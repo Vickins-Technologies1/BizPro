@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2022",
+    "moduleResolution": "Node",
+    "outDir": "dist",
+    "rootDir": "src",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "types": ["node"],
+    "paths": {
+      "@vbo/shared": ["../../packages/shared/src/index.ts"],
+      "@vbo/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

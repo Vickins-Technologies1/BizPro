@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "moduleResolution": "Bundler",
+    "types": ["react", "react-native"],
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@shared": ["../../packages/shared/src/index.ts"],
+      "@shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"]
+}

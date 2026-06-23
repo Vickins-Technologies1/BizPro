@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "android/**", "ios/**"]
+    },
+    "dev": {
+      "cache": false
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "format": {
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

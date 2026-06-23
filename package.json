@@ -1,0 +1,17 @@
+{
+  "name": "vickins-business-os",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "turbo format",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.14",
+    "typescript": "^5.5.4"
+  }
+}

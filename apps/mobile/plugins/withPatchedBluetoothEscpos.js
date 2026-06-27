@@ -18,6 +18,13 @@ function patchBluetoothEscposGradle(contents) {
     .replace(/targetSdkVersion\s+24/g, "targetSdkVersion rootProject.ext.targetSdkVersion");
 }
 
+function patchExpoModulesCoreGradle(contents) {
+  return contents.replace(
+    /from components\.release/g,
+    'from components.findByName("release")'
+  );
+}
+
 module.exports = function withPatchedBluetoothEscpos(config) {
   return withDangerousMod(config, [
     "android",
@@ -33,6 +40,20 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
       if (patched !== current) {
         fs.writeFileSync(buildGradlePath, patched);
+      }
+
+      const expoModulesCorePackageJson = require.resolve("expo-modules-core/package.json", {
+        paths: [config.modRequest.projectRoot]
+      });
+      const expoModulesCoreGradlePath = path.join(path.dirname(expoModulesCorePackageJson), "android", "ExpoModulesCorePlugin.gradle");
+
+      if (fs.existsSync(expoModulesCoreGradlePath)) {
+        const expoModulesCurrent = fs.readFileSync(expoModulesCoreGradlePath, "utf8");
+        const expoModulesPatched = patchExpoModulesCoreGradle(expoModulesCurrent);
+
+        if (expoModulesPatched !== expoModulesCurrent) {
+          fs.writeFileSync(expoModulesCoreGradlePath, expoModulesPatched);
+        }
       }
 
       return config;

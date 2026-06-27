@@ -80,7 +80,6 @@ Why this split:
 Use the Render blueprint in `render.yaml` or the Dockerfile in `apps/api/Dockerfile`:
 
 ```bash
-corepack enable
 pnpm install --frozen-lockfile --prod=false
 pnpm --filter @vbo/shared build
 pnpm --filter @vbo/api build

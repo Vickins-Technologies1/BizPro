@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @vbo/shared build && pnpm --filter @vbo/api build
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @vbo/shared build && pnpm --filter @vbo/api build
     startCommand: pnpm --filter @vbo/api start:prod
     healthCheckPath: /api/health
     envVars:

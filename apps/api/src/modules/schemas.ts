@@ -4,7 +4,7 @@ import type { BusinessType, PlanTier, UserRole, PaymentMethod, PaymentStatus } f
 
 @Schema({ timestamps: true, collection: "businesses" })
 export class Business {
-  @Prop({ index: true, unique: true, sparse: true, default: null })
+  @Prop({ type: String, index: true, unique: true, sparse: true, default: null })
   externalId?: string | null;
 
   @Prop({ required: true })
@@ -25,10 +25,10 @@ export class Business {
   @Prop({ required: true, default: "trial" })
   billingStatus!: "trial" | "active" | "past_due" | "suspended";
 
-  @Prop()
+  @Prop({ type: Date })
   graceEndsAt?: Date | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type BusinessDocument = HydratedDocument<Business>;
@@ -48,7 +48,7 @@ export class Branch {
   @Prop({ default: false })
   isDefault!: boolean;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type BranchDocument = HydratedDocument<Branch>;
@@ -59,19 +59,19 @@ export class User {
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   branchId?: string | null;
 
   @Prop({ required: true })
   fullName!: string;
 
-  @Prop()
+  @Prop({ type: String })
   phone?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   passwordHash?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   pinHash?: string | null;
 
   @Prop({ required: true, enum: ["owner", "manager", "cashier"] satisfies UserRole[] })
@@ -80,7 +80,7 @@ export class User {
   @Prop({ default: true })
   isActive!: boolean;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type UserDocument = HydratedDocument<User>;
@@ -100,10 +100,10 @@ export class Device {
   @Prop({ default: false })
   trusted!: boolean;
 
-  @Prop()
+  @Prop({ type: Date })
   lastSeenAt?: Date | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type DeviceDocument = HydratedDocument<Device>;
@@ -111,7 +111,7 @@ export const DeviceSchema = SchemaFactory.createForClass(Device);
 
 @Schema({ timestamps: true, collection: "categories" })
 export class Category {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
@@ -120,13 +120,13 @@ export class Category {
   @Prop({ required: true })
   name!: string;
 
-  @Prop()
+  @Prop({ type: String })
   color?: string | null;
 
   @Prop({ default: 0 })
   sortOrder!: number;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type CategoryDocument = HydratedDocument<Category>;
@@ -134,22 +134,22 @@ export const CategorySchema = SchemaFactory.createForClass(Category);
 
 @Schema({ timestamps: true, collection: "products" })
 export class Product {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   categoryId?: string | null;
 
   @Prop({ required: true })
   name!: string;
 
-  @Prop()
+  @Prop({ type: String })
   sku?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   barcode?: string | null;
 
   @Prop({ required: true, default: "pcs" })
@@ -170,7 +170,7 @@ export class Product {
   @Prop({ default: true })
   isActive!: boolean;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type ProductDocument = HydratedDocument<Product>;
@@ -178,7 +178,7 @@ export const ProductSchema = SchemaFactory.createForClass(Product);
 
 @Schema({ timestamps: true, collection: "customers" })
 export class Customer {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
@@ -187,19 +187,19 @@ export class Customer {
   @Prop({ required: true })
   name!: string;
 
-  @Prop()
+  @Prop({ type: String })
   phone?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   email?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   notes?: string | null;
 
   @Prop({ required: true, default: 0 })
   balance!: number;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type CustomerDocument = HydratedDocument<Customer>;
@@ -207,13 +207,13 @@ export const CustomerSchema = SchemaFactory.createForClass(Customer);
 
 @Schema({ timestamps: true, collection: "expenses" })
 export class Expense {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   categoryId?: string | null;
 
   @Prop({ required: true })
@@ -225,10 +225,10 @@ export class Expense {
   @Prop({ required: true })
   expenseDate!: Date;
 
-  @Prop()
+  @Prop({ type: String })
   recordedById?: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type ExpenseDocument = HydratedDocument<Expense>;
@@ -246,16 +246,16 @@ export interface SaleItem {
 
 @Schema({ timestamps: true, collection: "sales" })
 export class Sale {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   branchId?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   customerId?: string | null;
 
   @Prop({ required: true, index: true })
@@ -285,16 +285,16 @@ export class Sale {
   @Prop({ required: true })
   paymentMethod!: PaymentMethod;
 
-  @Prop()
+  @Prop({ type: String })
   cashierId?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   notes?: string | null;
 
   @Prop({ type: Array, default: [] })
   items!: SaleItem[];
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type SaleDocument = HydratedDocument<Sale>;
@@ -302,19 +302,19 @@ export const SaleSchema = SchemaFactory.createForClass(Sale);
 
 @Schema({ timestamps: true, collection: "payments" })
 export class Payment {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop({ index: true, default: null })
+  @Prop({ type: String, index: true, default: null })
   customerId?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   saleId?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   debtPaymentId?: string | null;
 
   @Prop({ required: true })
@@ -326,16 +326,16 @@ export class Payment {
   @Prop({ required: true })
   amount!: number;
 
-  @Prop()
+  @Prop({ type: String })
   reference?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   note?: string | null;
 
-  @Prop()
+  @Prop({ type: String })
   provider?: string | null;
 
-  @Prop()
+  @Prop({ type: Date })
   reconciledAt?: Date | null;
 }
 export type PaymentDocument = HydratedDocument<Payment>;
@@ -343,7 +343,7 @@ export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
 @Schema({ timestamps: true, collection: "stock_movements" })
 export class StockMovement {
-  @Prop({ index: true })
+  @Prop({ type: String, index: true })
   externalId?: string | null;
 
   @Prop({ required: true, index: true })
@@ -364,7 +364,7 @@ export class StockMovement {
   @Prop({ required: true })
   unitCost!: number;
 
-  @Prop()
+  @Prop({ type: String })
   note?: string | null;
 }
 export type StockMovementDocument = HydratedDocument<StockMovement>;
@@ -399,7 +399,7 @@ export class SyncEvent {
   @Prop({ required: true, default: 0 })
   retryCount!: number;
 
-  @Prop()
+  @Prop({ type: String })
   lastError?: string | null;
 }
 export type SyncEventDocument = HydratedDocument<SyncEvent>;
@@ -413,13 +413,13 @@ export class SyncCheckpoint {
   @Prop({ required: true, index: true })
   deviceId!: string;
 
-  @Prop()
+  @Prop({ type: Date })
   lastPulledAt?: Date | null;
 
-  @Prop()
+  @Prop({ type: Date })
   lastPushedAt?: Date | null;
 
-  @Prop()
+  @Prop({ type: String })
   serverCursor?: string | null;
 }
 export type SyncCheckpointDocument = HydratedDocument<SyncCheckpoint>;
@@ -453,13 +453,13 @@ export class Subscription {
   @Prop({ required: true })
   status!: "trial" | "active" | "past_due" | "suspended";
 
-  @Prop()
+  @Prop({ type: Date })
   trialEndsAt?: Date | null;
 
-  @Prop()
+  @Prop({ type: Date })
   expiresAt?: Date | null;
 
-  @Prop()
+  @Prop({ type: Date })
   graceEndsAt?: Date | null;
 }
 export type SubscriptionDocument = HydratedDocument<Subscription>;
@@ -479,7 +479,7 @@ export class WebhookLog {
   @Prop({ required: true, default: "received" })
   status!: "received" | "processed" | "failed";
 
-  @Prop()
+  @Prop({ type: String })
   error?: string | null;
 }
 export type WebhookLogDocument = HydratedDocument<WebhookLog>;
@@ -490,7 +490,7 @@ export class PaymentReconciliationLog {
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   paymentId?: string | null;
 
   @Prop({ required: true })
@@ -510,7 +510,7 @@ export class AuditLog {
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop()
+  @Prop({ type: String })
   actorId?: string | null;
 
   @Prop({ required: true })

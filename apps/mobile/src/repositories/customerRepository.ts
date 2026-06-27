@@ -1,4 +1,4 @@
-import type { Customer } from "@vbo/shared";
+import type { Customer } from "@shared";
 import { BaseRepository } from "./baseRepository";
 import { createId } from "@/utils/id";
 import { nowIso } from "@/utils/date";

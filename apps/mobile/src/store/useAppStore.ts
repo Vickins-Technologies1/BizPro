@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Business, Customer, Product, Sale, Expense, DailySummary, Category, Payment } from "@vbo/shared";
+import type { Business, Customer, Product, Sale, Expense, DailySummary, Category, Payment } from "@shared";
 import { initializeDatabase, oneSql, runSql, allSql } from "@/storage/sqlite";
 import { secureStore } from "@/storage/secure";
 import { createId, createEventId } from "@/utils/id";
@@ -10,7 +10,7 @@ import { CustomerRepository } from "@/repositories/customerRepository";
 import { ExpenseRepository, PaymentRepository, StockMovementRepository } from "@/repositories/financeRepository";
 import { SyncService } from "@/services/syncService";
 import { getDashboardSummary, getTopProducts } from "@/services/reportService";
-import { businessSetupSchema, loginSchema } from "@vbo/shared";
+import { businessSetupSchema, loginSchema } from "@shared";
 import { buildReceiptText } from "@/services/receiptService";
 import { env } from "@/config/env";
 import { remoteLogin, remoteRegister } from "@/services/remoteAuth";

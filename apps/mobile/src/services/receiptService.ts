@@ -1,4 +1,4 @@
-import type { Sale, SaleItem } from "@vbo/shared";
+import type { Sale, SaleItem } from "@shared";
 import { formatMoney } from "@/utils/money";
 
 export function buildReceiptText(sale: Sale, items: SaleItem[], currency = "KES") {

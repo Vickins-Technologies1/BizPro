@@ -6,6 +6,8 @@
     "moduleResolution": "Bundler",
     "paths": {
       "@/*": ["src/*"],
+      "@vbo/shared": ["../../packages/shared/src/index.ts"],
+      "@vbo/shared/*": ["../../packages/shared/src/*"],
       "@shared": ["../../packages/shared/src/index.ts"],
       "@shared/*": ["../../packages/shared/src/*"]
     }

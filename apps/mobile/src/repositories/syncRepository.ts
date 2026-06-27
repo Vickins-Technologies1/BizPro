@@ -1,4 +1,4 @@
-import type { SyncEventPayload, SyncCheckpoint } from "@vbo/shared";
+import type { SyncEventPayload, SyncCheckpoint } from "@shared";
 import { BaseRepository } from "./baseRepository";
 import { createId } from "@/utils/id";
 import { nowIso } from "@/utils/date";

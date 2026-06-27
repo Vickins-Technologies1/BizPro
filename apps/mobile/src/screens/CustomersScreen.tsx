@@ -8,7 +8,7 @@ import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
 import { allSql } from "@/storage/sqlite";
-import type { Payment } from "@vbo/shared";
+import type { Payment } from "@shared";
 
 const customerSchema = z.object({
   name: z.string().min(2),

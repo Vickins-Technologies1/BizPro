@@ -2,7 +2,7 @@ import React from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BUSINESS_TYPES, PLAN_TIERS, businessSetupSchema } from "@vbo/shared";
+import { BUSINESS_TYPES, PLAN_TIERS, businessSetupSchema } from "@shared";
 import { GradientHeader, InputField, PrimaryButton, Screen, Card, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";

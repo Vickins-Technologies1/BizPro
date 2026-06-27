@@ -1,4 +1,4 @@
-import type { Expense, Sale, Payment, StockMovement } from "@vbo/shared";
+import type { Expense, Sale, Payment, StockMovement } from "@shared";
 import { BaseRepository } from "./baseRepository";
 import { createId } from "@/utils/id";
 import { nowIso } from "@/utils/date";

@@ -6,10 +6,11 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [path.resolve(workspaceRoot, "packages/shared")];
+config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules")
 ];
+config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;

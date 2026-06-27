@@ -1,7 +1,7 @@
 import { BaseRepository } from "./baseRepository";
 import { createId } from "@/utils/id";
 import { nowIso } from "@/utils/date";
-import type { Category, Product } from "@vbo/shared";
+import type { Category, Product } from "@shared";
 
 export class CategoryRepository extends BaseRepository<Category> {
   constructor() {

@@ -17,6 +17,9 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { RolesGuard } from "./common/roles.guard";
 import { SupportKeyGuard } from "./common/support-key.guard";
+import { HealthController } from "./health.controller";
+import { BootstrapService } from "./bootstrap.service";
+import { SystemState, SystemStateSchema } from "./system-state.schema";
 
 @Module({
   imports: [
@@ -24,9 +27,11 @@ import { SupportKeyGuard } from "./common/support-key.guard";
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>("MONGODB_URI") ?? "mongodb://127.0.0.1:27017/vickins_business_os"
+        uri: config.get<string>("MONGODB_URI") ?? "mongodb://127.0.0.1:27017/vickins_business_os",
+        dbName: config.get<string>("MONGODB_DB_NAME") ?? "vickins_business_os"
       })
     }),
+    MongooseModule.forFeature([{ name: SystemState.name, schema: SystemStateSchema }]),
     AuthModule,
     BusinessesModule,
     CategoriesModule,
@@ -41,6 +46,7 @@ import { SupportKeyGuard } from "./common/support-key.guard";
     WebhooksModule,
     AuditModule
   ],
-  providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard]
+  controllers: [HealthController],
+  providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]
 })
 export class AppModule {}

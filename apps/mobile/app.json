@@ -1,24 +1,39 @@
 {
   "expo": {
     "name": "Vickins Business OS",
-    "slug": "vickins-business-os",
+    "owner": "vickinss-team",
+    "slug": "bizpro",
     "scheme": "vickinsbos",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.vickins.businessos",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.vickins.businessos",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Allows the app to connect to Bluetooth receipt printers.",
+        "NSBluetoothPeripheralUsageDescription": "Allows the app to connect to Bluetooth receipt printers."
+      }
+    },
     "splash": {
       "backgroundColor": "#0B1220"
     },
     "assetBundlePatterns": ["**/*"],
-    "plugins": [
-      "expo-secure-store",
-      [
-        "expo-sqlite",
-        {
-          "enableFTS": true
-        }
-      ]
-    ]
+    "extra": {
+      "eas": {
+        "projectId": "691dea44-6740-4044-9780-7748566a6b51"
+      }
+    },
+    "plugins": ["expo-secure-store", "./plugins/withPatchedBluetoothEscpos"]
   }
 }

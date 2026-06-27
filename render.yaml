@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: bizpro-api
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @vbo/shared build && pnpm --filter @vbo/api build
+    startCommand: pnpm --filter @vbo/api start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: vickins_business_os
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        sync: false
+      - key: SUPPORT_API_KEY
+        sync: false
+      - key: TUMA_WEBHOOK_SECRET
+        sync: false

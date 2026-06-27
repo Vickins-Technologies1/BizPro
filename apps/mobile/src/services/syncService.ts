@@ -2,7 +2,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { nowIso } from "@/utils/date";
 import { allSql, runSql } from "@/storage/sqlite";
 import { SyncRepository, SyncCheckpointRepository } from "@/repositories/syncRepository";
-import type { SyncEventPayload } from "@vbo/shared";
+import type { SyncEventPayload } from "@shared";
 
 export type SyncStatus = "idle" | "syncing" | "online" | "offline" | "error";
 

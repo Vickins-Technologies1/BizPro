@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.next
+**/ios
+**/android
+**/build
+**/.turbo
+**/.expo
+**/.eas
+.git
+.gitignore
+README.md

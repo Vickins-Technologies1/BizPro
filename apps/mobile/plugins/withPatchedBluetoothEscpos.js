@@ -25,6 +25,13 @@ function patchExpoModulesCoreGradle(contents) {
   );
 }
 
+function patchExpoModulesCorePermissionsService(contents) {
+  return contents.replace(
+    /return requestedPermissions\.contains\(permission\)/g,
+    "return requestedPermissions?.contains(permission) == true"
+  );
+}
+
 module.exports = function withPatchedBluetoothEscpos(config) {
   return withDangerousMod(config, [
     "android",
@@ -53,6 +60,29 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
         if (expoModulesPatched !== expoModulesCurrent) {
           fs.writeFileSync(expoModulesCoreGradlePath, expoModulesPatched);
+        }
+      }
+
+      const expoModulesCorePermissionsPath = path.join(
+        path.dirname(expoModulesCorePackageJson),
+        "android",
+        "src",
+        "main",
+        "java",
+        "expo",
+        "modules",
+        "adapters",
+        "react",
+        "permissions",
+        "PermissionsService.kt"
+      );
+
+      if (fs.existsSync(expoModulesCorePermissionsPath)) {
+        const permissionsCurrent = fs.readFileSync(expoModulesCorePermissionsPath, "utf8");
+        const permissionsPatched = patchExpoModulesCorePermissionsService(permissionsCurrent);
+
+        if (permissionsPatched !== permissionsCurrent) {
+          fs.writeFileSync(expoModulesCorePermissionsPath, permissionsPatched);
         }
       }
 

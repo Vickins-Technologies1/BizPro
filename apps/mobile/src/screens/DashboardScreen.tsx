@@ -36,7 +36,7 @@ export function DashboardScreen() {
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Sync health</Text>
           <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "800" }}>{pendingSync ? `${pendingSync} events waiting` : "Fully synced"}</Text>
-          <Text style={{ color: tokens.colors.textSecondary }}>Offline-first queue is ready. Mutations are stored locally and pushed in the background.</Text>
+          <Text style={{ color: tokens.colors.textSecondary }}>Critical records stay local if the connection drops, then sync automatically as soon as the internet is back.</Text>
           <PrimaryButton title="Sync now" onPress={() => syncNow()} />
         </Card>
         <View style={{ flexDirection: "row", gap: 12 }}>

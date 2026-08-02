@@ -1,0 +1,446 @@
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@brooons\react-native-bluetooth-escpos-printer\android\src\main\java\cn\jystudio\bluetooth\tsc\TscCommand.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@react-native-community\netinfo\android\src\main\java\com\reactnativecommunity\netinfo\NetInfoModule.java:45: warning: [removal] onCatalystInstanceDestroy() in NativeModule has been deprecated and marked for removal
+    public void onCatalystInstanceDestroy() {
+                ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Note: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-safe-area-context\android\src\paper\java\com\th3rdwave\safeareacontext\NativeSafeAreaContextSpec.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-screens\android\src\paper\java\com\swmansion\rnscreens\NativeScreensModuleSpec.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':expo-modules-core:buildCMakeDebug[armeabi-v7a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-modules-core@1.12.26\node_modules\expo-modules-core\android\.cxx\Debug\161d1y5j\armeabi-v7a'
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/.cxx/Debug/161d1y5j/armeabi-v7a
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\node_modules\\.pnpm\\expo-modules-core@1.12.26\\node_modules\\expo-modules-core\\android\\.cxx\\Debug\\161d1y5j\\armeabi-v7a" ^
+        expo-modules-core
+    from C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-modules-core@1.12.26\node_modules\expo-modules-core\android
+  ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 18h 13m 4s

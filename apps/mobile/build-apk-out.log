@@ -1,0 +1,691 @@
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-asset[0m (10.0.10)
+  - [32mexpo-clipboard[0m (6.0.3)
+  - [32mexpo-constants[0m (16.0.2)
+  - [32mexpo-file-system[0m (17.0.1)
+  - [32mexpo-font[0m (12.0.10)
+  - [32mexpo-keep-awake[0m (13.0.2)
+  - [32mexpo-linear-gradient[0m (13.0.2)
+  - [32mexpo-modules-core[0m (1.12.26)
+  - [32mexpo-secure-store[0m (13.0.2)
+  - [32mexpo-sqlite[0m (14.0.6)
+  - [32mexpo-system-ui[0m (3.0.7)
+
+
+> Configure project :react-native-reanimated
+Android gradle plugin: 8.2.1
+Gradle: 8.8
+WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.2.1) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.2.1) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generatePackageList
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:generateDebugBuildConfig
+> Task :brooons_react-native-bluetooth-escpos-printer:preBuild UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:preDebugBuild UP-TO-DATE
+> Task :expo:generateExpoModulesPackageListTask UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo:preDebugBuild UP-TO-DATE
+> Task :expo-asset:preBuild UP-TO-DATE
+> Task :expo-asset:preDebugBuild UP-TO-DATE
+> Task :expo-clipboard:preBuild UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:writeDebugAarMetadata
+> Task :expo-clipboard:preDebugBuild UP-TO-DATE
+> Task :expo:writeDebugAarMetadata
+> Task :expo-asset:writeDebugAarMetadata
+> Task :expo-clipboard:writeDebugAarMetadata
+> Task :expo-constants:createExpoConfig UP-TO-DATE
+> Task :expo-constants:preBuild UP-TO-DATE
+> Task :expo-constants:preDebugBuild UP-TO-DATE
+> Task :expo-file-system:preBuild UP-TO-DATE
+> Task :expo-file-system:preDebugBuild UP-TO-DATE
+> Task :expo-constants:writeDebugAarMetadata
+> Task :expo-font:preBuild UP-TO-DATE
+> Task :expo-font:preDebugBuild UP-TO-DATE
+> Task :expo-file-system:writeDebugAarMetadata
+> Task :expo-keep-awake:preBuild UP-TO-DATE
+> Task :expo-keep-awake:preDebugBuild UP-TO-DATE
+> Task :expo-font:writeDebugAarMetadata
+> Task :expo-linear-gradient:preBuild UP-TO-DATE
+> Task :expo-linear-gradient:preDebugBuild UP-TO-DATE
+> Task :expo-keep-awake:writeDebugAarMetadata
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-linear-gradient:writeDebugAarMetadata
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo-secure-store:preBuild UP-TO-DATE
+> Task :expo-secure-store:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata
+> Task :expo-sqlite:preBuild UP-TO-DATE
+> Task :expo-sqlite:preDebugBuild UP-TO-DATE
+> Task :expo-secure-store:writeDebugAarMetadata
+> Task :expo-system-ui:preBuild UP-TO-DATE
+> Task :expo-system-ui:preDebugBuild UP-TO-DATE
+> Task :expo-sqlite:writeDebugAarMetadata
+> Task :react-native-community_netinfo:preBuild UP-TO-DATE
+> Task :react-native-community_netinfo:preDebugBuild UP-TO-DATE
+> Task :expo-system-ui:writeDebugAarMetadata
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
+> Task :react-native-reanimated:assertLatestReactNativeWithNewArchitectureTask SKIPPED
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask SKIPPED
+> Task :react-native-community_netinfo:writeDebugAarMetadata
+> Task :react-native-gesture-handler:writeDebugAarMetadata
+> Task :react-native-reanimated:prepareHeadersForPrefab UP-TO-DATE
+> Task :react-native-reanimated:preBuild UP-TO-DATE
+> Task :react-native-reanimated:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-reanimated:writeDebugAarMetadata
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata
+> Task :react-native-screens:writeDebugAarMetadata
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugResValues
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugResources
+> Task :brooons_react-native-bluetooth-escpos-printer:packageDebugResources
+> Task :expo:generateDebugResValues
+> Task :expo:generateDebugResources
+> Task :expo:packageDebugResources
+> Task :expo-asset:generateDebugResValues
+> Task :expo-asset:generateDebugResources
+> Task :expo-asset:packageDebugResources
+> Task :expo-clipboard:generateDebugResValues
+> Task :expo-clipboard:generateDebugResources
+> Task :expo-clipboard:packageDebugResources
+> Task :expo-constants:generateDebugResValues
+> Task :expo-constants:generateDebugResources
+> Task :expo-constants:packageDebugResources
+> Task :expo-file-system:generateDebugResValues
+> Task :expo-file-system:generateDebugResources
+> Task :expo-file-system:packageDebugResources
+> Task :expo-font:generateDebugResValues
+> Task :expo-font:generateDebugResources
+> Task :expo-font:packageDebugResources
+> Task :expo-keep-awake:generateDebugResValues
+> Task :expo-keep-awake:generateDebugResources
+> Task :expo-keep-awake:packageDebugResources
+> Task :expo-linear-gradient:generateDebugResValues
+> Task :expo-linear-gradient:generateDebugResources
+> Task :expo-linear-gradient:packageDebugResources
+> Task :expo-modules-core:generateDebugResValues
+> Task :expo-modules-core:generateDebugResources
+> Task :expo-modules-core:packageDebugResources
+> Task :expo-secure-store:generateDebugResValues
+> Task :expo-secure-store:generateDebugResources
+> Task :expo-secure-store:packageDebugResources
+> Task :expo-sqlite:generateDebugResValues
+> Task :expo-sqlite:generateDebugResources
+> Task :expo-sqlite:packageDebugResources
+> Task :expo-system-ui:generateDebugResValues
+> Task :expo-system-ui:generateDebugResources
+> Task :expo-system-ui:packageDebugResources
+> Task :react-native-community_netinfo:generateDebugResValues
+> Task :react-native-community_netinfo:generateDebugResources
+> Task :react-native-community_netinfo:packageDebugResources
+> Task :react-native-gesture-handler:generateDebugResValues
+> Task :react-native-gesture-handler:generateDebugResources
+> Task :react-native-gesture-handler:packageDebugResources
+> Task :react-native-reanimated:generateDebugResValues
+> Task :react-native-reanimated:generateDebugResources
+> Task :react-native-reanimated:packageDebugResources
+> Task :react-native-safe-area-context:generateDebugResValues
+> Task :react-native-safe-area-context:generateDebugResources
+> Task :react-native-safe-area-context:packageDebugResources
+> Task :react-native-screens:generateDebugResValues
+> Task :react-native-screens:generateDebugResources
+> Task :react-native-screens:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:mergeDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :brooons_react-native-bluetooth-escpos-printer:extractDeepLinksDebug
+> Task :expo:extractDeepLinksDebug
+> Task :expo-asset:extractDeepLinksDebug
+> Task :expo-clipboard:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :expo-constants:extractDeepLinksDebug
+> Task :expo-file-system:extractDeepLinksDebug
+> Task :expo-constants:processDebugManifest
+> Task :expo:processDebugManifest
+
+> Task :brooons_react-native-bluetooth-escpos-printer:processDebugManifest
+package="cn.jystudio.bluetooth" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@brooons\react-native-bluetooth-escpos-printer\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="cn.jystudio.bluetooth" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@brooons\react-native-bluetooth-escpos-printer\android\src\main\AndroidManifest.xml.
+
+> Task :expo-clipboard:processDebugManifest
+> Task :expo-asset:processDebugManifest
+> Task :expo-font:extractDeepLinksDebug
+
+> Task :expo-file-system:processDebugManifest
+C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-file-system@17.0.1_exp_e0c3392a32ae2648da4985d461e74fe0\node_modules\expo-file-system\android\src\main\AndroidManifest.xml:6:9-8:20 Warning:
+	provider#expo.modules.filesystem.FileSystemFileProvider@android:authorities was tagged at AndroidManifest.xml:6 to replace other declarations but no other declaration present
+
+> Task :expo-keep-awake:extractDeepLinksDebug
+> Task :expo-font:processDebugManifest
+> Task :expo-linear-gradient:extractDeepLinksDebug
+> Task :expo-keep-awake:processDebugManifest
+> Task :expo-modules-core:extractDeepLinksDebug
+> Task :expo-linear-gradient:processDebugManifest
+> Task :expo-secure-store:extractDeepLinksDebug
+
+> Task :expo-modules-core:processDebugManifest
+C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-modules-core@1.12.26\node_modules\expo-modules-core\android\src\main\AndroidManifest.xml:8:9-11:45 Warning:
+	meta-data#com.facebook.soloader.enabled@android:value was tagged at AndroidManifest.xml:8 to replace other declarations but no other declaration present
+
+> Task :expo-sqlite:extractDeepLinksDebug
+> Task :expo-secure-store:processDebugManifest
+> Task :expo-system-ui:extractDeepLinksDebug
+> Task :expo-sqlite:processDebugManifest
+> Task :react-native-community_netinfo:extractDeepLinksDebug
+> Task :expo-system-ui:processDebugManifest
+> Task :react-native-gesture-handler:extractDeepLinksDebug
+
+> Task :react-native-community_netinfo:processDebugManifest
+package="com.reactnativecommunity.netinfo" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@react-native-community\netinfo\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.reactnativecommunity.netinfo" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\@react-native-community\netinfo\android\src\main\AndroidManifest.xml.
+
+> Task :react-native-reanimated:extractDeepLinksDebug
+
+> Task :react-native-gesture-handler:processDebugManifest
+package="com.swmansion.gesturehandler" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-gesture-handler\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.swmansion.gesturehandler" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-gesture-handler\android\src\main\AndroidManifest.xml.
+
+> Task :react-native-safe-area-context:extractDeepLinksDebug
+
+> Task :react-native-reanimated:processDebugManifest
+package="com.swmansion.reanimated" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-reanimated\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.swmansion.reanimated" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-reanimated\android\src\main\AndroidManifest.xml.
+
+> Task :react-native-screens:extractDeepLinksDebug
+
+> Task :react-native-safe-area-context:processDebugManifest
+package="com.th3rdwave.safeareacontext" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-safe-area-context\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.th3rdwave.safeareacontext" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-safe-area-context\android\src\main\AndroidManifest.xml.
+
+> Task :react-native-screens:processDebugManifest
+package="com.swmansion.rnscreens" found in source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-screens\android\src\main\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.swmansion.rnscreens" from the source AndroidManifest.xml: C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\node_modules\react-native-screens\android\src\main\AndroidManifest.xml.
+
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugLibraryResources
+
+> Task :app:processDebugMainManifest
+C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\android\app\src\debug\AndroidManifest.xml:6:5-162 Warning:
+	application@android:usesCleartextTraffic was tagged at AndroidManifest.xml:6 to replace other declarations but no other declaration present
+C:\Users\ABCD\OneDrive\Documentos\BizPro\apps\mobile\android\app\src\debug\AndroidManifest.xml Warning:
+	provider#expo.modules.filesystem.FileSystemFileProvider@android:authorities was tagged at AndroidManifest.xml:0 to replace other declarations but no other declaration present
+
+> Task :app:processDebugManifest
+> Task :brooons_react-native-bluetooth-escpos-printer:parseDebugLocalResources
+> Task :expo:compileDebugLibraryResources
+> Task :expo:parseDebugLocalResources
+> Task :expo-asset:compileDebugLibraryResources
+> Task :expo-asset:parseDebugLocalResources
+> Task :expo-clipboard:compileDebugLibraryResources
+> Task :expo:generateDebugRFile
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugRFile
+> Task :app:processDebugManifestForPackage
+> Task :expo-clipboard:parseDebugLocalResources
+> Task :expo-asset:generateDebugRFile
+> Task :expo-clipboard:generateDebugRFile
+> Task :expo-constants:compileDebugLibraryResources
+> Task :expo-constants:parseDebugLocalResources
+> Task :expo-file-system:compileDebugLibraryResources
+> Task :expo-constants:generateDebugRFile
+> Task :expo-font:compileDebugLibraryResources
+> Task :expo-font:parseDebugLocalResources
+> Task :expo-keep-awake:compileDebugLibraryResources
+> Task :expo-file-system:parseDebugLocalResources
+> Task :expo-file-system:generateDebugRFile
+> Task :expo-keep-awake:parseDebugLocalResources
+> Task :expo-linear-gradient:compileDebugLibraryResources
+> Task :expo-font:generateDebugRFile
+> Task :expo-linear-gradient:parseDebugLocalResources
+> Task :expo-keep-awake:generateDebugRFile
+> Task :expo-modules-core:compileDebugLibraryResources
+> Task :expo-linear-gradient:generateDebugRFile
+> Task :expo-secure-store:compileDebugLibraryResources
+> Task :expo-modules-core:parseDebugLocalResources
+> Task :expo-secure-store:parseDebugLocalResources
+> Task :expo-sqlite:compileDebugLibraryResources
+> Task :expo-secure-store:generateDebugRFile
+> Task :expo-modules-core:generateDebugRFile
+> Task :expo-system-ui:compileDebugLibraryResources
+> Task :expo-sqlite:parseDebugLocalResources
+> Task :expo-system-ui:parseDebugLocalResources
+> Task :react-native-community_netinfo:compileDebugLibraryResources
+> Task :expo-system-ui:generateDebugRFile
+> Task :react-native-gesture-handler:compileDebugLibraryResources
+> Task :expo-sqlite:generateDebugRFile
+> Task :react-native-community_netinfo:parseDebugLocalResources
+> Task :react-native-gesture-handler:parseDebugLocalResources
+> Task :react-native-reanimated:compileDebugLibraryResources
+> Task :react-native-gesture-handler:generateDebugRFile
+> Task :react-native-reanimated:parseDebugLocalResources
+> Task :react-native-community_netinfo:generateDebugRFile
+> Task :react-native-safe-area-context:compileDebugLibraryResources
+> Task :react-native-safe-area-context:parseDebugLocalResources
+> Task :react-native-reanimated:generateDebugRFile
+> Task :react-native-safe-area-context:generateDebugRFile
+> Task :react-native-screens:parseDebugLocalResources
+> Task :react-native-screens:compileDebugLibraryResources
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugBuildConfig
+> Task :expo:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-screens:generateDebugRFile
+> Task :brooons_react-native-bluetooth-escpos-printer:javaPreCompileDebug
+> Task :expo:generateDebugBuildConfig
+> Task :app:processDebugResources
+
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugJavaWithJavac
+
+> Task :expo-asset:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-asset:generateDebugBuildConfig
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-modules-core:generateDebugBuildConfig
+> Task :brooons_react-native-bluetooth-escpos-printer:bundleLibCompileToJarDebug
+> Task :expo-modules-core:javaPreCompileDebug
+> Task :expo-clipboard:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-asset:javaPreCompileDebug
+> Task :expo-clipboard:generateDebugBuildConfig
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-clipboard:javaPreCompileDebug
+> Task :expo-constants:generateDebugBuildConfig
+> Task :expo-file-system:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-constants:javaPreCompileDebug
+> Task :expo-file-system:generateDebugBuildConfig
+> Task :expo-font:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-file-system:javaPreCompileDebug
+> Task :expo-font:generateDebugBuildConfig
+> Task :expo-keep-awake:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-font:javaPreCompileDebug
+> Task :expo-keep-awake:generateDebugBuildConfig
+> Task :expo-linear-gradient:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-keep-awake:javaPreCompileDebug
+> Task :expo-linear-gradient:generateDebugBuildConfig
+> Task :expo-secure-store:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-linear-gradient:javaPreCompileDebug
+> Task :expo-secure-store:generateDebugBuildConfig
+> Task :expo-sqlite:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-secure-store:javaPreCompileDebug
+> Task :expo-sqlite:generateDebugBuildConfig
+> Task :expo-system-ui:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-sqlite:javaPreCompileDebug
+> Task :expo-system-ui:generateDebugBuildConfig
+> Task :expo-system-ui:javaPreCompileDebug
+> Task :expo:javaPreCompileDebug
+> Task :react-native-community_netinfo:generateDebugBuildConfig
+> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-community_netinfo:javaPreCompileDebug
+> Task :react-native-gesture-handler:generateDebugBuildConfig
+> Task :expo-modules-core:compileDebugKotlin
+
+> Task :react-native-community_netinfo:compileDebugJavaWithJavac
+
+> Task :react-native-reanimated:generateDebugBuildConfig
+> Task :react-native-community_netinfo:bundleLibCompileToJarDebug
+> Task :react-native-reanimated:javaPreCompileDebug
+> Task :react-native-reanimated:packageNdkLibs NO-SOURCE
+
+> Task :react-native-reanimated:compileDebugJavaWithJavac
+
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-gesture-handler:javaPreCompileDebug
+> Task :react-native-safe-area-context:generateDebugBuildConfig
+> Task :react-native-reanimated:bundleLibCompileToJarDebug
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-safe-area-context:javaPreCompileDebug
+> Task :react-native-screens:generateDebugBuildConfig
+> Task :react-native-screens:javaPreCompileDebug
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugShaders
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugShaders NO-SOURCE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugAssets UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:packageDebugAssets
+> Task :expo:mergeDebugShaders
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :expo:packageDebugAssets
+> Task :expo-asset:mergeDebugShaders
+> Task :expo-asset:compileDebugShaders NO-SOURCE
+> Task :expo-asset:generateDebugAssets UP-TO-DATE
+> Task :expo-asset:packageDebugAssets
+> Task :expo-clipboard:mergeDebugShaders
+> Task :expo-clipboard:compileDebugShaders NO-SOURCE
+> Task :expo-clipboard:generateDebugAssets UP-TO-DATE
+> Task :expo-clipboard:packageDebugAssets
+> Task :expo-constants:mergeDebugShaders
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:packageDebugAssets
+> Task :expo-file-system:mergeDebugShaders
+> Task :expo-file-system:compileDebugShaders NO-SOURCE
+> Task :expo-file-system:generateDebugAssets UP-TO-DATE
+> Task :expo-file-system:packageDebugAssets
+> Task :expo-font:mergeDebugShaders
+> Task :expo-font:compileDebugShaders NO-SOURCE
+> Task :expo-font:generateDebugAssets UP-TO-DATE
+> Task :expo-font:packageDebugAssets
+> Task :expo-keep-awake:mergeDebugShaders
+> Task :expo-keep-awake:compileDebugShaders NO-SOURCE
+> Task :expo-keep-awake:generateDebugAssets UP-TO-DATE
+> Task :expo-keep-awake:packageDebugAssets
+> Task :expo-linear-gradient:mergeDebugShaders
+> Task :expo-linear-gradient:compileDebugShaders NO-SOURCE
+> Task :expo-linear-gradient:generateDebugAssets UP-TO-DATE
+> Task :expo-linear-gradient:packageDebugAssets
+> Task :expo-modules-core:mergeDebugShaders
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:packageDebugAssets
+> Task :expo-secure-store:mergeDebugShaders
+> Task :expo-secure-store:compileDebugShaders NO-SOURCE
+> Task :expo-secure-store:generateDebugAssets UP-TO-DATE
+> Task :expo-secure-store:packageDebugAssets
+> Task :expo-sqlite:mergeDebugShaders
+> Task :expo-sqlite:compileDebugShaders NO-SOURCE
+> Task :expo-sqlite:generateDebugAssets UP-TO-DATE
+> Task :expo-sqlite:packageDebugAssets
+> Task :expo-system-ui:mergeDebugShaders
+> Task :expo-system-ui:compileDebugShaders NO-SOURCE
+> Task :expo-system-ui:generateDebugAssets UP-TO-DATE
+> Task :expo-system-ui:packageDebugAssets
+> Task :react-native-community_netinfo:mergeDebugShaders
+> Task :react-native-community_netinfo:compileDebugShaders NO-SOURCE
+> Task :react-native-community_netinfo:generateDebugAssets UP-TO-DATE
+> Task :react-native-community_netinfo:packageDebugAssets
+> Task :react-native-gesture-handler:mergeDebugShaders
+> Task :react-native-gesture-handler:compileDebugShaders NO-SOURCE
+> Task :react-native-gesture-handler:generateDebugAssets UP-TO-DATE
+> Task :react-native-gesture-handler:packageDebugAssets
+> Task :react-native-reanimated:mergeDebugShaders
+> Task :react-native-reanimated:compileDebugShaders NO-SOURCE
+> Task :react-native-reanimated:generateDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:packageDebugAssets
+> Task :react-native-safe-area-context:mergeDebugShaders
+> Task :react-native-safe-area-context:compileDebugShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:packageDebugAssets
+> Task :react-native-screens:mergeDebugShaders
+> Task :react-native-screens:compileDebugShaders NO-SOURCE
+> Task :react-native-screens:generateDebugAssets UP-TO-DATE
+> Task :react-native-screens:packageDebugAssets
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :brooons_react-native-bluetooth-escpos-printer:bundleLibRuntimeToJarDebug
+> Task :react-native-safe-area-context:compileDebugKotlin
+> Task :react-native-gesture-handler:compileDebugKotlin
+> Task :react-native-reanimated:bundleLibRuntimeToJarDebug
+> Task :react-native-community_netinfo:bundleLibRuntimeToJarDebug
+> Task :react-native-screens:compileDebugKotlin
+> Task :app:desugarDebugFileDependencies
+> Task :brooons_react-native-bluetooth-escpos-printer:processDebugJavaRes NO-SOURCE
+> Task :react-native-community_netinfo:processDebugJavaRes NO-SOURCE
+> Task :react-native-reanimated:processDebugJavaRes NO-SOURCE
+> Task :app:checkDebugDuplicateClasses
+
+> Task :react-native-safe-area-context:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaContextPackage.kt:27:11 'constructor ReactModuleInfo(String!, String!, Boolean, Boolean, Boolean, Boolean, Boolean)' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaContextPackage.kt:33:27 'hasConstants: Boolean' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt:59:23 'getter for uiImplementation: UIImplementation!' is deprecated. Deprecated in Java
+
+> Task :app:mergeDebugJniLibFolders
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugJniLibFolders
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugNativeLibs NO-SOURCE
+> Task :brooons_react-native-bluetooth-escpos-printer:copyDebugJniLibsProjectOnly
+> Task :expo:mergeDebugJniLibFolders
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:copyDebugJniLibsProjectOnly
+> Task :expo-asset:mergeDebugJniLibFolders
+> Task :expo-asset:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-asset:copyDebugJniLibsProjectOnly
+> Task :expo-clipboard:mergeDebugJniLibFolders
+> Task :expo-clipboard:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-clipboard:copyDebugJniLibsProjectOnly
+> Task :expo-constants:mergeDebugJniLibFolders
+
+> Task :react-native-screens:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/RNScreensPackage.kt:42:47 'constructor ReactModuleInfo(String!, String!, Boolean, Boolean, Boolean, Boolean, Boolean)' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenContainer.kt:30:53 'FrameCallback' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenContainer.kt:30:98 'FrameCallback' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:65:27 'setter for targetElevation: Float' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:128:27 'setter for targetElevation: Float' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt:86:34 'getter for systemWindowInsetTop: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt:231:37 'setColorFilter(Int, PorterDuff.Mode): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenViewManager.kt:47:42 'setStateWrapper(StateWrapper!): Unit' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:55:53 'getter for statusBarColor: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:66:48 'getter for statusBarColor: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:69:32 'setter for statusBarColor: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:135:47 'replaceSystemWindowInsets(Int, Int, Int, Int): WindowInsetsCompat' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:136:51 'getter for systemWindowInsetLeft: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:138:51 'getter for systemWindowInsetRight: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:139:51 'getter for systemWindowInsetBottom: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:179:72 'getter for navigationBarColor: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:185:16 'setter for navigationBarColor: Int' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/SearchBarManager.kt:100:22 Parameter 'view' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/SearchBarManager.kt:100:43 Parameter 'placeholder' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/SearchBarView.kt:147:43 Parameter 'flag' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/events/HeaderHeightChangeEvent.kt:6:44 'RCTEventEmitter' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/paper/java/com/swmansion/rnscreens/FabricEnabledViewGroup.kt:5:37 'FabricViewStateManager' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/paper/java/com/swmansion/rnscreens/FabricEnabledViewGroup.kt:9:48 'FabricViewStateManager' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/paper/java/com/swmansion/rnscreens/FabricEnabledViewGroup.kt:11:42 Parameter 'width' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/paper/java/com/swmansion/rnscreens/FabricEnabledViewGroup.kt:11:54 Parameter 'height' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-screens/android/src/paper/java/com/swmansion/rnscreens/FabricEnabledViewGroup.kt:11:67 Parameter 'headerHeight' is never used
+
+> Task :react-native-safe-area-context:compileDebugJavaWithJavac
+
+> Task :react-native-gesture-handler:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/RNGestureHandlerPackage.kt:69:42 'constructor ReactModuleInfo(String!, String!, Boolean, Boolean, Boolean, Boolean, Boolean)' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/FlingGestureHandler.kt:25:26 Parameter 'event' is never used
+
+> Task :react-native-safe-area-context:compileDebugJavaWithJavac
+
+> Task :react-native-gesture-handler:compileDebugJavaWithJavac
+
+> Task :expo-modules-core:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt:20:26 'Promise' is deprecated. AsyncFunction will crash when called. Use expo.modules.kotlin.Promise instead
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt:63:51 'Promise' is deprecated. AsyncFunction will crash when called. Use expo.modules.kotlin.Promise instead
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt:90:54 'Promise' is deprecated. AsyncFunction will crash when called. Use expo.modules.kotlin.Promise instead
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/defaultmodules/CoreModule.kt:6:34 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/defaultmodules/CoreModule.kt:70:12 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/events/KModuleEventEmitterWrapper.kt:97:7 'constructor Event<T : Event<(raw) Event<*>>!>(Int)' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-modules-core@1.12.26/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/types/JSTypeConverterHelper.kt:44:17 'get(String!): Any?' is deprecated. Deprecated in Java
+
+> Task :react-native-safe-area-context:bundleLibCompileToJarDebug
+> Task :react-native-gesture-handler:bundleLibCompileToJarDebug
+
+> Task :react-native-screens:compileDebugJavaWithJavac
+
+> Task :expo-modules-core:compileDebugJavaWithJavac
+
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarDebug
+> Task :react-native-screens:bundleLibRuntimeToJarDebug
+> Task :react-native-screens:bundleLibCompileToJarDebug
+> Task :expo-modules-core:processDebugJavaRes
+> Task :react-native-gesture-handler:processDebugJavaRes
+> Task :react-native-safe-area-context:processDebugJavaRes
+> Task :react-native-gesture-handler:bundleLibRuntimeToJarDebug
+> Task :react-native-screens:processDebugJavaRes
+> Task :expo-modules-core:bundleLibCompileToJarDebug
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug
+> Task :app:mergeExtDexDebug
+> Task :expo-constants:compileDebugKotlin
+> Task :expo-keep-awake:compileDebugKotlin
+> Task :expo-linear-gradient:compileDebugKotlin
+> Task :expo-font:compileDebugKotlin
+> Task :expo-asset:compileDebugKotlin
+> Task :expo-clipboard:compileDebugKotlin
+> Task :expo-constants:compileDebugJavaWithJavac
+> Task :expo-file-system:compileDebugKotlin
+> Task :expo-asset:compileDebugJavaWithJavac
+> Task :expo-asset:bundleLibCompileToJarDebug
+> Task :expo-clipboard:compileDebugJavaWithJavac
+> Task :expo-constants:bundleLibCompileToJarDebug
+> Task :expo-clipboard:bundleLibCompileToJarDebug
+> Task :expo-file-system:compileDebugJavaWithJavac
+> Task :expo-file-system:bundleLibCompileToJarDebug
+> Task :expo-font:compileDebugJavaWithJavac
+> Task :expo-font:bundleLibCompileToJarDebug
+> Task :expo-keep-awake:compileDebugJavaWithJavac
+> Task :expo-keep-awake:bundleLibCompileToJarDebug
+> Task :expo-linear-gradient:compileDebugJavaWithJavac
+> Task :expo-linear-gradient:bundleLibCompileToJarDebug
+> Task :expo-asset:bundleLibRuntimeToJarDebug
+> Task :expo-constants:bundleLibRuntimeToJarDebug
+> Task :expo-font:bundleLibRuntimeToJarDebug
+> Task :expo-keep-awake:bundleLibRuntimeToJarDebug
+> Task :expo-linear-gradient:bundleLibRuntimeToJarDebug
+> Task :expo-clipboard:bundleLibRuntimeToJarDebug
+> Task :expo-file-system:bundleLibRuntimeToJarDebug
+> Task :expo-asset:processDebugJavaRes
+> Task :expo-clipboard:processDebugJavaRes
+> Task :expo-constants:processDebugJavaRes
+> Task :expo-file-system:processDebugJavaRes
+> Task :expo-font:processDebugJavaRes
+> Task :expo-keep-awake:processDebugJavaRes
+> Task :expo-linear-gradient:processDebugJavaRes
+> Task :expo-constants:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-constants:copyDebugJniLibsProjectOnly
+> Task :expo-file-system:mergeDebugJniLibFolders
+> Task :expo-file-system:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-file-system:copyDebugJniLibsProjectOnly
+> Task :expo-font:mergeDebugJniLibFolders
+> Task :expo-font:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-font:copyDebugJniLibsProjectOnly
+> Task :expo-keep-awake:mergeDebugJniLibFolders
+> Task :expo-keep-awake:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-keep-awake:copyDebugJniLibsProjectOnly
+> Task :expo-linear-gradient:mergeDebugJniLibFolders
+> Task :expo-linear-gradient:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-linear-gradient:copyDebugJniLibsProjectOnly
+
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+Warning: Observed package id 'build-tools;34.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0')
+Warning: Observed package id 'build-tools;35.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0')
+Warning: Observed package id 'build-tools;34.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0')
+Warning: Observed package id 'build-tools;35.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0')
+
+> Task :expo-system-ui:compileDebugKotlin
+
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+Checking the license for package CMake 3.22.1 in C:\Users\ABCD\AppData\Local\Android\Sdk\licenses
+License for package CMake 3.22.1 accepted.
+Preparing "Install CMake 3.22.1 v.3.22.1".
+
+> Task :expo-sqlite:compileDebugKotlin
+
+> Task :expo-secure-store:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-secure-store@13.0.2_ex_c22886db7ec2bf03ece5d59c7899b2c8/node_modules/expo-secure-store/android/src/main/java/expo/modules/securestore/SecureStoreModule.kt:5:27 'PreferenceManager' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-secure-store@13.0.2_ex_c22886db7ec2bf03ece5d59c7899b2c8/node_modules/expo-secure-store/android/src/main/java/expo/modules/securestore/SecureStoreModule.kt:110:9 Variable 'legacyReadFailedWarning' is never used
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-secure-store@13.0.2_ex_c22886db7ec2bf03ece5d59c7899b2c8/node_modules/expo-secure-store/android/src/main/java/expo/modules/securestore/SecureStoreModule.kt:247:23 'PreferenceManager' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-secure-store@13.0.2_ex_c22886db7ec2bf03ece5d59c7899b2c8/node_modules/expo-secure-store/android/src/main/java/expo/modules/securestore/SecureStoreModule.kt:247:41 'getDefaultSharedPreferences(Context!): SharedPreferences!' is deprecated. Deprecated in Java
+
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+"Install CMake 3.22.1 v.3.22.1" ready.
+Installing CMake 3.22.1 in C:\Users\ABCD\AppData\Local\Android\Sdk\cmake\3.22.1
+"Install CMake 3.22.1 v.3.22.1" complete.
+"Install CMake 3.22.1 v.3.22.1" finished.
+Warning: Observed package id 'build-tools;34.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0')
+Warning: Observed package id 'build-tools;35.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0')
+
+> Task :expo-secure-store:compileDebugJavaWithJavac
+> Task :expo-secure-store:bundleLibCompileToJarDebug
+> Task :expo-sqlite:compileDebugJavaWithJavac
+> Task :expo-sqlite:bundleLibCompileToJarDebug
+> Task :expo-system-ui:compileDebugJavaWithJavac
+> Task :expo-system-ui:bundleLibCompileToJarDebug
+> Task :expo-secure-store:processDebugJavaRes
+> Task :expo-system-ui:bundleLibRuntimeToJarDebug
+> Task :expo-secure-store:bundleLibRuntimeToJarDebug
+> Task :expo-sqlite:processDebugJavaRes
+> Task :expo-sqlite:bundleLibRuntimeToJarDebug
+> Task :expo-system-ui:processDebugJavaRes
+
+> Task :expo:compileDebugKotlin
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:20:34 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:153:11 'ReactFeatureFlags' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:161:34 'constructor ReactDelegate(Activity!, ReactNativeHost!, String?, Bundle?)' is deprecated. Deprecated in Java
+w: file:///C:/Users/ABCD/OneDrive/Documentos/BizPro/apps/mobile/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:231:10 'ReactFeatureFlags' is deprecated. Deprecated in Java
+
+> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+> Task :expo:compileDebugJavaWithJavac
+> Task :expo:bundleLibCompileToJarDebug
+> Task :expo:bundleLibRuntimeToJarDebug
+> Task :expo:processDebugJavaRes
+> Task :app:compileDebugKotlin
+> Task :expo-modules-core:configureCMakeDebug[armeabi-v7a]
+> Task :app:compileDebugJavaWithJavac
+> Task :app:dexBuilderDebug
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :expo-modules-core:buildCMakeDebug[armeabi-v7a]
+C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+
+> Task :expo-modules-core:buildCMakeDebug[armeabi-v7a] FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.8/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+381 actionable tasks: 370 executed, 11 up-to-date

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { Model, Types } from "mongoose";
@@ -8,6 +8,8 @@ import { RegisterDto, LoginDto } from "./dto";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(Business.name) private readonly businessModel: Model<BusinessDocument>,
     @InjectModel(Branch.name) private readonly branchModel: Model<BranchDocument>,
@@ -19,73 +21,92 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const exists = await this.businessModel.findOne({ slug: this.slugify(dto.businessName), deletedAt: null }).lean();
-    if (exists) throw new BadRequestException("Business already exists");
+    try {
+      const businessName = dto.businessName.trim();
+      const branchName = dto.branchName.trim();
+      const ownerName = dto.ownerName.trim();
+      const phone = this.normalizePhone(dto.phone);
+      const currency = (dto.currency ?? "KES").trim().toUpperCase();
+      const businessExternalId = dto.businessId?.trim() || null;
+      const slug = this.slugify(businessName);
 
-    const business = await this.businessModel.create({
-      externalId: dto.businessId ?? null,
-      name: dto.businessName,
-      slug: this.slugify(dto.businessName),
-      businessType: dto.businessType,
-      currency: dto.currency ?? "KES",
-      planTier: dto.planTier,
-      billingStatus: "trial",
-      graceEndsAt: null,
-      deletedAt: null
-    });
-    const effectiveBusinessId = business.externalId ?? business._id.toString();
-    const branch = await this.branchModel.create({
-      businessId: effectiveBusinessId,
-      name: dto.branchName,
-      code: "MAIN",
-      isDefault: true,
-      deletedAt: null
-    });
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-    const pinHash = dto.cashierPin ? await bcrypt.hash(dto.cashierPin, 10) : null;
-    const owner = await this.userModel.create({
-      businessId: effectiveBusinessId,
-      branchId: branch._id.toString(),
-      fullName: dto.ownerName,
-      phone: dto.phone,
-      passwordHash,
-      pinHash,
-      role: "owner",
-      isActive: true,
-      deletedAt: null
-    });
-    await this.deviceModel.create({
-      businessId: effectiveBusinessId,
-      deviceName: "Owner setup",
-      platform: "android",
-      trusted: true,
-      lastSeenAt: new Date(),
-      deletedAt: null
-    });
-    await this.ensureSubscriptionPlan(dto.planTier);
-    await this.subscriptionModel.create({
-      businessId: effectiveBusinessId,
-      planCode: dto.planTier,
-      status: "trial",
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-      expiresAt: null,
-      graceEndsAt: null
+      const exists = await this.businessModel.findOne({ slug, deletedAt: null }).lean();
+      if (exists) throw new BadRequestException("Business already exists");
+      if (!phone) throw new BadRequestException("Phone is required");
+
+      const business = await this.businessModel.create({
+        externalId: businessExternalId,
+        name: businessName,
+        slug,
+        businessType: dto.businessType,
+        currency,
+        planTier: dto.planTier,
+        billingStatus: "trial",
+        graceEndsAt: null,
+        deletedAt: null
       });
-    return this.issueToken(owner, business, effectiveBusinessId);
+      const effectiveBusinessId = business.externalId ?? business._id.toString();
+      const branch = await this.branchModel.create({
+        businessId: effectiveBusinessId,
+        name: branchName,
+        code: "MAIN",
+        isDefault: true,
+        deletedAt: null
+      });
+      const passwordHash = await bcrypt.hash(dto.password, 10);
+      const pin = dto.cashierPin?.trim() || null;
+      const pinHash = pin ? await bcrypt.hash(pin, 10) : null;
+      const owner = await this.userModel.create({
+        businessId: effectiveBusinessId,
+        branchId: branch._id.toString(),
+        fullName: ownerName,
+        phone,
+        passwordHash,
+        pinHash,
+        role: "owner",
+        isActive: true,
+        deletedAt: null
+      });
+      await this.deviceModel.create({
+        businessId: effectiveBusinessId,
+        deviceName: "Owner setup",
+        platform: "android",
+        trusted: true,
+        lastSeenAt: new Date(),
+        deletedAt: null
+      });
+      await this.ensureSubscriptionPlan(dto.planTier);
+      await this.subscriptionModel.create({
+        businessId: effectiveBusinessId,
+        planCode: dto.planTier,
+        status: "trial",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        expiresAt: null,
+        graceEndsAt: null
+      });
+      return this.issueToken(owner, business, effectiveBusinessId);
+    } catch (error) {
+      this.logger.error("Auth register failed", error instanceof Error ? error.stack : undefined);
+      throw error;
+    }
   }
 
   async login(dto: LoginDto) {
-    const user = await this.userModel.findOne({
-      deletedAt: null,
-      $or: [{ phone: dto.identifier }, { fullName: dto.identifier }]
-    });
-    if (!user || !user.isActive) throw new UnauthorizedException("Invalid credentials");
-    const matchesPassword = user.passwordHash ? await bcrypt.compare(dto.passwordOrPin, user.passwordHash) : false;
-    const matchesPin = user.pinHash ? await bcrypt.compare(dto.passwordOrPin, user.pinHash) : false;
-    if (!matchesPassword && !matchesPin) throw new UnauthorizedException("Invalid credentials");
-    const business = await this.findBusiness(user.businessId);
-    if (!business || business.deletedAt) throw new UnauthorizedException("Business not found");
-    return this.issueToken(user, business, user.businessId);
+    try {
+      const identifier = dto.identifier.trim();
+      const businessId = dto.businessId?.trim() || null;
+      const user = await this.findUser(identifier, businessId);
+      if (!user || !user.isActive) throw new UnauthorizedException("Invalid credentials");
+      const matchesPassword = user.passwordHash ? await bcrypt.compare(dto.passwordOrPin, user.passwordHash) : false;
+      const matchesPin = user.pinHash ? await bcrypt.compare(dto.passwordOrPin, user.pinHash) : false;
+      if (!matchesPassword && !matchesPin) throw new UnauthorizedException("Invalid credentials");
+      const business = await this.findBusiness(user.businessId);
+      if (!business || business.deletedAt) throw new UnauthorizedException("Business not found");
+      return this.issueToken(user, business, user.businessId);
+    } catch (error) {
+      this.logger.error("Auth login failed", error instanceof Error ? error.stack : undefined);
+      throw error;
+    }
   }
 
   async me(userId: string) {
@@ -137,7 +158,7 @@ export class AuthService {
   }
 
   private slugify(value: string) {
-    return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   }
 
   private async ensureSubscriptionPlan(planCode: string) {
@@ -149,5 +170,24 @@ export class AuthService {
       monthlyPrice: planCode === "lite" ? 300 : planCode === "standard" ? 600 : 1000,
       active: true
     });
+  }
+
+  private normalizePhone(value: string) {
+    return value.replace(/[^\d+]/g, "").trim();
+  }
+
+  private async findUser(identifier: string, businessId?: string | null) {
+    const trimmed = identifier.trim();
+    const phone = this.normalizePhone(trimmed);
+    const businessFilter = businessId ? { businessId } : {};
+
+    if (phone) {
+      const byPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phone }).lean();
+      if (byPhone) return byPhone;
+    }
+
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const fullName = new RegExp(`^${escaped}$`, "i");
+    return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).lean();
   }
 }

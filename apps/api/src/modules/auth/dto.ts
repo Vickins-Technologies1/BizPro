@@ -52,6 +52,10 @@ export class LoginDto {
   passwordOrPin!: string;
 
   @IsOptional()
+  @IsString()
+  businessId?: string;
+
+  @IsOptional()
   @IsIn(["owner", "manager", "cashier"])
   role?: UserRole;
 }

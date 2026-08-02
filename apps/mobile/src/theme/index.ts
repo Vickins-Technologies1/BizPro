@@ -1,9 +1,35 @@
-import { tokens } from "./tokens";
+import React from "react";
+import { useAppStore } from "@/store/useAppStore";
+import { setThemeTokens, tokens, type ThemeMode } from "./tokens";
 
 export const appTheme = {
-  tokens,
-  colors: tokens.colors,
-  spacing: tokens.spacing,
-  radii: tokens.radii,
-  typography: tokens.typography
+  get tokens() {
+    return tokens;
+  },
+  get colors() {
+    return tokens.colors;
+  },
+  get spacing() {
+    return tokens.spacing;
+  },
+  get radii() {
+    return tokens.radii;
+  },
+  get typography() {
+    return tokens.typography;
+  }
 } as const;
+
+export function useThemeMode() {
+  return useAppStore((state) => state.themeMode);
+}
+
+export function useThemeTokens() {
+  const themeMode = useThemeMode();
+  React.useEffect(() => {
+    setThemeTokens(themeMode);
+  }, [themeMode]);
+  return tokens;
+}
+
+export type { ThemeMode };

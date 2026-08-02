@@ -1,0 +1,1824 @@
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':expo-sqlite:buildCMakeDebug[arm64-v8a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678\node_modules\expo-sqlite\android\.cxx\Debug\3x4w6039\arm64-v8a'
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  [0/1] Re-running CMake...
+  -- Configuring done
+  -- Generating done
+  -- Build files have been written to: C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\node_modules\\.pnpm\\expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678\\node_modules\\expo-sqlite\\android\\.cxx\\Debug\\3x4w6039\\arm64-v8a" ^
+        expo-sqlite
+    from C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678\node_modules\expo-sqlite\android
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeStatementBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  CMake Warning in CMakeLists.txt:
+    The object file directory
+  
+      C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+  
+    has 213 characters.  The maximum full path to an object file is 250
+    characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+  
+      src/main/cpp/NativeDatabaseBinding.cpp.o
+  
+    cannot be safely placed under this directory.  The build may not work
+    correctly.
+  
+  
+  ninja: error: manifest 'build.ninja' still dirty after 100 tries
+  
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 7m 9s

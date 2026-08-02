@@ -1,0 +1,13 @@
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Included build X:\node_modules\.pnpm\@react-native+gradle-plugin@0.74.87\node_modules\@react-native\gradle-plugin has build path :gradle-plugin which is the same as included build C:\Users\ABCD\OneDrive\Documentos\BizPro\node_modules\.pnpm\@react-native+gradle-plugin@0.74.87\node_modules\@react-native\gradle-plugin
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 41s

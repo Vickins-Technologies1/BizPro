@@ -1,5 +1,5 @@
 import React from "react";
-import { NavigationContainer, DarkTheme } from "@react-navigation/native";
+import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,8 +15,10 @@ import { ExpensesScreen } from "@/screens/ExpensesScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { OnboardingScreen } from "@/screens/OnboardingScreen";
+import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
 
 type RootStackParamList = {
+  Launchpad: undefined;
   Main: undefined;
   Expenses: undefined;
   Reports: undefined;
@@ -67,9 +69,11 @@ function TabNavigator() {
 
 function AuthNavigator() {
   const business = useAppStore((state) => state.business);
+  const initialRouteName = business ? "Login" : "Onboarding";
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      {business ? <AuthStack.Screen name="Login" component={LoginScreen} /> : <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />}
+    <AuthStack.Navigator key={initialRouteName} initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
+      <AuthStack.Screen name="Login" component={LoginScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -77,24 +81,28 @@ function AuthNavigator() {
 export function RootNavigator() {
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const themeMode = useAppStore((state) => state.themeMode);
+  const navigationTheme = React.useMemo(
+    () => ({
+      ...(themeMode === "dark" ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(themeMode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
+        background: tokens.colors.background,
+        card: tokens.colors.surface,
+        border: tokens.colors.border,
+        text: tokens.colors.text,
+        primary: tokens.colors.primaryStrong,
+        notification: tokens.colors.warning
+      }
+    }),
+    [themeMode]
+  );
 
   return (
-    <NavigationContainer
-      theme={{
-        ...DarkTheme,
-        colors: {
-          ...DarkTheme.colors,
-          background: tokens.colors.background,
-          card: tokens.colors.surface,
-          border: tokens.colors.border,
-          text: tokens.colors.text,
-          primary: tokens.colors.primaryStrong,
-          notification: tokens.colors.warning
-        }
-      }}
-    >
+    <NavigationContainer theme={navigationTheme}>
       {business && user ? (
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Navigator initialRouteName="Launchpad" screenOptions={{ headerShown: false }}>
+          <RootStack.Screen name="Launchpad" component={RoleLaunchpadScreen} />
           <RootStack.Screen name="Main" component={TabNavigator} />
           <RootStack.Screen name="ProductDetail" component={ProductDetailScreen} />
           <RootStack.Screen name="Expenses" component={ExpensesScreen} />

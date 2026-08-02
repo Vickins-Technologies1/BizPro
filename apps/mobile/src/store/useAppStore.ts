@@ -1,6 +1,7 @@
 import { create } from "zustand";
+import bcrypt from "bcryptjs";
 import type { Business, Customer, Product, Sale, Expense, DailySummary, Category, Payment } from "@shared";
-import { initializeDatabase, oneSql, runSql, allSql } from "@/storage/sqlite";
+import { initializeDatabase, oneSql, runSql, allSql, withTransaction } from "@/storage/sqlite";
 import { secureStore } from "@/storage/secure";
 import { createId, createEventId } from "@/utils/id";
 import { nowIso, dateKey } from "@/utils/date";
@@ -14,6 +15,7 @@ import { businessSetupSchema, loginSchema } from "@shared";
 import { buildReceiptText } from "@/services/receiptService";
 import { env } from "@/config/env";
 import { remoteLogin, remoteRegister } from "@/services/remoteAuth";
+import { setThemeTokens, type ThemeMode } from "@/theme/tokens";
 
 const categoryRepository = new CategoryRepository();
 const productRepository = new ProductRepository();
@@ -22,6 +24,7 @@ const expenseRepository = new ExpenseRepository();
 const paymentRepository = new PaymentRepository();
 const stockMovementRepository = new StockMovementRepository();
 const syncService = new SyncService();
+let syncInFlight: Promise<void> | null = null;
 
 export interface DashboardSummary extends DailySummary {
   topProducts: Array<{ productId: string; productName: string; quantity: number; total: number }>;
@@ -31,6 +34,7 @@ interface AppState {
   ready: boolean;
   loading: boolean;
   authLoading: boolean;
+  themeMode: ThemeMode;
   business: Business | null;
   user: { id: string; fullName: string; role: string; businessId?: string } | null;
   deviceId: string;
@@ -47,6 +51,7 @@ interface AppState {
   completeOnboarding: (input: unknown) => Promise<void>;
   login: (input: unknown) => Promise<void>;
   logout: () => Promise<void>;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
   loadDashboard: () => Promise<void>;
   loadCatalog: () => Promise<void>;
   addCategory: (input: Omit<Category, "id" | "createdAt" | "updatedAt" | "deletedAt">) => Promise<void>;
@@ -75,6 +80,41 @@ type StoredSession = {
   accessToken?: string | null;
 };
 
+type StoredUserRow = {
+  id: string;
+  businessId: string;
+  fullName: string;
+  phone?: string | null;
+  passwordHash?: string | null;
+  pinHash?: string | null;
+  role: string;
+  isActive: number | boolean;
+};
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/[^\d+]/g, "").trim();
+}
+
+function slugify(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function normalizeSetupValue(value: string) {
+  return value.trim();
+}
+
+function matchesIdentifier(user: Pick<StoredUserRow, "fullName" | "phone">, identifier: string) {
+  const normalizedIdentifier = normalizeText(identifier);
+  const normalizedPhone = normalizePhone(identifier);
+  const userPhone = user.phone ? normalizePhone(user.phone) : "";
+
+  return normalizeText(user.fullName) === normalizedIdentifier || (!!userPhone && userPhone === normalizedPhone);
+}
+
 async function ensureBusiness() {
   const row = await oneSql<Business>("SELECT * FROM businesses WHERE deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1");
   return row ?? null;
@@ -89,6 +129,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ready: false,
   loading: false,
   authLoading: true,
+  themeMode: "light",
   business: null,
   user: null,
   deviceId: "",
@@ -105,7 +146,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await initializeDatabase();
+      const storedThemeMode = await secureStore.getThemeMode();
+      const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : "light";
+      if (!storedThemeMode) {
+        await secureStore.setThemeMode(themeMode);
+      }
+      setThemeTokens(themeMode);
       const existingBusiness = await ensureBusiness();
+      if (!storedThemeMode && existingBusiness) {
+        await runSql("UPDATE app_settings SET themeMode = ?, updatedAt = ? WHERE businessId = ?", [
+          themeMode,
+          nowIso(),
+          existingBusiness.id
+        ]);
+      }
       const session = await ensureSession();
       let deviceId = await secureStore.getDeviceId();
       if (!deviceId) {
@@ -114,6 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (existingBusiness) {
         set({
+          themeMode,
           business: existingBusiness,
           user: session?.user ?? null,
           deviceId,
@@ -124,7 +179,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         await get().loadCatalog();
         await get().refreshPendingSync();
       } else {
-        set({ business: null, user: null, deviceId, ready: true, authLoading: false });
+        set({ themeMode, business: null, user: null, deviceId, ready: true, authLoading: false });
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Failed to initialize app", authLoading: false });
@@ -136,14 +191,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     const parsed = businessSetupSchema.parse(input);
     set({ loading: true, error: null });
     try {
+      const ownerName = normalizeSetupValue(parsed.ownerName);
+      const phone = normalizePhone(parsed.phone);
+      const businessName = normalizeSetupValue(parsed.businessName);
+      const branchName = normalizeSetupValue(parsed.branchName);
+      const currency = normalizeSetupValue(parsed.currency).toUpperCase();
+      const passwordHash = await bcrypt.hash(parsed.password, 10);
+      const pin = normalizeSetupValue(parsed.cashierPin ?? "");
+      const pinHash = pin ? await bcrypt.hash(pin, 10) : null;
       const branchId = createId();
       const ownerUserId = createId();
       const business: Business = {
         id: createId(),
-        name: parsed.businessName,
-        slug: parsed.businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        name: businessName,
+        slug: slugify(businessName),
         businessType: parsed.businessType,
-        currency: parsed.currency,
+        currency,
         planTier: parsed.planTier,
         billingStatus: "trial",
         graceEndsAt: null,
@@ -152,125 +215,156 @@ export const useAppStore = create<AppState>((set, get) => ({
         deletedAt: null
       };
       await initializeDatabase();
-      await runSql("INSERT INTO businesses (id, name, slug, businessType, currency, planTier, billingStatus, graceEndsAt, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-        business.id,
-        business.name,
-        business.slug,
-        business.businessType,
-        business.currency,
-        business.planTier,
-        business.billingStatus,
-        null,
-        business.createdAt,
-        business.updatedAt,
-        null
-      ]);
-      await runSql("INSERT INTO branches (id, businessId, name, code, isDefault, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
-        branchId,
-        business.id,
-        parsed.branchName,
-        "MAIN",
-        1,
-        nowIso(),
-        nowIso(),
-        null
-      ]);
-      await runSql("INSERT INTO users (id, businessId, fullName, phone, passwordHash, pinHash, role, isActive, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-        ownerUserId,
-        business.id,
-        parsed.ownerName,
-        parsed.phone,
-        await import("bcryptjs").then(({ default: bcrypt }) => bcrypt.hash(parsed.password, 10)),
-        parsed.cashierPin ? await import("bcryptjs").then(({ default: bcrypt }) => bcrypt.hash(parsed.cashierPin!, 10)) : null,
-        "owner",
-        1,
-        nowIso(),
-        nowIso(),
-        null
-      ]);
-      await runSql("INSERT INTO app_settings (id, businessId, deviceId, currency, lastSyncAt, themeMode, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
-        createId(),
-        business.id,
-        get().deviceId,
-        business.currency,
-        null,
-        "dark",
-        nowIso(),
-        nowIso()
-      ]);
-      await seedDemoData(business.id);
-      const stored = await ensureBusiness();
-      let session: StoredSession = { user: { id: ownerUserId, fullName: parsed.ownerName, role: "owner", businessId: business.id } };
+      await withTransaction(async (db) => {
+        await db.runAsync(
+          "INSERT INTO businesses (id, name, slug, businessType, currency, planTier, billingStatus, graceEndsAt, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            business.id,
+            business.name,
+            business.slug,
+            business.businessType,
+            business.currency,
+            business.planTier,
+            business.billingStatus,
+            null,
+            business.createdAt,
+            business.updatedAt,
+            null
+          ]
+        );
+        await db.runAsync("INSERT INTO branches (id, businessId, name, code, isDefault, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+          branchId,
+          business.id,
+          branchName,
+          "MAIN",
+          1,
+          nowIso(),
+          nowIso(),
+          null
+        ]);
+        await db.runAsync(
+          "INSERT INTO users (id, businessId, fullName, phone, passwordHash, pinHash, role, isActive, createdAt, updatedAt, deletedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [ownerUserId, business.id, ownerName, phone, passwordHash, pinHash, "owner", 1, nowIso(), nowIso(), null]
+        );
+        await db.runAsync("INSERT INTO app_settings (id, businessId, deviceId, currency, lastSyncAt, themeMode, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+          createId(),
+          business.id,
+          get().deviceId,
+          currency,
+          null,
+          get().themeMode,
+          nowIso(),
+          nowIso()
+        ]);
+      });
+
       try {
-        const remote = await remoteRegister({
+        await seedDemoData(business.id);
+      } catch (seedError) {
+        console.warn("[auth] Demo data seeding failed after onboarding", seedError);
+      }
+
+      try {
+        await remoteRegister({
           businessId: business.id,
           branchId,
           ownerUserId,
-          ownerName: parsed.ownerName,
-          phone: parsed.phone,
+          ownerName,
+          phone,
           password: parsed.password,
-          businessName: parsed.businessName,
+          businessName,
           businessType: parsed.businessType,
           planTier: parsed.planTier,
-          currency: parsed.currency,
-          branchName: parsed.branchName,
-          cashierPin: parsed.cashierPin || null
+          currency,
+          branchName,
+          cashierPin: pin || null
         });
-        session = {
-          user: {
-            id: remote.user.id,
-            fullName: remote.user.fullName,
-            role: remote.user.role,
-            businessId: remote.user.businessId
-          },
-          accessToken: remote.accessToken
-        };
-      } catch {
-        session = { user: { id: ownerUserId, fullName: parsed.ownerName, role: "owner", businessId: business.id } };
+      } catch (remoteError) {
+        console.warn("[auth] Remote register failed after local onboarding", remoteError);
       }
-      set({ business: stored, user: session.user });
+
+      const session: StoredSession = {
+        user: {
+          id: ownerUserId,
+          fullName: ownerName,
+          role: "owner",
+          businessId: business.id
+        }
+      };
       await secureStore.setSession(JSON.stringify(session));
-      await get().loadDashboard();
-      await get().loadCatalog();
-      await get().refreshPendingSync();
+      set({ business, user: session.user, error: null });
+      await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : "Failed to complete onboarding" });
+      const message = error instanceof Error ? error.message : "Failed to complete onboarding";
+      set({ error: message });
+      throw error instanceof Error ? error : new Error(message);
     } finally {
       set({ loading: false });
     }
   },
   login: async (input) => {
     const parsed = loginSchema.parse(input);
-    const business = await ensureBusiness();
-    if (!business) throw new Error("No business setup found");
     set({ authLoading: true, error: null });
     try {
-      const user = await oneSql<{ id: string; fullName: string; role: string; passwordHash?: string; pinHash?: string }>(
-        "SELECT id, fullName, role, passwordHash, pinHash FROM users WHERE businessId = ? AND (phone = ? OR fullName = ?) AND deletedAt IS NULL LIMIT 1",
-        [business.id, parsed.identifier, parsed.identifier]
+      const business = get().business ?? (await ensureBusiness());
+      if (!business) throw new Error("No business configured");
+
+      const normalizedIdentifier = parsed.identifier.trim();
+      const users = await allSql<StoredUserRow>(
+        "SELECT id, businessId, fullName, phone, passwordHash, pinHash, role, isActive FROM users WHERE deletedAt IS NULL AND businessId = ?",
+        [business.id]
       );
-      if (!user) throw new Error("Invalid credentials");
-      const bcrypt = await import("bcryptjs").then((m) => m.default);
-      const matchesPassword = user.passwordHash ? await bcrypt.compare(parsed.passwordOrPin, user.passwordHash) : false;
-      const matchesPin = user.pinHash ? await bcrypt.compare(parsed.passwordOrPin, user.pinHash) : false;
-      if (!matchesPassword && !matchesPin) throw new Error("Invalid credentials");
-      let session: StoredSession = { user: { id: user.id, fullName: user.fullName, role: user.role, businessId: business.id } };
-      try {
-        const remote = await remoteLogin({ identifier: parsed.identifier, passwordOrPin: parsed.passwordOrPin });
-        session = {
-          user: {
-            id: remote.user.id,
-            fullName: remote.user.fullName,
-            role: remote.user.role,
-            businessId: remote.user.businessId
-          },
-          accessToken: remote.accessToken
-        };
-      } catch {
-        session = { user: { id: user.id, fullName: user.fullName, role: user.role, businessId: business.id } };
+      const localUser = users.find((candidate) => candidate.isActive && matchesIdentifier(candidate, normalizedIdentifier));
+
+      let session: StoredSession | null = null;
+      if (localUser) {
+        const matchesPassword = localUser.passwordHash ? await bcrypt.compare(parsed.passwordOrPin, localUser.passwordHash) : false;
+        const matchesPin = localUser.pinHash ? await bcrypt.compare(parsed.passwordOrPin, localUser.pinHash) : false;
+        if (matchesPassword || matchesPin) {
+          session = {
+            user: { id: localUser.id, fullName: localUser.fullName, role: localUser.role, businessId: business.id }
+          };
+        }
       }
+
+      if (!session) {
+        try {
+          const remote = await remoteLogin({ identifier: normalizedIdentifier, passwordOrPin: parsed.passwordOrPin, businessId: business.id });
+          session = {
+            user: {
+              id: remote.user.id,
+              fullName: remote.user.fullName,
+              role: remote.user.role,
+              businessId: remote.user.businessId
+            },
+            accessToken: remote.accessToken
+          };
+        } catch (remoteError) {
+          console.error("[auth] Remote login failed", remoteError);
+          throw new Error("Invalid credentials");
+        }
+      } else {
+        try {
+          const remote = await remoteLogin({ identifier: normalizedIdentifier, passwordOrPin: parsed.passwordOrPin, businessId: business.id });
+          session = {
+            user: {
+              id: remote.user.id,
+              fullName: remote.user.fullName,
+              role: remote.user.role,
+              businessId: remote.user.businessId
+            },
+            accessToken: remote.accessToken
+          };
+        } catch (remoteError) {
+          console.warn("[auth] Remote login unavailable, continuing with local session", remoteError);
+        }
+      }
+
+      if (!session) throw new Error("Invalid credentials");
+
       await secureStore.setSession(JSON.stringify(session));
-      set({ user: session.user, business });
+      set({ user: session.user, business, error: null });
+      await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
     } finally {
       set({ authLoading: false });
     }
@@ -278,6 +372,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout: async () => {
     await secureStore.clearSession();
     set({ user: null });
+  },
+  setThemeMode: async (mode) => {
+    const themeMode: ThemeMode = mode === "dark" ? "dark" : "light";
+    await secureStore.setThemeMode(themeMode);
+    const business = get().business ?? (await ensureBusiness());
+    if (business) {
+      await runSql("UPDATE app_settings SET themeMode = ?, updatedAt = ? WHERE businessId = ?", [
+        themeMode,
+        nowIso(),
+        business.id
+      ]);
+    }
+    setThemeTokens(themeMode);
+    set({ themeMode });
   },
   loadDashboard: async () => {
     const business = get().business ?? (await ensureBusiness());
@@ -577,22 +685,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { sale: saleWithItems, receipt };
   },
   syncNow: async () => {
+    if (syncInFlight) {
+      return syncInFlight;
+    }
     const business = get().business;
     if (!business) return;
     set({ syncMessage: "Syncing..." });
+    syncInFlight = (async () => {
+      try {
+        const deviceId = get().deviceId;
+        const endpoint = env.apiUrl;
+        const session = await ensureSession();
+        const token = session?.accessToken ?? null;
+        const flushResult = await syncService.flush(business.id, deviceId, endpoint, token);
+        if (flushResult.status === "offline") {
+          set({ syncMessage: "Offline. Queued changes will sync when connection returns." });
+          return;
+        }
+        await syncService.pull(business.id, deviceId, endpoint, token);
+        await get().loadCatalog();
+        await get().loadDashboard();
+        set({ syncMessage: "Synced" });
+      } catch (error) {
+        set({ syncMessage: error instanceof Error ? error.message : "Sync failed" });
+      } finally {
+        await get().refreshPendingSync();
+      }
+    })();
     try {
-      const deviceId = get().deviceId;
-      const endpoint = env.apiUrl;
-      const session = await ensureSession();
-      const token = session?.accessToken ?? null;
-      await syncService.flush(business.id, deviceId, endpoint, token);
-      await syncService.pull(business.id, deviceId, endpoint, token);
-      await get().loadCatalog();
-      await get().loadDashboard();
-      await get().refreshPendingSync();
-      set({ syncMessage: "Synced" });
-    } catch (error) {
-      set({ syncMessage: error instanceof Error ? error.message : "Sync failed" });
+      return await syncInFlight;
+    } finally {
+      syncInFlight = null;
     }
   },
   refreshPendingSync: async () => {

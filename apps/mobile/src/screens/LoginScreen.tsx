@@ -2,6 +2,7 @@ import React from "react";
 import { Alert, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigation } from "@react-navigation/native";
 import { loginSchema } from "@shared";
 import { GradientHeader, InputField, PrimaryButton, Screen, Card } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
@@ -11,6 +12,7 @@ import { z } from "zod";
 type FormValues = z.infer<typeof loginSchema>;
 
 export function LoginScreen() {
+  const navigation = useNavigation<any>();
   const authLoading = useAppStore((state) => state.authLoading);
   const login = useAppStore((state) => state.login);
   const { control, handleSubmit } = useForm<FormValues>({
@@ -19,7 +21,7 @@ export function LoginScreen() {
   });
 
   return (
-    <Screen>
+    <Screen hideFooter>
       <GradientHeader title="Welcome back" subtitle="Secure login with owner password or cashier PIN" />
       <View style={{ padding: 16 }}>
         <Card style={{ gap: 14 }}>
@@ -45,6 +47,7 @@ export function LoginScreen() {
               }
             })}
           />
+          <PrimaryButton title="Create account" variant="secondary" onPress={() => navigation.navigate("Onboarding")} />
         </Card>
       </View>
     </Screen>

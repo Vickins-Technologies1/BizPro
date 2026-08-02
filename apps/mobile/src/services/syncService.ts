@@ -23,7 +23,7 @@ export class SyncService {
 
   async flush(businessId: string, deviceId: string, endpoint: string, token?: string | null) {
     const net = await NetInfo.fetch();
-    if (!net.isConnected) {
+    if (!net.isConnected || net.isInternetReachable === false) {
       return { status: "offline" as const, pushed: 0 };
     }
     const pending = await this.syncRepo.pending();

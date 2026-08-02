@@ -1,0 +1,1397 @@
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-asset[0m (10.0.10)
+  - [32mexpo-clipboard[0m (6.0.3)
+  - [32mexpo-constants[0m (16.0.2)
+  - [32mexpo-file-system[0m (17.0.1)
+  - [32mexpo-font[0m (12.0.10)
+  - [32mexpo-keep-awake[0m (13.0.2)
+  - [32mexpo-linear-gradient[0m (13.0.2)
+  - [32mexpo-modules-core[0m (1.12.26)
+  - [32mexpo-secure-store[0m (13.0.2)
+  - [32mexpo-sqlite[0m (14.0.6)
+  - [32mexpo-system-ui[0m (3.0.7)
+
+
+> Configure project :react-native-reanimated
+Android gradle plugin: 8.2.1
+Gradle: 8.8
+WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.2.1) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+Observed package id 'build-tools;34.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\34.0.0')
+Observed package id 'build-tools;35.0.0' in inconsistent location 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0-2' (Expected 'C:\Users\ABCD\AppData\Local\Android\Sdk\build-tools\35.0.0')
+Build properties not found for package Android SDK Platform 34
+WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.2.1) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generatePackageList
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:preBuild UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:preDebugBuild UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:writeDebugAarMetadata UP-TO-DATE
+> Task :expo:generateExpoModulesPackageListTask UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo:preDebugBuild UP-TO-DATE
+> Task :expo:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-asset:preBuild UP-TO-DATE
+> Task :expo-asset:preDebugBuild UP-TO-DATE
+> Task :expo-asset:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-clipboard:preBuild UP-TO-DATE
+> Task :expo-clipboard:preDebugBuild UP-TO-DATE
+> Task :expo-clipboard:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-constants:createExpoConfig UP-TO-DATE
+> Task :expo-constants:preBuild UP-TO-DATE
+> Task :expo-constants:preDebugBuild UP-TO-DATE
+> Task :expo-constants:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-file-system:preBuild UP-TO-DATE
+> Task :expo-file-system:preDebugBuild UP-TO-DATE
+> Task :expo-file-system:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-font:preBuild UP-TO-DATE
+> Task :expo-font:preDebugBuild UP-TO-DATE
+> Task :expo-font:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-keep-awake:preBuild UP-TO-DATE
+> Task :expo-keep-awake:preDebugBuild UP-TO-DATE
+> Task :expo-keep-awake:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-linear-gradient:preBuild UP-TO-DATE
+> Task :expo-linear-gradient:preDebugBuild UP-TO-DATE
+> Task :expo-linear-gradient:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-secure-store:preBuild UP-TO-DATE
+> Task :expo-secure-store:preDebugBuild UP-TO-DATE
+> Task :expo-secure-store:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-sqlite:preBuild UP-TO-DATE
+> Task :expo-sqlite:preDebugBuild UP-TO-DATE
+> Task :expo-sqlite:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-system-ui:preBuild UP-TO-DATE
+> Task :expo-system-ui:preDebugBuild UP-TO-DATE
+> Task :expo-system-ui:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-community_netinfo:preBuild UP-TO-DATE
+> Task :react-native-community_netinfo:preDebugBuild UP-TO-DATE
+> Task :react-native-community_netinfo:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
+> Task :react-native-gesture-handler:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-reanimated:assertLatestReactNativeWithNewArchitectureTask SKIPPED
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask SKIPPED
+> Task :react-native-reanimated:prepareHeadersForPrefab UP-TO-DATE
+> Task :react-native-reanimated:preBuild UP-TO-DATE
+> Task :react-native-reanimated:preDebugBuild UP-TO-DATE
+> Task :react-native-reanimated:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugResValues UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugResources UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:packageDebugResources UP-TO-DATE
+> Task :expo:generateDebugResValues UP-TO-DATE
+> Task :expo:generateDebugResources UP-TO-DATE
+> Task :expo:packageDebugResources UP-TO-DATE
+> Task :expo-asset:generateDebugResValues UP-TO-DATE
+> Task :expo-asset:generateDebugResources UP-TO-DATE
+> Task :expo-asset:packageDebugResources UP-TO-DATE
+> Task :expo-clipboard:generateDebugResValues UP-TO-DATE
+> Task :expo-clipboard:generateDebugResources UP-TO-DATE
+> Task :expo-clipboard:packageDebugResources UP-TO-DATE
+> Task :expo-constants:generateDebugResValues UP-TO-DATE
+> Task :expo-constants:generateDebugResources UP-TO-DATE
+> Task :expo-constants:packageDebugResources UP-TO-DATE
+> Task :expo-file-system:generateDebugResValues UP-TO-DATE
+> Task :expo-file-system:generateDebugResources UP-TO-DATE
+> Task :expo-file-system:packageDebugResources UP-TO-DATE
+> Task :expo-font:generateDebugResValues UP-TO-DATE
+> Task :expo-font:generateDebugResources UP-TO-DATE
+> Task :expo-font:packageDebugResources UP-TO-DATE
+> Task :expo-keep-awake:generateDebugResValues UP-TO-DATE
+> Task :expo-keep-awake:generateDebugResources UP-TO-DATE
+> Task :expo-keep-awake:packageDebugResources UP-TO-DATE
+> Task :expo-linear-gradient:generateDebugResValues UP-TO-DATE
+> Task :expo-linear-gradient:generateDebugResources UP-TO-DATE
+> Task :expo-linear-gradient:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugResValues UP-TO-DATE
+> Task :expo-modules-core:generateDebugResources UP-TO-DATE
+> Task :expo-modules-core:packageDebugResources UP-TO-DATE
+> Task :expo-secure-store:generateDebugResValues UP-TO-DATE
+> Task :expo-secure-store:generateDebugResources UP-TO-DATE
+> Task :expo-secure-store:packageDebugResources UP-TO-DATE
+> Task :expo-sqlite:generateDebugResValues UP-TO-DATE
+> Task :expo-sqlite:generateDebugResources UP-TO-DATE
+> Task :expo-sqlite:packageDebugResources UP-TO-DATE
+> Task :expo-system-ui:generateDebugResValues UP-TO-DATE
+> Task :expo-system-ui:generateDebugResources UP-TO-DATE
+> Task :expo-system-ui:packageDebugResources UP-TO-DATE
+> Task :react-native-community_netinfo:generateDebugResValues UP-TO-DATE
+> Task :react-native-community_netinfo:generateDebugResources UP-TO-DATE
+> Task :react-native-community_netinfo:packageDebugResources UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugResValues UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugResources UP-TO-DATE
+> Task :react-native-gesture-handler:packageDebugResources UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResValues UP-TO-DATE
+> Task :react-native-reanimated:generateDebugResources UP-TO-DATE
+> Task :react-native-reanimated:packageDebugResources UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResValues UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugResources UP-TO-DATE
+> Task :react-native-safe-area-context:packageDebugResources UP-TO-DATE
+> Task :react-native-screens:generateDebugResValues UP-TO-DATE
+> Task :react-native-screens:generateDebugResources UP-TO-DATE
+> Task :react-native-screens:packageDebugResources UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:extractDeepLinksDebug UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:processDebugManifest UP-TO-DATE
+> Task :expo:extractDeepLinksDebug UP-TO-DATE
+> Task :expo:processDebugManifest UP-TO-DATE
+> Task :expo-asset:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-asset:processDebugManifest UP-TO-DATE
+> Task :expo-clipboard:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-clipboard:processDebugManifest UP-TO-DATE
+> Task :expo-constants:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-constants:processDebugManifest UP-TO-DATE
+> Task :expo-file-system:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-file-system:processDebugManifest UP-TO-DATE
+> Task :expo-font:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-font:processDebugManifest UP-TO-DATE
+> Task :expo-keep-awake:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-keep-awake:processDebugManifest UP-TO-DATE
+> Task :expo-linear-gradient:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-linear-gradient:processDebugManifest UP-TO-DATE
+> Task :expo-modules-core:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-modules-core:processDebugManifest UP-TO-DATE
+> Task :expo-secure-store:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-secure-store:processDebugManifest UP-TO-DATE
+> Task :expo-sqlite:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-sqlite:processDebugManifest UP-TO-DATE
+> Task :expo-system-ui:extractDeepLinksDebug UP-TO-DATE
+> Task :expo-system-ui:processDebugManifest UP-TO-DATE
+> Task :react-native-community_netinfo:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-community_netinfo:processDebugManifest UP-TO-DATE
+> Task :react-native-gesture-handler:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-gesture-handler:processDebugManifest UP-TO-DATE
+> Task :react-native-reanimated:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-reanimated:processDebugManifest UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-safe-area-context:processDebugManifest UP-TO-DATE
+> Task :react-native-screens:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-screens:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugLibraryResources UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:parseDebugLocalResources UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugRFile UP-TO-DATE
+> Task :expo:compileDebugLibraryResources UP-TO-DATE
+> Task :expo:parseDebugLocalResources UP-TO-DATE
+> Task :expo:generateDebugRFile UP-TO-DATE
+> Task :expo-asset:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-asset:parseDebugLocalResources UP-TO-DATE
+> Task :expo-asset:generateDebugRFile UP-TO-DATE
+> Task :expo-clipboard:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-clipboard:parseDebugLocalResources UP-TO-DATE
+> Task :expo-clipboard:generateDebugRFile UP-TO-DATE
+> Task :expo-constants:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-constants:parseDebugLocalResources UP-TO-DATE
+> Task :expo-constants:generateDebugRFile UP-TO-DATE
+> Task :expo-file-system:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-file-system:parseDebugLocalResources UP-TO-DATE
+> Task :expo-file-system:generateDebugRFile UP-TO-DATE
+> Task :expo-font:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-font:parseDebugLocalResources UP-TO-DATE
+> Task :expo-font:generateDebugRFile UP-TO-DATE
+> Task :expo-keep-awake:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-keep-awake:parseDebugLocalResources UP-TO-DATE
+> Task :expo-keep-awake:generateDebugRFile UP-TO-DATE
+> Task :expo-linear-gradient:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-linear-gradient:parseDebugLocalResources UP-TO-DATE
+> Task :expo-linear-gradient:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-modules-core:parseDebugLocalResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugRFile UP-TO-DATE
+> Task :expo-secure-store:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-secure-store:parseDebugLocalResources UP-TO-DATE
+> Task :expo-secure-store:generateDebugRFile UP-TO-DATE
+> Task :expo-sqlite:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-sqlite:parseDebugLocalResources UP-TO-DATE
+> Task :expo-sqlite:generateDebugRFile UP-TO-DATE
+> Task :expo-system-ui:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-system-ui:parseDebugLocalResources UP-TO-DATE
+> Task :expo-system-ui:generateDebugRFile UP-TO-DATE
+> Task :react-native-community_netinfo:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-community_netinfo:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-community_netinfo:generateDebugRFile UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-gesture-handler:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-gesture-handler:generateDebugRFile UP-TO-DATE
+> Task :react-native-reanimated:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-reanimated:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-reanimated:generateDebugRFile UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-safe-area-context:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-safe-area-context:generateDebugRFile UP-TO-DATE
+> Task :react-native-screens:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-screens:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-screens:generateDebugRFile UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugBuildConfig UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:javaPreCompileDebug UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugJavaWithJavac UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo:checkKotlinGradlePluginConfigurationErrors
+> Task :expo:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-asset:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-asset:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-modules-core:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:compileDebugKotlin UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileDebug UP-TO-DATE
+> Task :expo-modules-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-asset:compileDebugKotlin UP-TO-DATE
+> Task :expo-asset:javaPreCompileDebug UP-TO-DATE
+> Task :expo-asset:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-asset:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-clipboard:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-clipboard:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-clipboard:compileDebugKotlin UP-TO-DATE
+> Task :expo-clipboard:javaPreCompileDebug UP-TO-DATE
+> Task :expo-clipboard:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-clipboard:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-constants:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-constants:compileDebugKotlin UP-TO-DATE
+> Task :expo-constants:javaPreCompileDebug UP-TO-DATE
+> Task :expo-constants:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-constants:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-file-system:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-file-system:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-file-system:compileDebugKotlin UP-TO-DATE
+> Task :expo-file-system:javaPreCompileDebug UP-TO-DATE
+> Task :expo-file-system:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-file-system:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-font:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-font:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-font:compileDebugKotlin UP-TO-DATE
+> Task :expo-font:javaPreCompileDebug UP-TO-DATE
+> Task :expo-font:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-font:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-keep-awake:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-keep-awake:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-keep-awake:compileDebugKotlin UP-TO-DATE
+> Task :expo-keep-awake:javaPreCompileDebug UP-TO-DATE
+> Task :expo-keep-awake:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-keep-awake:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-linear-gradient:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-linear-gradient:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-linear-gradient:compileDebugKotlin UP-TO-DATE
+> Task :expo-linear-gradient:javaPreCompileDebug UP-TO-DATE
+> Task :expo-linear-gradient:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-linear-gradient:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-secure-store:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-secure-store:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-secure-store:compileDebugKotlin UP-TO-DATE
+> Task :expo-secure-store:javaPreCompileDebug UP-TO-DATE
+> Task :expo-secure-store:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-secure-store:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-sqlite:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-sqlite:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-sqlite:compileDebugKotlin UP-TO-DATE
+> Task :expo-sqlite:javaPreCompileDebug UP-TO-DATE
+> Task :expo-sqlite:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-sqlite:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo-system-ui:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-system-ui:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-system-ui:compileDebugKotlin UP-TO-DATE
+> Task :expo-system-ui:javaPreCompileDebug UP-TO-DATE
+> Task :expo-system-ui:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-system-ui:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :expo:compileDebugKotlin UP-TO-DATE
+> Task :expo:javaPreCompileDebug UP-TO-DATE
+> Task :expo:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-community_netinfo:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-community_netinfo:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-community_netinfo:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-community_netinfo:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-gesture-handler:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-reanimated:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-reanimated:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-reanimated:packageNdkLibs NO-SOURCE
+> Task :react-native-reanimated:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-reanimated:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugKotlin UP-TO-DATE
+> Task :react-native-gesture-handler:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-gesture-handler:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-safe-area-context:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugKotlin UP-TO-DATE
+> Task :react-native-safe-area-context:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors
+> Task :react-native-screens:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-screens:compileDebugKotlin UP-TO-DATE
+> Task :react-native-screens:javaPreCompileDebug UP-TO-DATE
+> Task :react-native-screens:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-screens:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugShaders UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:compileDebugShaders NO-SOURCE
+> Task :brooons_react-native-bluetooth-escpos-printer:generateDebugAssets UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:packageDebugAssets UP-TO-DATE
+> Task :expo:mergeDebugShaders UP-TO-DATE
+> Task :expo:compileDebugShaders NO-SOURCE
+> Task :expo:generateDebugAssets UP-TO-DATE
+> Task :expo:packageDebugAssets UP-TO-DATE
+> Task :expo-asset:mergeDebugShaders UP-TO-DATE
+> Task :expo-asset:compileDebugShaders NO-SOURCE
+> Task :expo-asset:generateDebugAssets UP-TO-DATE
+> Task :expo-asset:packageDebugAssets UP-TO-DATE
+> Task :expo-clipboard:mergeDebugShaders UP-TO-DATE
+> Task :expo-clipboard:compileDebugShaders NO-SOURCE
+> Task :expo-clipboard:generateDebugAssets UP-TO-DATE
+> Task :expo-clipboard:packageDebugAssets UP-TO-DATE
+> Task :expo-constants:mergeDebugShaders UP-TO-DATE
+> Task :expo-constants:compileDebugShaders NO-SOURCE
+> Task :expo-constants:generateDebugAssets UP-TO-DATE
+> Task :expo-constants:packageDebugAssets UP-TO-DATE
+> Task :expo-file-system:mergeDebugShaders UP-TO-DATE
+> Task :expo-file-system:compileDebugShaders NO-SOURCE
+> Task :expo-file-system:generateDebugAssets UP-TO-DATE
+> Task :expo-file-system:packageDebugAssets UP-TO-DATE
+> Task :expo-font:mergeDebugShaders UP-TO-DATE
+> Task :expo-font:compileDebugShaders NO-SOURCE
+> Task :expo-font:generateDebugAssets UP-TO-DATE
+> Task :expo-font:packageDebugAssets UP-TO-DATE
+> Task :expo-keep-awake:mergeDebugShaders UP-TO-DATE
+> Task :expo-keep-awake:compileDebugShaders NO-SOURCE
+> Task :expo-keep-awake:generateDebugAssets UP-TO-DATE
+> Task :expo-keep-awake:packageDebugAssets UP-TO-DATE
+> Task :expo-linear-gradient:mergeDebugShaders UP-TO-DATE
+> Task :expo-linear-gradient:compileDebugShaders NO-SOURCE
+> Task :expo-linear-gradient:generateDebugAssets UP-TO-DATE
+> Task :expo-linear-gradient:packageDebugAssets UP-TO-DATE
+> Task :expo-modules-core:mergeDebugShaders UP-TO-DATE
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:packageDebugAssets UP-TO-DATE
+> Task :expo-secure-store:mergeDebugShaders UP-TO-DATE
+> Task :expo-secure-store:compileDebugShaders NO-SOURCE
+> Task :expo-secure-store:generateDebugAssets UP-TO-DATE
+> Task :expo-secure-store:packageDebugAssets UP-TO-DATE
+> Task :expo-sqlite:mergeDebugShaders UP-TO-DATE
+> Task :expo-sqlite:compileDebugShaders NO-SOURCE
+> Task :expo-sqlite:generateDebugAssets UP-TO-DATE
+> Task :expo-sqlite:packageDebugAssets UP-TO-DATE
+> Task :expo-system-ui:mergeDebugShaders UP-TO-DATE
+> Task :expo-system-ui:compileDebugShaders NO-SOURCE
+> Task :expo-system-ui:generateDebugAssets UP-TO-DATE
+> Task :expo-system-ui:packageDebugAssets UP-TO-DATE
+> Task :react-native-community_netinfo:mergeDebugShaders UP-TO-DATE
+> Task :react-native-community_netinfo:compileDebugShaders NO-SOURCE
+> Task :react-native-community_netinfo:generateDebugAssets UP-TO-DATE
+> Task :react-native-community_netinfo:packageDebugAssets UP-TO-DATE
+> Task :react-native-gesture-handler:mergeDebugShaders UP-TO-DATE
+> Task :react-native-gesture-handler:compileDebugShaders NO-SOURCE
+> Task :react-native-gesture-handler:generateDebugAssets UP-TO-DATE
+> Task :react-native-gesture-handler:packageDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:mergeDebugShaders UP-TO-DATE
+> Task :react-native-reanimated:compileDebugShaders NO-SOURCE
+> Task :react-native-reanimated:generateDebugAssets UP-TO-DATE
+> Task :react-native-reanimated:packageDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeDebugShaders UP-TO-DATE
+> Task :react-native-safe-area-context:compileDebugShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateDebugAssets UP-TO-DATE
+> Task :react-native-safe-area-context:packageDebugAssets UP-TO-DATE
+> Task :react-native-screens:mergeDebugShaders UP-TO-DATE
+> Task :react-native-screens:compileDebugShaders NO-SOURCE
+> Task :react-native-screens:generateDebugAssets UP-TO-DATE
+> Task :react-native-screens:packageDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-community_netinfo:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-asset:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-clipboard:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-constants:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-file-system:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-font:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-keep-awake:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-linear-gradient:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-secure-store:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-sqlite:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-system-ui:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-gesture-handler:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-reanimated:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-screens:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:processDebugJavaRes NO-SOURCE
+> Task :expo:processDebugJavaRes UP-TO-DATE
+> Task :expo-asset:processDebugJavaRes UP-TO-DATE
+> Task :expo-clipboard:processDebugJavaRes UP-TO-DATE
+> Task :expo-constants:processDebugJavaRes UP-TO-DATE
+> Task :expo-file-system:processDebugJavaRes UP-TO-DATE
+> Task :expo-font:processDebugJavaRes UP-TO-DATE
+> Task :expo-keep-awake:processDebugJavaRes UP-TO-DATE
+> Task :expo-linear-gradient:processDebugJavaRes UP-TO-DATE
+> Task :expo-modules-core:processDebugJavaRes UP-TO-DATE
+> Task :expo-secure-store:processDebugJavaRes UP-TO-DATE
+> Task :expo-sqlite:processDebugJavaRes UP-TO-DATE
+> Task :expo-system-ui:processDebugJavaRes UP-TO-DATE
+> Task :react-native-community_netinfo:processDebugJavaRes NO-SOURCE
+> Task :react-native-gesture-handler:processDebugJavaRes UP-TO-DATE
+> Task :react-native-reanimated:processDebugJavaRes NO-SOURCE
+> Task :react-native-safe-area-context:processDebugJavaRes UP-TO-DATE
+> Task :react-native-screens:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugJniLibFolders UP-TO-DATE
+> Task :brooons_react-native-bluetooth-escpos-printer:mergeDebugNativeLibs NO-SOURCE
+> Task :brooons_react-native-bluetooth-escpos-printer:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo:mergeDebugNativeLibs NO-SOURCE
+> Task :expo:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-asset:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-asset:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-asset:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-clipboard:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-clipboard:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-clipboard:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-constants:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-constants:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-constants:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-file-system:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-file-system:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-file-system:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-font:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-font:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-font:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-keep-awake:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-keep-awake:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-keep-awake:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-linear-gradient:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-linear-gradient:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-linear-gradient:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-modules-core:configureCMakeDebug[arm64-v8a]
+> Task :expo-modules-core:buildCMakeDebug[arm64-v8a]
+> Task :expo-modules-core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-modules-core:mergeDebugNativeLibs UP-TO-DATE
+> Task :expo-modules-core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-secure-store:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-secure-store:mergeDebugNativeLibs NO-SOURCE
+> Task :expo-secure-store:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :expo-sqlite:createNativeDepsDirectories UP-TO-DATE
+
+> Task :expo-sqlite:downloadSQLite UP-TO-DATE
+Download https://www.sqlite.org/2024/sqlite-amalgamation-3450300.zip
+
+> Task :expo-sqlite:mergeDebugJniLibFolders UP-TO-DATE
+> Task :expo-sqlite:prepareSQLite UP-TO-DATE
+
+> Task :expo-sqlite:configureCMakeDebug[arm64-v8a]
+C/C++: CMake Warning in C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/CMakeTmp/CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_eebb2.dir/./
+C/C++:   has 232 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     CMakeCCompilerABI.c.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/CMakeTmp/CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/CMakeTmp/CMakeFiles/cmTC_d937f.dir/./
+C/C++:   has 232 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     CMakeCXXCompilerABI.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+
+> Task :expo-sqlite:buildCMakeDebug[arm64-v8a]
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeStatementBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: CMake Warning in CMakeLists.txt:
+C/C++:   The object file directory
+C/C++:     C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/expo-sqlite@14.0.6_expo@51._ed8e4f7feac70299965e16a345417678/node_modules/expo-sqlite/android/.cxx/Debug/3x4w6039/arm64-v8a/CMakeFiles/expo-sqlite.dir/./
+C/C++:   has 213 characters.  The maximum full path to an object file is 250
+C/C++:   characters (see CMAKE_OBJECT_PATH_MAX).  Object file
+C/C++:     src/main/cpp/NativeDatabaseBinding.cpp.o
+C/C++:   cannot be safely placed under this directory.  The build may not work
+C/C++:   correctly.
+C/C++: ninja: error: manifest 'build.ninja' still dirty after 100 tries
+
+> Task :expo-sqlite:buildCMakeDebug[arm64-v8a] FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.8/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+389 actionable tasks: 23 executed, 366 up-to-date

@@ -61,7 +61,7 @@ export function PosScreen() {
 
   return (
     <Screen>
-      <GradientHeader title="POS checkout" subtitle="Fast retail flow with offline local commit" />
+      <GradientHeader title="POS checkout" subtitle="Fast retail flow that syncs automatically when the internet is available" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Card style={{ gap: 12 }}>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search by name or SKU" />

@@ -6,7 +6,7 @@ export const schemaStatements = [
     deviceId TEXT NOT NULL,
     currency TEXT NOT NULL DEFAULT 'KES',
     lastSyncAt TEXT,
-    themeMode TEXT NOT NULL DEFAULT 'dark',
+    themeMode TEXT NOT NULL DEFAULT 'light',
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   );`,

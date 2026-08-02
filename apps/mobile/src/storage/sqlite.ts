@@ -37,6 +37,23 @@ export async function runSql(sql: string, params: any[] = []) {
   return db.runAsync(sql, params);
 }
 
+export async function withTransaction<T>(callback: (db: SqliteDb) => Promise<T>) {
+  const db = await getDb();
+  await db.execAsync("BEGIN");
+  try {
+    const result = await callback(db);
+    await db.execAsync("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await db.execAsync("ROLLBACK");
+    } catch {
+      // Ignore rollback failures so the original error is preserved.
+    }
+    throw error;
+  }
+}
+
 export async function allSql<T = DbRow>(sql: string, params: any[] = []) {
   const db = await getDb();
   return db.getAllAsync<T>(sql, params);

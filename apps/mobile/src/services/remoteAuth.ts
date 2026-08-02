@@ -13,9 +13,30 @@ async function requestJson<T>(path: string, body: Record<string, unknown>): Prom
     body: JSON.stringify(body)
   });
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw new Error(await readErrorMessage(response));
   }
   return response.json() as Promise<T>;
+}
+
+async function readErrorMessage(response: Response) {
+  const fallback = `Request failed with status ${response.status}`;
+  const raw = await response.text();
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw) as { message?: string | string[]; error?: string };
+    if (Array.isArray(parsed.message)) {
+      return parsed.message.join(", ");
+    }
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message;
+    }
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error;
+    }
+  } catch {
+    // Fall through to the raw body below.
+  }
+  return raw;
 }
 
 export async function remoteRegister(input: {
@@ -35,6 +56,6 @@ export async function remoteRegister(input: {
   return requestJson<RemoteAuthResponse>("/auth/register", input);
 }
 
-export async function remoteLogin(input: { identifier: string; passwordOrPin: string }) {
+export async function remoteLogin(input: { identifier: string; passwordOrPin: string; businessId?: string }) {
   return requestJson<RemoteAuthResponse>("/auth/login", input);
 }

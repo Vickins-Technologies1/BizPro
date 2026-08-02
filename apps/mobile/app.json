@@ -10,6 +10,10 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.vickins.businessos",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
@@ -20,6 +24,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.vickins.businessos",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Allows the app to connect to Bluetooth receipt printers.",
         "NSBluetoothPeripheralUsageDescription": "Allows the app to connect to Bluetooth receipt printers."

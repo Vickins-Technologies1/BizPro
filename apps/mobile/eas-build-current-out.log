@@ -1,0 +1,37 @@
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+
+
+
+√ Using remote Android credentials (Expo server)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+
+See logs: https://expo.dev/accounts/vickinss-team/projects/bizpro/builds/1390c6e5-b04e-4926-a105-2ebe0973f72f
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+
+  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+  █ ▄▄▄▄▄ █▄▄███▄██▀█▀▄███ █▀ █▄█ ▄▄▄▄▄ █
+  █ █   █ █ ▀█ ▄ ▄▀▀▀████▀▄▀  ▄██ █   █ █
+  █ █▄▄▄█ █▄ ▄▄▀██▄▀▄▀ █  █ ██▄▄█ █▄▄▄█ █
+  █▄▄▄▄▄▄▄█▄▀▄▀▄█ █▄▀ █ █▄█ █▄█▄█▄▄▄▄▄▄▄█
+  █▄ ▄▄▀▀▄▀ █████▄██▄█ ▄ ▀ ▀▀█▄ ▄█▀▄  ▀▄█
+  █▀ █▄▀▀▄█▄  ▀▀▀▀█ ▄ ▀██▀ ▄▀▀▀  ▀ ▄█  ▀█
+  ██  ▀ █▄█▄▀▀ █▄  ▄▄▄  █ █▀▄▄▀▀  ▀   █ █
+  █▄█  ▄▀▄ █▄▀█ ██▀██▄ ▄ ▄██▄▄██▀█▀  █▄▀█
+  █ █▀██▀▄▀ █▀▄▀ █▀██▄██     █▀██▀▀█▀▄ ▀█
+  █▀▄▄██ ▄█ █▀▄ █▄▄  ▄█ █ ███▄▄▄▄▀▀ ▀▄ ▄█
+  █▄▀▄▀█ ▄ ▄▄▄▄▀█▀▄▄▄█ ▄▄▄▀██▄▄  █▀▄██ ██
+  █ ███▄█▄███▀ ▀▀▄▀█▄██▀▄▄▄ ▀ ▀█▀█▄▄ ▀███
+  ███▄▄▀█▄██▀▄█  █ ▄   ▀█▄█       ▀ █ ▄ █
+  █▀▄▀█ ▄▄▀█ ▄▀▀▄▀█▄█  ▄ ▄▀▀▄ █▀▄▄ ██▄▄▀█
+  █████▄█▄▄▀ █ ▄  ▀ █▄█▀▄▄▀▀▄▄▄ ▄▄▄ ▄ ▄ █
+  █ ▄▄▄▄▄ ███ █▀▄▄▄▄▀▀██▄ █▀▄▄█ █▄█  █▄ █
+  █ █   █ █▀▄▄▀ █▀▄█ ▀ ▀▄█ ██ █   ▄ █▀███
+  █ █▄▄▄█ █ ▀▄ ▀  ██▄ ▀ ██ █▀▄▀█▀▄  ▄ ███
+  █▄▄▄▄▄▄▄█▄▄▄█▄▄▄▄▄▄▄▄██▄██▄▄███▄▄▄▄▄▄▄█
+
+
+🤖 Open this link on your Android devices (or scan the QR code) to install the app:
+https://expo.dev/accounts/vickinss-team/projects/bizpro/builds/1390c6e5-b04e-4926-a105-2ebe0973f72f

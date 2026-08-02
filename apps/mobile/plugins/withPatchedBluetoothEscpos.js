@@ -12,10 +12,12 @@ const PACKAGE_BUILD_GRADLE = path.join(
 
 function patchBluetoothEscposGradle(contents) {
   return contents
-    .replace(/compileSdkVersion\s+28/g, "compileSdkVersion rootProject.ext.compileSdkVersion")
+    .replace(/compileSdkVersion\s*(=)?\s*\d+/g, "compileSdkVersion rootProject.ext.compileSdkVersion")
+    .replace(/compileSdk\s*(=)?\s*\d+/g, "compileSdkVersion rootProject.ext.compileSdkVersion")
     .replace(/buildToolsVersion\s+"28\.0\.3"/g, "buildToolsVersion rootProject.ext.buildToolsVersion")
-    .replace(/minSdkVersion\s+16/g, "minSdkVersion rootProject.ext.minSdkVersion")
-    .replace(/targetSdkVersion\s+24/g, "targetSdkVersion rootProject.ext.targetSdkVersion");
+    .replace(/buildToolsVersion\s*(=)?\s*"[^"]+"/g, "buildToolsVersion rootProject.ext.buildToolsVersion")
+    .replace(/minSdkVersion\s*(=)?\s*\d+/g, "minSdkVersion rootProject.ext.minSdkVersion")
+    .replace(/targetSdkVersion\s*(=)?\s*\d+/g, "targetSdkVersion rootProject.ext.targetSdkVersion");
 }
 
 function patchExpoModulesCoreGradle(contents) {

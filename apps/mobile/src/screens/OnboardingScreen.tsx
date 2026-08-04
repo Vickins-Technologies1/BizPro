@@ -17,6 +17,7 @@ const planOptions = PLAN_TIERS;
 export function OnboardingScreen() {
   const navigation = useNavigation<any>();
   const loading = useAppStore((state) => state.loading);
+  const activateSession = useAppStore((state) => state.activateSession);
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
   const { control, handleSubmit, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(businessSetupSchema),
@@ -98,8 +99,17 @@ export function OnboardingScreen() {
             onPress={handleSubmit(
               async (values) => {
                 try {
-                  await completeOnboarding(values);
-                  Alert.alert("Setup complete", "Your business was created successfully and you are now signed in.");
+                  const result = await completeOnboarding(values);
+                  Alert.alert("Setup complete", "Your owner account and business were saved successfully. Tap Continue to open the app.", [
+                    {
+                      text: "Continue",
+                      onPress: () => {
+                        void activateSession({ business: result.business, session: result.session }).catch((error) => {
+                          Alert.alert("Setup failed", error instanceof Error ? error.message : "Failed to finish signing you in.");
+                        });
+                      }
+                    }
+                  ]);
                 } catch (error) {
                   Alert.alert("Setup failed", error instanceof Error ? error.message : "Failed to complete setup");
                 }

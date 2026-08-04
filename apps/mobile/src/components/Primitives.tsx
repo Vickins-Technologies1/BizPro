@@ -106,20 +106,35 @@ export function InputField({
   keyboardType?: React.ComponentProps<typeof TextInput>["keyboardType"];
 }) {
   const inputRef = React.useRef<React.ElementRef<typeof TextInput>>(null);
+  const [passwordVisible, setPasswordVisible] = React.useState(false);
   const styles = usePrimitiveStyles();
+  const isSecureEntry = secureTextEntry ? !passwordVisible : false;
 
   return (
     <View style={{ gap: 8 }}>
-      <Pressable onPress={() => inputRef.current?.focus()} accessibilityRole="button">
-        <Text style={styles.fieldLabel}>{label}</Text>
-      </Pressable>
+      <View style={styles.fieldLabelRow}>
+        <Pressable onPress={() => inputRef.current?.focus()} accessibilityRole="button">
+          <Text style={styles.fieldLabel}>{label}</Text>
+        </Pressable>
+        {secureTextEntry ? (
+          <Pressable
+            onPress={() => setPasswordVisible((current) => !current)}
+            accessibilityRole="button"
+            accessibilityLabel={passwordVisible ? `Hide ${label}` : `Show ${label}`}
+            style={styles.passwordToggle}
+          >
+            <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={16} color={tokens.colors.primaryStrong} />
+            <Text style={styles.passwordToggleText}>{passwordVisible ? "Hide" : "View"}</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <TextInput
         ref={inputRef}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={tokens.colors.textMuted}
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={isSecureEntry}
         keyboardType={keyboardType}
         style={styles.input}
       />
@@ -262,6 +277,26 @@ function createStyles() {
     },
     buttonText: { color: tokens.colors.text, fontSize: 15, fontWeight: "700" },
     fieldLabel: { color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
+    fieldLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12
+    },
+    passwordToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 2,
+      paddingHorizontal: 4
+    },
+    passwordToggleText: {
+      color: tokens.colors.primaryStrong,
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.4
+    },
     input: {
       minHeight: 52,
       borderRadius: 16,

@@ -48,7 +48,8 @@ interface AppState {
   expenses: Expense[];
   error: string | null;
   bootstrap: () => Promise<void>;
-  completeOnboarding: (input: unknown) => Promise<void>;
+  activateSession: (input: { business: Business; session: StoredSession; refreshData?: boolean }) => Promise<void>;
+  completeOnboarding: (input: unknown) => Promise<{ business: Business; session: StoredSession }>;
   login: (input: unknown) => Promise<void>;
   logout: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
@@ -187,6 +188,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ loading: false });
     }
   },
+  activateSession: async ({ business, session, refreshData = true }) => {
+    if (!session.user) {
+      throw new Error("No signed-in user was provided");
+    }
+    await secureStore.setSession(JSON.stringify(session));
+    set({ business, user: session.user, error: null });
+    if (refreshData) {
+      void Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
+    }
+  },
   completeOnboarding: async (input) => {
     const parsed = businessSetupSchema.parse(input);
     set({ loading: true, error: null });
@@ -258,6 +269,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         ]);
       });
 
+      const savedOwner = await oneSql<StoredUserRow>(
+        "SELECT id, businessId, fullName, phone, passwordHash, pinHash, role, isActive FROM users WHERE deletedAt IS NULL AND id = ? AND businessId = ? LIMIT 1",
+        [ownerUserId, business.id]
+      );
+      if (!savedOwner) {
+        throw new Error("Owner account was not saved. Please try setup again.");
+      }
+
       try {
         await seedDemoData(business.id);
       } catch (seedError) {
@@ -291,9 +310,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           businessId: business.id
         }
       };
-      await secureStore.setSession(JSON.stringify(session));
-      set({ business, user: session.user, error: null });
-      await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
+      return { business, session };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to complete onboarding";
       set({ error: message });
@@ -362,9 +379,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       if (!session) throw new Error("Invalid credentials");
 
-      await secureStore.setSession(JSON.stringify(session));
-      set({ user: session.user, business, error: null });
-      await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
+      await get().activateSession({ business, session });
     } finally {
       set({ authLoading: false });
     }

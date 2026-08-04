@@ -4,10 +4,11 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
-import { allSql } from "@/storage/sqlite";
 import { formatDate } from "@/utils/date";
 import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
+import { getProductHistory } from "@/services/apiClient";
+import type { StockMovement } from "@shared";
 
 type RootStackParamList = {
   Main: undefined;
@@ -18,16 +19,6 @@ type RootStackParamList = {
 };
 
 type Route = RouteProp<RootStackParamList, "ProductDetail">;
-
-type StockMovementRow = {
-  id: string;
-  referenceType: string;
-  referenceId: string;
-  quantityDelta: number;
-  unitCost: number;
-  note?: string | null;
-  createdAt: string;
-};
 
 type SaleHistoryRow = {
   id: string;
@@ -44,7 +35,7 @@ export function ProductDetailScreen() {
   const product = useAppStore((state) => state.products.find((item) => item.id === route.params.productId) ?? null);
   const business = useAppStore((state) => state.business);
   const adjustStock = useAppStore((state) => state.adjustStock);
-  const [stockMovements, setStockMovements] = React.useState<StockMovementRow[]>([]);
+  const [stockMovements, setStockMovements] = React.useState<StockMovement[]>([]);
   const [salesHistory, setSalesHistory] = React.useState<SaleHistoryRow[]>([]);
   const [restockVisible, setRestockVisible] = React.useState(false);
   const [restockQty, setRestockQty] = React.useState("0");
@@ -56,23 +47,9 @@ export function ProductDetailScreen() {
   }, [route.params.productId]);
 
   async function loadHistory() {
-    const [movementRows, saleRows] = await Promise.all([
-      allSql<StockMovementRow>(
-        "SELECT id, referenceType, referenceId, quantityDelta, unitCost, note, createdAt FROM stock_movements WHERE productId = ? ORDER BY createdAt DESC LIMIT 24",
-        [route.params.productId]
-      ),
-      allSql<SaleHistoryRow>(
-        `SELECT sale_items.id, sales.receiptNumber, sale_items.quantity, sale_items.unitPrice, sale_items.lineTotal, sales.createdAt, sales.paymentStatus
-         FROM sale_items
-         JOIN sales ON sales.id = sale_items.saleId
-         WHERE sale_items.productId = ?
-         ORDER BY sales.createdAt DESC
-         LIMIT 24`,
-        [route.params.productId]
-      )
-    ]);
-    setStockMovements(movementRows);
-    setSalesHistory(saleRows);
+    const history = await getProductHistory(route.params.productId);
+    setStockMovements(history.stockMovements);
+    setSalesHistory(history.salesHistory);
   }
 
   if (!product) {

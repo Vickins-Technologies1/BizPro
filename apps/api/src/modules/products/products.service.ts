@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { Product, ProductDocument, StockMovement, StockMovementDocument } from "../schemas";
+import { Product, ProductDocument, Sale, SaleDocument, StockMovement, StockMovementDocument } from "../schemas";
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
-    @InjectModel(StockMovement.name) private readonly movementModel: Model<StockMovementDocument>
+    @InjectModel(StockMovement.name) private readonly movementModel: Model<StockMovementDocument>,
+    @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>
   ) {}
 
   list(businessId: string) {
@@ -37,5 +38,31 @@ export class ProductsService {
     await product.save();
     await this.movementModel.create({ ...input });
     return product.toObject();
+  }
+
+  async history(businessId: string, productId: string) {
+    const [stockMovements, salesHistory] = await Promise.all([
+      this.movementModel.find({ businessId, productId }).sort({ createdAt: -1 }).limit(24).lean(),
+      this.saleModel.aggregate([
+        { $match: { businessId } },
+        { $unwind: "$items" },
+        { $match: { "items.productId": productId } },
+        { $sort: { createdAt: -1 } },
+        {
+          $project: {
+            id: "$_id",
+            receiptNumber: 1,
+            quantity: "$items.quantity",
+            unitPrice: "$items.unitPrice",
+            lineTotal: "$items.lineTotal",
+            createdAt: 1,
+            paymentStatus: 1
+          }
+        },
+        { $limit: 24 }
+      ])
+    ]);
+
+    return { stockMovements, salesHistory };
   }
 }

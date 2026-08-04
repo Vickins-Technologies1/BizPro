@@ -7,7 +7,7 @@ import { Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, B
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
-import { allSql } from "@/storage/sqlite";
+import { listCustomerPayments } from "@/services/apiClient";
 import type { Payment } from "@shared";
 
 const customerSchema = z.object({
@@ -51,7 +51,7 @@ export function CustomersScreen() {
     setDebtPaymentReference("");
     setDebtPaymentNote("");
     setDebtPaymentMethod("cash");
-    allSql<Payment>("SELECT * FROM payments WHERE customerId = ? ORDER BY createdAt DESC LIMIT 20", [selectedCustomerId])
+    listCustomerPayments(selectedCustomerId)
       .then((rows) => setSelectedPayments(rows))
       .catch(() => setSelectedPayments([]));
   }, [selectedCustomerId]);
@@ -148,7 +148,7 @@ export function CustomersScreen() {
                           note: debtPaymentNote.trim() || null
                         });
                         await loadCatalog();
-                        const refreshedPayments = await allSql<Payment>("SELECT * FROM payments WHERE customerId = ? ORDER BY createdAt DESC LIMIT 20", [customer.id]);
+                        const refreshedPayments = await listCustomerPayments(customer.id);
                         setSelectedPayments(refreshedPayments);
                         setDebtPaymentAmount("0");
                         setDebtPaymentReference("");

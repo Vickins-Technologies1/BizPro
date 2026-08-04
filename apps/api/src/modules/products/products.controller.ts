@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
 import { ProductsService } from "./products.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -18,6 +18,13 @@ class CreateProductDto {
   @IsOptional() @IsNumber() stockOnHand?: number;
   @IsOptional() @IsNumber() lowStockThreshold?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;
+}
+
+class AdjustStockDto {
+  @IsNumber() quantityDelta!: number;
+  @IsNumber() unitCost!: number;
+  @IsOptional() @IsString() note?: string;
+  @IsOptional() @IsString() referenceType?: string;
 }
 
 @Controller("products")
@@ -48,5 +55,25 @@ export class ProductsController {
   @Roles("owner", "manager")
   archive(@Param("id") id: string) {
     return this.products.archive(id);
+  }
+
+  @Post(":id/adjust-stock")
+  @Roles("owner", "manager")
+  adjustStock(@CurrentUser() user: { businessId: string }, @Param("id") id: string, @Body() dto: AdjustStockDto) {
+    return this.products.adjustStock({
+      businessId: user.businessId,
+      productId: id,
+      referenceType: (dto.referenceType as "sale" | "purchase" | "adjustment" | "restock" | "refund") ?? "adjustment",
+      referenceId: `${id}-${Date.now()}`,
+      quantityDelta: dto.quantityDelta,
+      unitCost: dto.unitCost,
+      ...(dto.note !== undefined ? { note: dto.note } : {})
+    });
+  }
+
+  @Get(":id/history")
+  @Roles("owner", "manager", "cashier")
+  history(@CurrentUser() user: { businessId: string }, @Param("id") id: string) {
+    return this.products.history(user.businessId, id);
   }
 }

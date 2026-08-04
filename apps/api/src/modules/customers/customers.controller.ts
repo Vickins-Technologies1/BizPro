@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { IsNumber, IsOptional, IsString } from "class-validator";
 import { CustomersService } from "./customers.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -13,6 +13,13 @@ class CreateCustomerDto {
   @IsOptional() @IsString() email?: string;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsNumber() balance?: number;
+}
+
+class RecordPaymentDto {
+  @IsNumber() amount!: number;
+  @IsString() method!: "cash" | "mpesa" | "bank" | "credit";
+  @IsOptional() @IsString() reference?: string;
+  @IsOptional() @IsString() note?: string;
 }
 
 @Controller("customers")
@@ -30,5 +37,25 @@ export class CustomersController {
   @Roles("owner", "manager", "cashier")
   create(@CurrentUser() user: { businessId: string }, @Body() dto: CreateCustomerDto) {
     return this.customers.create({ ...dto, businessId: user.businessId });
+  }
+
+  @Get(":id/payments")
+  @Roles("owner", "manager", "cashier")
+  payments(@CurrentUser() user: { businessId: string }, @Param("id") id: string) {
+    return this.customers.payments(user.businessId, id);
+  }
+
+  @Post(":id/payments")
+  @Roles("owner", "manager", "cashier")
+  recordPayment(@CurrentUser() user: { businessId: string; sub: string }, @Param("id") id: string, @Body() dto: RecordPaymentDto) {
+    return this.customers.recordPayment({
+      businessId: user.businessId,
+      customerId: id,
+      amount: dto.amount,
+      method: dto.method,
+      reference: dto.reference ?? null,
+      note: dto.note ?? null,
+      recordedById: user.sub
+    });
   }
 }

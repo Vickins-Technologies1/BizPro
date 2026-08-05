@@ -1,12 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
-const SUPPORT_KEY = process.env.NEXT_PUBLIC_SUPPORT_API_KEY ?? "";
+const API_BASE = "/api";
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const baseUrl = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${baseUrl}${normalizedPath}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(SUPPORT_KEY ? { "x-support-key": SUPPORT_KEY } : {}),
       ...(init?.headers ?? {})
     }
   });

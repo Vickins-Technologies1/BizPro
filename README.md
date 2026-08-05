@@ -109,8 +109,11 @@ Deploy `apps/admin` to Vercel.
 
 Required env vars:
 
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_SUPPORT_API_KEY`
+- `SUPPORT_API_KEY`
+
+The admin app calls `/api/*` on its own domain, and Vercel rewrites that traffic to the Render API through an internal proxy route.
+Set `SUPPORT_API_KEY` in Vercel so the proxy can attach the server-side support header before forwarding requests.
+No public API URL is needed in the admin dashboard anymore.
 
 ### Mobile
 

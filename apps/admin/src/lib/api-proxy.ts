@@ -41,9 +41,16 @@ export async function proxyToRender(request: NextRequest, pathParts: string[]) {
   }
 
   const upstream = await fetch(upstreamUrl, init);
-  return new Response(upstream.body, {
+  const body = method === "HEAD" ? null : await upstream.arrayBuffer();
+  const headers = new Headers(upstream.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  headers.delete("transfer-encoding");
+  headers.delete("connection");
+
+  return new Response(body, {
     status: upstream.status,
     statusText: upstream.statusText,
-    headers: upstream.headers
+    headers
   });
 }

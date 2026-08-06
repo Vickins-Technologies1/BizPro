@@ -123,7 +123,7 @@ export function RoleLaunchpadScreen() {
   const roleLabel = user?.roleLabel ?? (role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier");
 
   return (
-    <Screen>
+    <Screen hideFooter={false}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={tokens.gradients.primary} style={styles.hero}>
           <View style={styles.heroGlowTop} />
@@ -143,7 +143,7 @@ export function RoleLaunchpadScreen() {
         </LinearGradient>
 
         <Card style={styles.panel}>
-          <Text style={styles.panelTitle}>Choose a workspace</Text>
+          <Text style={styles.panelTitle}>Choose Workspace</Text>
           <Text style={styles.panelSubtitle}>
             Only the destinations available to your current role are shown below.
           </Text>

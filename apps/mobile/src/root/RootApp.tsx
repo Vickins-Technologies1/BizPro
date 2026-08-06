@@ -6,7 +6,6 @@ import NetInfo from "@react-native-community/netinfo";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
-import { LinearGradient } from "expo-linear-gradient";
 
 const splashLogo = require("../../assets/brand/biz-pro-logo.png");
 
@@ -87,14 +86,11 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
   }, [drift, fade, scale]);
 
   const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [10, -8] });
-  const glowScale = drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
-  const glowOpacity = drift.interpolate({ inputRange: [0, 1], outputRange: [0.34, 0.58] });
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
-        <LinearGradient
-          colors={[tokens.colors.background, tokens.colors.backgroundAlt]}
+        <View
           style={{
             flex: 1,
             alignItems: "center",
@@ -103,28 +99,6 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
             backgroundColor: tokens.colors.background
           }}
         >
-          <View
-            style={{
-              position: "absolute",
-              width: 320,
-              height: 320,
-              borderRadius: 320,
-              backgroundColor: "rgba(37,99,235,0.18)"
-            }}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              width: 360,
-              height: 360,
-              borderRadius: 360,
-              backgroundColor: "rgba(14,165,233,0.14)",
-              opacity: glowOpacity,
-              transform: [{ scale: glowScale }]
-            }}
-          />
-
           <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
             <View
               style={{
@@ -150,13 +124,10 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
               <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
                 Preparing your workspace and syncing your latest data.
               </Text>
-              <Text style={{ color: tokens.colors.textMuted, textAlign: "center", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" }}>
-                Powered by Vickins Technologies
-              </Text>
             </View>
             <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 6 }} />
           </Animated.View>
-        </LinearGradient>
+        </View>
       </SafeAreaView>
       <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
     </SafeAreaProvider>

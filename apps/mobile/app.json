@@ -10,6 +10,7 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.vickins.businessos",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"

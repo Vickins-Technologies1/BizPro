@@ -1,13 +1,13 @@
 import React from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { AppScrollView, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatDate } from "@/utils/date";
 import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
-import { getProductHistory } from "@/services/apiClient";
+import { deleteProduct, getProductHistory } from "@/services/apiClient";
 import type { StockMovement } from "@shared";
 import { hasPermission } from "@shared";
 
@@ -46,6 +46,8 @@ export function ProductDetailScreen() {
   const [restockNote, setRestockNote] = React.useState("Quick restock");
   const [savingRestock, setSavingRestock] = React.useState(false);
   const [historyLoading, setHistoryLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const canManageInventory = hasPermission(user, "manageInventory");
 
   React.useEffect(() => {
@@ -79,6 +81,36 @@ export function ProductDetailScreen() {
     }
   }
 
+  async function refreshHistory() {
+    if (refreshing || historyLoading) return;
+    setRefreshing(true);
+    try {
+      await loadHistory();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (deleting) return;
+    const currentProduct = useAppStore.getState().products.find((item) => item.id === route.params.productId);
+    if (!currentProduct) return;
+    const confirmed = await confirmMobile(`Delete ${currentProduct.name}? This will remove it from active catalog lists.`);
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await deleteProduct(currentProduct.id);
+      await useAppStore.getState().loadCatalog();
+      Alert.alert("Product deleted", `${currentProduct.name} was removed from the catalog.`);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Delete failed", error instanceof Error ? error.message : "Failed to delete product");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (!product) {
     return (
       <Screen>
@@ -93,35 +125,50 @@ export function ProductDetailScreen() {
     );
   }
 
-  const lowStock = product.stockOnHand <= product.lowStockThreshold;
-  const margin = Math.max(0, product.sellingPrice - product.buyingPrice);
+  const currentProduct = product;
+  const lowStock = currentProduct.stockOnHand <= currentProduct.lowStockThreshold;
+  const margin = Math.max(0, currentProduct.sellingPrice - currentProduct.buyingPrice);
 
   return (
     <Screen>
       <GradientHeader
-        title={product.name}
-        subtitle={`${product.sku ?? "No SKU"} • ${product.unit} • ${business?.currency ?? "KES"}`}
-        right={<Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />}
+        title={currentProduct.name}
+        subtitle={`${currentProduct.sku ?? "No SKU"} • ${currentProduct.unit} • ${business?.currency ?? "KES"}`}
+        right={
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Badge label={currentProduct.isActive ? "Active" : "Archived"} tone={currentProduct.isActive ? "success" : "warning"} />
+            <Pressable onPress={confirmDelete} accessibilityRole="button" accessibilityLabel="Delete product" disabled={deleting}>
+              <Ionicons name="trash-outline" size={22} color={tokens.colors.danger} />
+            </Pressable>
+          </View>
+        }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshHistory}>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{product.name}</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>{product.barcode ?? "No barcode"}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{currentProduct.name}</Text>
+              <Text style={{ color: tokens.colors.textSecondary }}>{currentProduct.barcode ?? "No barcode"}</Text>
             </View>
             <Badge label={lowStock ? "Low stock" : "Healthy"} tone={lowStock ? "danger" : "success"} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Units on hand" value={String(product.stockOnHand)} />
-            <Metric label="Low stock limit" value={String(product.lowStockThreshold)} />
+            <Metric label="Units on hand" value={String(currentProduct.stockOnHand)} />
+            <Metric label="Low stock limit" value={String(currentProduct.lowStockThreshold)} />
             <Metric label="Profit per unit" value={formatMoney(margin, business?.currency)} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Buying price" value={formatMoney(product.buyingPrice, business?.currency)} />
-            <Metric label="Selling price" value={formatMoney(product.sellingPrice, business?.currency)} />
+            <Metric label="Buying price" value={formatMoney(currentProduct.buyingPrice, business?.currency)} />
+            <Metric label="Selling price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
           </View>
-          <PrimaryButton title="Add stock" onPress={() => setRestockVisible(true)} />
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Add stock" onPress={() => setRestockVisible(true)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title={deleting ? "Deleting..." : "Delete"} variant="danger" onPress={confirmDelete} loading={deleting} />
+            </View>
+          </View>
         </Card>
 
         <Card style={{ gap: 10 }}>
@@ -174,7 +221,7 @@ export function ProductDetailScreen() {
             <Text style={{ color: tokens.colors.textSecondary }}>No sales history yet.</Text>
           )}
         </Card>
-      </ScrollView>
+      </AppScrollView>
 
       <SimpleModal visible={restockVisible} title="Quick restock" onClose={() => setRestockVisible(false)}>
         <View style={{ gap: 12 }}>
@@ -193,7 +240,7 @@ export function ProductDetailScreen() {
                   return;
                 }
                 await adjustStock({
-                  productId: product.id,
+                  productId: currentProduct.id,
                   quantityDelta: quantity,
                   unitCost,
                   note: restockNote.trim() || "Quick restock"
@@ -239,4 +286,13 @@ function formatPaymentStatusLabel(value: string) {
       : value === "unpaid"
         ? "Unpaid"
         : value.replaceAll("_", " ");
+}
+
+function confirmMobile(message: string) {
+  return new Promise<boolean>((resolve) => {
+    Alert.alert("Confirm delete", message, [
+      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+      { text: "Delete", style: "destructive", onPress: () => resolve(true) }
+    ]);
+  });
 }

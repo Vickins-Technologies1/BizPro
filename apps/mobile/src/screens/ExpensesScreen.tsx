@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { expenseCreateSchema } from "@shared";
-import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,10 +18,12 @@ export function ExpensesScreen() {
   const business = useAppStore((state) => state.business);
   const expenses = useAppStore((state) => state.expenses);
   const addExpense = useAppStore((state) => state.addExpense);
+  const loadCatalog = useAppStore((state) => state.loadCatalog);
   const user = useAppStore((state) => state.user);
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState("");
   const [savingExpense, setSavingExpense] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const canManageExpenses = hasPermission(user, "manageExpenses");
 
   const {
@@ -43,6 +45,20 @@ export function ExpensesScreen() {
   });
 
   const filtered = useMemo(() => expenses.filter((expense) => expense.note.toLowerCase().includes(search.toLowerCase())), [expenses, search]);
+
+  React.useEffect(() => {
+    loadCatalog().catch(() => undefined);
+  }, [loadCatalog]);
+
+  async function refreshExpenses() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadCatalog();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   if (!canManageExpenses) {
     return (
@@ -75,7 +91,7 @@ export function ExpensesScreen() {
           </View>
         }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshExpenses}>
         <Card>
           <InputField label="Search expenses" value={search} onChangeText={setSearch} placeholder="Filter notes" />
         </Card>
@@ -97,9 +113,9 @@ export function ExpensesScreen() {
             action={<PrimaryButton title="Add expense" onPress={() => setVisible(true)} />}
           />
         )}
-      </ScrollView>
+      </AppScrollView>
       <SimpleModal visible={visible} title="Add expense" onClose={() => setVisible(false)}>
-        <ScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Controller
             control={control}
             name="amount"
@@ -164,7 +180,7 @@ export function ExpensesScreen() {
             })}
             loading={savingExpense}
           />
-        </ScrollView>
+        </AppScrollView>
       </SimpleModal>
     </Screen>
   );

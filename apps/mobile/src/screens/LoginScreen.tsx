@@ -1,10 +1,10 @@
 import React from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { loginSchema } from "@shared";
-import { Badge, GradientHeader, InputField, PrimaryButton, Screen, Card } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
@@ -29,7 +29,7 @@ export function LoginScreen() {
   return (
     <Screen hideFooter>
       <GradientHeader title="Welcome back" subtitle="Sign in with the owner password or a cashier PIN" />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, flexGrow: 1, justifyContent: "center" }} keyboardShouldPersistTaps="handled">
+      <AppScrollView contentContainerStyle={{ gap: 16, flexGrow: 1, justifyContent: "center" }}>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Biz Pro login</Text>
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
@@ -94,7 +94,7 @@ export function LoginScreen() {
             New businesses should create the owner account first. Team members can sign in only after the owner adds their employee profile.
           </Text>
         </Card>
-      </ScrollView>
+      </AppScrollView>
     </Screen>
   );
 }

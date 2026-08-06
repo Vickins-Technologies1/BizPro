@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productCreateSchema, BUSINESS_TYPES } from "@shared";
-import { Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { AppScrollView, Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -12,6 +12,7 @@ import { z } from "zod";
 import { useNavigation } from "@react-navigation/native";
 import { EmptyState } from "@/components/Primitives";
 import { hasPermission } from "@shared";
+import { deleteProduct } from "@/services/apiClient";
 
 type FormValues = z.infer<typeof productCreateSchema>;
 
@@ -37,6 +38,8 @@ export function ProductsScreen() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
   const [savingStock, setSavingStock] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   const {
     control,
@@ -76,6 +79,33 @@ export function ProductsScreen() {
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
   }, [loadCatalog]);
+
+  async function refreshCatalog() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadCatalog();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleDeleteProduct(id: string, name: string) {
+    if (deletingProductId) return;
+    const confirmed = await confirmMobile(`Delete ${name}? This removes it from the active catalog.`);
+    if (!confirmed) return;
+
+    setDeletingProductId(id);
+    try {
+      await deleteProduct(id);
+      await loadCatalog();
+      Alert.alert("Product deleted", `${name} was removed from the catalog.`);
+    } catch (error) {
+      Alert.alert("Delete failed", error instanceof Error ? error.message : "Failed to delete product");
+    } finally {
+      setDeletingProductId(null);
+    }
+  }
 
   React.useEffect(() => {
     if (visible) {
@@ -117,7 +147,7 @@ export function ProductsScreen() {
           </View>
         }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog}>
         <Card>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
         </Card>
@@ -164,12 +194,15 @@ export function ProductsScreen() {
                     setRestockCost(String(product.buyingPrice));
                     setRestockVisible(true);
                   }}
-                >
-                  <Badge label="Restock" tone="success" />
-                </Pressable>
-              </View>
-            </Card>
-          ))
+                  >
+                    <Badge label="Restock" tone="success" />
+                  </Pressable>
+                  <Pressable onPress={() => void handleDeleteProduct(product.id, product.name)}>
+                    <Badge label={deletingProductId === product.id ? "Deleting..." : "Delete"} tone="danger" />
+                  </Pressable>
+                </View>
+              </Card>
+            ))
         ) : (
           <EmptyState
             title={search ? "No matching products" : "No products yet"}
@@ -178,9 +211,9 @@ export function ProductsScreen() {
             icon="cube-outline"
           />
         )}
-      </ScrollView>
+      </AppScrollView>
       <SimpleModal visible={visible} title="Add product" onClose={() => setVisible(false)}>
-        <ScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Controller
             control={control}
             name="name"
@@ -312,7 +345,7 @@ export function ProductsScreen() {
             })}
             loading={savingProduct}
           />
-        </ScrollView>
+        </AppScrollView>
       </SimpleModal>
       <SimpleModal visible={categoryVisible} title="Add category" onClose={() => setCategoryVisible(false)}>
         <View style={{ gap: 12 }}>
@@ -374,4 +407,13 @@ export function ProductsScreen() {
       </SimpleModal>
     </Screen>
   );
+}
+
+function confirmMobile(message: string) {
+  return new Promise<boolean>((resolve) => {
+    Alert.alert("Confirm delete", message, [
+      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+      { text: "Delete", style: "destructive", onPress: () => resolve(true) }
+    ]);
+  });
 }

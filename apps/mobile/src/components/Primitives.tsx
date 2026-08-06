@@ -1,11 +1,24 @@
 import React from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
+import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isSameDay, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 
-export function Screen({ children, hideFooter = false }: { children: React.ReactNode; hideFooter?: boolean }) {
+export function Screen({ children, hideFooter = true }: { children: React.ReactNode; hideFooter?: boolean }) {
   const styles = usePrimitiveStyles();
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -14,6 +27,40 @@ export function Screen({ children, hideFooter = false }: { children: React.React
         {hideFooter ? null : <AppFooter />}
       </SafeAreaView>
     </KeyboardAvoidingView>
+  );
+}
+
+export function AppScrollView({
+  children,
+  contentContainerStyle,
+  refreshing,
+  onRefresh,
+  scrollRef,
+  ...props
+}: React.ComponentProps<typeof ScrollView> & {
+  children: React.ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  scrollRef?: React.RefObject<ScrollView>;
+}) {
+  const styles = usePrimitiveStyles();
+  return (
+    <ScrollView
+      ref={scrollRef}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
+      contentInsetAdjustmentBehavior="automatic"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={tokens.colors.primaryStrong} colors={[tokens.colors.primaryStrong]} />
+        ) : undefined
+      }
+      contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
+      {...props}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
@@ -27,6 +74,11 @@ export function AppFooter() {
   );
 }
 
+export function SkeletonBlock({ width = "100%", height = 16, radius = 12, style }: { width?: number | string; height?: number; radius?: number; style?: any }) {
+  const styles = usePrimitiveStyles();
+  return <View style={[styles.skeleton, { width, height, borderRadius: radius }, style]} />;
+}
+
 export function GradientHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
   const styles = usePrimitiveStyles();
   return (
@@ -37,6 +89,140 @@ export function GradientHeader({ title, subtitle, right }: { title: string; subt
       </View>
       {right}
     </LinearGradient>
+  );
+}
+
+export function DateRangePickerModal({
+  visible,
+  title,
+  startDate,
+  endDate,
+  onClose,
+  onApply
+}: {
+  visible: boolean;
+  title: string;
+  startDate: string | null;
+  endDate: string | null;
+  onClose: () => void;
+  onApply: (range: { startDate: string; endDate: string }) => void;
+}) {
+  const styles = usePrimitiveStyles();
+  const today = React.useMemo(() => new Date(), []);
+  const initialCursor = React.useMemo(() => parsePickerDate(startDate ?? endDate ?? format(today, "yyyy-MM-dd")) ?? today, [endDate, startDate, today]);
+  const [cursor, setCursor] = React.useState(initialCursor);
+  const [selection, setSelection] = React.useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+
+  React.useEffect(() => {
+    if (!visible) return;
+    const start = parsePickerDate(startDate);
+    const end = parsePickerDate(endDate);
+    setCursor(parsePickerDate(startDate ?? endDate ?? format(today, "yyyy-MM-dd")) ?? today);
+    setSelection({ start, end });
+  }, [endDate, startDate, today, visible]);
+
+  const monthLabel = format(cursor, "MMMM yyyy");
+  const days = React.useMemo(() => buildCalendarDays(cursor), [cursor]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalCard, { padding: 16 }]}>
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.modalTitle}>{title}</Text>
+              <Text style={styles.helperText}>Select a start and end date, then apply the range.</Text>
+            </View>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <View style={styles.calendarShell}>
+            <View style={styles.calendarTopRow}>
+              <Pressable onPress={() => setCursor((current) => subMonths(current, 1))} style={styles.calendarNavButton}>
+                <Ionicons name="chevron-back" size={20} color={tokens.colors.text} />
+              </Pressable>
+              <Text style={styles.calendarMonth}>{monthLabel}</Text>
+              <Pressable onPress={() => setCursor((current) => addMonths(current, 1))} style={styles.calendarNavButton}>
+                <Ionicons name="chevron-forward" size={20} color={tokens.colors.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.calendarWeekRow}>
+              {["S", "M", "T", "W", "T", "F", "S"].map((label) => (
+                <Text key={label} style={styles.calendarWeekLabel}>
+                  {label}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {days.map((day, index) =>
+                day ? (
+                  <Pressable
+                    key={format(day, "yyyy-MM-dd")}
+                    onPress={() => {
+                      setSelection((current) => selectRangeDay(current, day));
+                    }}
+                    style={({ pressed }) => [
+                      styles.calendarDayButton,
+                      isCalendarSelected(day, selection) ? styles.calendarDayButtonSelected : null,
+                      !isSameMonth(day, cursor) ? styles.calendarDayButtonMuted : null,
+                      pressed && { opacity: 0.9 }
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarDayText,
+                        isCalendarSelected(day, selection) ? styles.calendarDayTextSelected : null,
+                        !isSameMonth(day, cursor) ? styles.calendarDayTextMuted : null
+                      ]}
+                    >
+                      {format(day, "d")}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View key={`blank-${index}`} style={styles.calendarDaySpacer} />
+                )
+              )}
+            </View>
+          </View>
+
+          <View style={styles.calendarSummary}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.fieldLabel}>Start</Text>
+              <Text style={styles.calendarSummaryValue}>{selection.start ? format(selection.start, "PPP") : "Choose a start date"}</Text>
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.fieldLabel}>End</Text>
+              <Text style={styles.calendarSummaryValue}>{selection.end ? format(selection.end, "PPP") : "Choose an end date"}</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <PrimaryButton
+              title="Reset"
+              variant="secondary"
+              onPress={() => {
+                const current = new Date();
+                setCursor(current);
+                setSelection({ start: null, end: null });
+              }}
+            />
+            <PrimaryButton
+              title="Apply"
+              onPress={() => {
+                const start = selection.start ?? startOfMonth(cursor);
+                const end = selection.end ?? selection.start ?? endOfMonth(cursor);
+                onApply({ startDate: format(start, "yyyy-MM-dd"), endDate: format(end, "yyyy-MM-dd") });
+                onClose();
+              }}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -255,6 +441,39 @@ function usePrimitiveStyles() {
   return React.useMemo(() => createStyles(), [tokens]);
 }
 
+function parsePickerDate(value: string | null) {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function buildCalendarDays(cursor: Date) {
+  const start = startOfMonth(cursor);
+  const end = endOfMonth(cursor);
+  const firstDay = start.getDay();
+  const padding: Array<Date | null> = Array.from({ length: firstDay }, () => null);
+  return padding.concat(eachDayOfInterval({ start, end }));
+}
+
+function selectRangeDay(current: { start: Date | null; end: Date | null }, day: Date) {
+  if (!current.start || current.end) {
+    return { start: day, end: null };
+  }
+  if (isBefore(day, current.start)) {
+    return { start: day, end: current.start };
+  }
+  if (isSameDay(day, current.start)) {
+    return { start: current.start, end: current.start };
+  }
+  return { start: current.start, end: day };
+}
+
+function isCalendarSelected(day: Date, selection: { start: Date | null; end: Date | null }) {
+  if (!selection.start) return false;
+  if (!selection.end) return isSameDay(day, selection.start);
+  return (isSameDay(day, selection.start) || isSameDay(day, selection.end) || (isAfter(day, selection.start) && isBefore(day, selection.end)));
+}
+
 function createStyles() {
   return StyleSheet.create({
     screen: {
@@ -379,6 +598,99 @@ function createStyles() {
       marginBottom: 16
     },
     modalTitle: { color: tokens.colors.text, fontSize: 18, fontWeight: "800" },
+    calendarShell: {
+      backgroundColor: tokens.colors.surfaceAlt,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      padding: 14,
+      gap: 12
+    },
+    calendarTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10
+    },
+    calendarNavButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: tokens.colors.surface,
+      borderWidth: 1,
+      borderColor: tokens.colors.border
+    },
+    calendarMonth: {
+      color: tokens.colors.text,
+      fontSize: 16,
+      fontWeight: "800"
+    },
+    calendarWeekRow: {
+      flexDirection: "row",
+      justifyContent: "space-between"
+    },
+    calendarWeekLabel: {
+      color: tokens.colors.textMuted,
+      fontSize: 11,
+      fontWeight: "800",
+      width: 38,
+      textAlign: "center"
+    },
+    calendarGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      rowGap: 8,
+      columnGap: 8
+    },
+    calendarDayButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: tokens.colors.surface
+    },
+    calendarDayButtonSelected: {
+      backgroundColor: tokens.colors.primary
+    },
+    calendarDayButtonMuted: {
+      opacity: 0.38
+    },
+    calendarDayText: {
+      color: tokens.colors.text,
+      fontSize: 13,
+      fontWeight: "700"
+    },
+    calendarDayTextSelected: {
+      color: "#FFFFFF"
+    },
+    calendarDayTextMuted: {
+      color: tokens.colors.textMuted
+    },
+    calendarDaySpacer: {
+      width: 38,
+      height: 38
+    },
+    calendarSummary: {
+      flexDirection: "row",
+      gap: 12
+    },
+    calendarSummaryValue: {
+      color: tokens.colors.text,
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 18
+    },
+    scrollContent: {
+      padding: 16,
+      gap: 16,
+      paddingBottom: 28
+    },
+    skeleton: {
+      backgroundColor: withAlpha(tokens.colors.textMuted, 0.14)
+    },
     footer: {
       alignItems: "center",
       paddingHorizontal: 16,

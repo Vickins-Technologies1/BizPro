@@ -190,6 +190,10 @@ export async function archiveProduct(id: string) {
   return withId(product) as Product;
 }
 
+export async function deleteProduct(id: string) {
+  return archiveProduct(id);
+}
+
 export async function adjustProductStock(input: { productId: string; quantityDelta: number; unitCost: number; note?: string | null; referenceType?: string }) {
   const product = await apiRequest<RawEntity>(`/products/${encodeURIComponent(input.productId)}/adjust-stock`, {
     method: "POST",

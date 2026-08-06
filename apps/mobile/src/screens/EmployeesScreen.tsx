@@ -1,8 +1,9 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import {
+  AppScrollView,
   Badge,
   Card,
   EmptyState,
@@ -321,7 +322,7 @@ export function EmployeesScreen() {
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshWorkspace}>
         <Card style={{ gap: 8 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Owned by the business owner account</Text>
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
@@ -468,14 +469,14 @@ export function EmployeesScreen() {
             <Text style={{ color: tokens.colors.textSecondary }}>No audit events match the current filters.</Text>
           )}
         </Card>
-      </ScrollView>
+      </AppScrollView>
 
       <SimpleModal
         visible={draftModalVisible}
         title={mode === "edit" ? `Edit ${selectedEmployee?.fullName ?? "employee"}` : "Add employee"}
         onClose={() => setDraftModalVisible(false)}
       >
-        <ScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <InputField label="Full name" value={draft.fullName} onChangeText={(value) => setDraft((current) => ({ ...current, fullName: value }))} />
           <InputField label="Phone" value={draft.phone} onChangeText={(value) => setDraft((current) => ({ ...current, phone: value }))} />
           <InputField label="Branch ID" value={draft.branchId} onChangeText={(value) => setDraft((current) => ({ ...current, branchId: value }))} />
@@ -557,7 +558,7 @@ export function EmployeesScreen() {
               </View>
             </View>
           ) : null}
-        </ScrollView>
+        </AppScrollView>
       </SimpleModal>
     </Screen>
   );

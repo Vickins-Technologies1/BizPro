@@ -1,10 +1,10 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { BUSINESS_TYPES, PLAN_TIERS, businessSetupSchema } from "@shared";
-import { GradientHeader, InputField, PrimaryButton, Screen, Card, Badge } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
@@ -46,7 +46,7 @@ export function OnboardingScreen() {
   return (
     <Screen hideFooter>
       <GradientHeader title="Biz Pro" subtitle="Set up your business once, then start selling with confidence" />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+      <AppScrollView contentContainerStyle={{ gap: 16 }}>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Create your owner account</Text>
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
@@ -176,7 +176,7 @@ export function OnboardingScreen() {
           />
           <PrimaryButton title="I already have an account" variant="secondary" onPress={() => navigation.navigate("Login")} />
         </Card>
-      </ScrollView>
+      </AppScrollView>
     </Screen>
   );
 }

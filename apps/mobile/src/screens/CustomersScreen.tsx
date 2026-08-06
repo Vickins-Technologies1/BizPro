@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -26,6 +26,7 @@ export function CustomersScreen() {
   const business = useAppStore((state) => state.business);
   const addCustomer = useAppStore((state) => state.addCustomer);
   const recordDebtPayment = useAppStore((state) => state.recordDebtPayment);
+  const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export function CustomersScreen() {
   const [debtPaymentNote, setDebtPaymentNote] = useState("");
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const owingCount = useMemo(() => customers.filter((customer) => customer.balance > 0).length, [customers]);
   const totalDebt = useMemo(() => customers.reduce((sum, customer) => sum + Math.max(0, customer.balance), 0), [customers]);
 
@@ -52,6 +54,10 @@ export function CustomersScreen() {
   });
 
   const filtered = useMemo(() => customers.filter((customer) => customer.name.toLowerCase().includes(search.toLowerCase()) || (customer.phone ?? "").includes(search)), [customers, search]);
+
+  React.useEffect(() => {
+    loadCatalog().catch(() => undefined);
+  }, [loadCatalog]);
 
   React.useEffect(() => {
     if (!selectedCustomerId) {
@@ -70,6 +76,16 @@ export function CustomersScreen() {
       .finally(() => setPaymentsLoading(false));
   }, [selectedCustomerId]);
 
+  async function refreshCustomers() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadCatalog();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <Screen>
       <GradientHeader
@@ -81,7 +97,7 @@ export function CustomersScreen() {
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshCustomers}>
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Customer overview</Text>
           <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Keep balances simple</Text>
@@ -127,9 +143,9 @@ export function CustomersScreen() {
             icon="people-outline"
           />
         )}
-      </ScrollView>
+      </AppScrollView>
       <SimpleModal visible={visible} title="Add customer" onClose={() => setVisible(false)}>
-        <ScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Controller
             control={control}
             name="name"
@@ -170,10 +186,10 @@ export function CustomersScreen() {
             })}
             loading={savingCustomer}
           />
-        </ScrollView>
+        </AppScrollView>
       </SimpleModal>
       <SimpleModal visible={Boolean(selectedCustomerId)} title="Customer statement" onClose={() => setSelectedCustomerId(null)}>
-        <ScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
           {(() => {
             const customer = customers.find((item) => item.id === selectedCustomerId);
             const customerSales = sales.filter((sale) => sale.customerId === selectedCustomerId);
@@ -298,7 +314,7 @@ export function CustomersScreen() {
               </>
             );
           })()}
-        </ScrollView>
+        </AppScrollView>
       </SimpleModal>
     </Screen>
   );

@@ -1,252 +1,261 @@
-import React, { useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
-import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import React from "react";
+import { Alert, Pressable, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAppStore } from "@/store/useAppStore";
+import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
-import { useAppStore } from "@/store/useAppStore";
-import { Ionicons } from "@expo/vector-icons";
+import { formatDate } from "@/utils/date";
 import { copyReceipt, printBluetoothReceipt, shareReceipt } from "@/services/printerService";
-
-const checkoutSchema = z.object({
-  amountPaid: z.coerce.number().nonnegative(),
-  notes: z.string().optional()
-});
-
-type CartLine = { productId: string; name: string; quantity: number; unitPrice: number; costPrice: number; discount: number };
 
 export function PosScreen() {
   const products = useAppStore((state) => state.products);
-  const customers = useAppStore((state) => state.customers);
+  const sales = useAppStore((state) => state.sales);
   const business = useAppStore((state) => state.business);
   const createSale = useAppStore((state) => state.createSale);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
 
-  const [search, setSearch] = useState("");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "mpesa" | "bank" | "credit">("cash");
-  const [paymentStatus, setPaymentStatus] = useState<"paid" | "partial" | "pending_confirmation" | "credit" | "unpaid">("paid");
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [receipt, setReceipt] = useState<string | null>(null);
-  const [receiptVisible, setReceiptVisible] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
-
-  const { control, handleSubmit, reset } = useForm<{ amountPaid: number; notes?: string }>({
-    resolver: zodResolver(checkoutSchema),
-    defaultValues: { amountPaid: 0, notes: "" }
-  });
+  const [search, setSearch] = React.useState("");
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [productSearch, setProductSearch] = React.useState("");
+  const [selectedProductId, setSelectedProductId] = React.useState<string | null>(null);
+  const [quantity, setQuantity] = React.useState("1");
+  const [saving, setSaving] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [receipt, setReceipt] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
   }, [loadCatalog]);
 
-  const filtered = useMemo(() => {
-    return products.filter((product) => product.name.toLowerCase().includes(search.toLowerCase()) || (product.sku ?? "").toLowerCase().includes(search.toLowerCase()));
-  }, [products, search]);
-
-  const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const discountTotal = cart.reduce((sum, line) => sum + line.discount, 0);
-  const total = subtotal - discountTotal;
-  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId) ?? null;
-
-  const addToCart = (product: (typeof products)[number]) => {
-    setCart((current) => {
-      const exists = current.find((line) => line.productId === product.id);
-      if (exists) {
-        return current.map((line) => (line.productId === product.id ? { ...line, quantity: line.quantity + 1 } : line));
-      }
-      return current.concat([{ productId: product.id, name: product.name, quantity: 1, unitPrice: product.sellingPrice, costPrice: product.buyingPrice, discount: 0 }]);
+  const filteredSales = React.useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return sales.filter((sale) => {
+      if (!query) return true;
+      return [sale.receiptNumber, sale.customerId ?? "", sale.paymentMethod, sale.paymentStatus]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
     });
-  };
+  }, [sales, search]);
+
+  const filteredProducts = React.useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    return products.filter((product) => {
+      if (!query) return true;
+      return [product.name, product.sku ?? "", product.barcode ?? ""].join(" ").toLowerCase().includes(query);
+    });
+  }, [productSearch, products]);
+
+  const selectedProduct = React.useMemo(() => products.find((product) => product.id === selectedProductId) ?? null, [products, selectedProductId]);
+  const saleQuantity = Number(quantity || 0);
+  const total = selectedProduct ? selectedProduct.sellingPrice * saleQuantity : 0;
+
+  async function refreshSales() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadCatalog();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function saveSale() {
+    if (!selectedProduct) {
+      Alert.alert("Choose a product", "Select a product before recording the sale.");
+      return;
+    }
+    if (!saleQuantity || saleQuantity <= 0) {
+      Alert.alert("Enter quantity", "Quantity must be greater than zero.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await createSale({
+        paymentMethod: "cash",
+        paymentStatus: "paid",
+        amountPaid: total,
+        notes: null,
+        items: [
+          {
+            productId: selectedProduct.id,
+            quantity: saleQuantity,
+            unitPrice: selectedProduct.sellingPrice,
+            costPrice: selectedProduct.buyingPrice,
+            discount: 0
+          }
+        ]
+      });
+      setReceipt(result.receipt);
+      setModalVisible(false);
+      setSelectedProductId(null);
+      setQuantity("1");
+      setProductSearch("");
+      Alert.alert("Sale recorded", "The sale has been saved and the history has been refreshed.");
+    } catch (error) {
+      Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to record sale");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Screen>
-      <GradientHeader title="POS checkout" subtitle="Quick checkout that stays in sync when the network returns" />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Card style={{ gap: 12 }}>
-          <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search by name or SKU" />
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: tokens.colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Selected customer</Text>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{selectedCustomer?.name ?? "No customer selected"}</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              {selectedCustomer ? "This sale will be linked to the selected customer." : "Choose a customer only when you need the sale linked to an account."}
-            </Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {customers.slice(0, 4).map((customer) => (
-              <Pressable key={customer.id} onPress={() => setSelectedCustomerId(customer.id)}>
-                <Badge label={customer.name} tone={selectedCustomerId === customer.id ? "success" : "primary"} />
-              </Pressable>
-            ))}
-          </ScrollView>
+      <GradientHeader
+        title="Sales"
+        subtitle="Review recent sales and record a new one when needed"
+        right={
+          <Pressable onPress={() => setModalVisible(true)}>
+            <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
+          </Pressable>
+        }
+      />
+
+      <AppScrollView refreshing={refreshing} onRefresh={refreshSales}>
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Sales history</Text>
+          <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>Keep the page focused on recent sales.</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+            Tap Record Sale to open the simple entry flow. The history below updates automatically after each save.
+          </Text>
+          <PrimaryButton title="Record Sale" onPress={() => setModalVisible(true)} />
         </Card>
-        <FlatList
-          data={filtered}
-          scrollEnabled={false}
-          keyExtractor={(item) => item.id}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => addToCart(item)}>
-              <Card style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{item.name}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>{item.sku ?? "No SKU"} • Stock {item.stockOnHand}</Text>
+
+        <Card>
+          <InputField label="Search sales" value={search} onChangeText={setSearch} placeholder="Receipt, method, or status" />
+        </Card>
+
+        {filteredSales.length ? (
+          filteredSales.map((sale) => {
+            const paymentStatus = String(sale.paymentStatus ?? "paid");
+            const paymentMethod = String(sale.paymentMethod ?? "cash");
+            return (
+              <Card key={sale.id} style={{ gap: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{sale.receiptNumber}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary }}>
+                      {formatDate(sale.createdAt, "PPP p")} • {paymentMethod.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Badge label={formatPaymentStatusLabel(paymentStatus)} tone={paymentStatus === "paid" ? "success" : paymentStatus === "unpaid" ? "danger" : "warning"} />
                 </View>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(item.sellingPrice, business?.currency)}</Text>
-              </Card>
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <EmptyState
-              title="No matching products"
-              subtitle={search ? "Try a different product name or SKU." : "Add products to the catalog before starting a sale."}
-              icon="cube-outline"
-            />
-          }
-        />
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Cart</Text>
-          {cart.length ? (
-            cart.map((line) => (
-              <View key={line.productId} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <Text style={{ color: tokens.colors.textSecondary, flex: 1 }}>
-                  {line.name} x{line.quantity}
+                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(sale.grandTotal, business?.currency ?? "KES")}</Text>
+                <Text style={{ color: tokens.colors.textSecondary }}>
+                  {sale.items.length} item{sale.items.length === 1 ? "" : "s"} • {sale.customerId ? "Linked customer" : "Walk-in sale"}
                 </Text>
-                <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatMoney(line.quantity * line.unitPrice, business?.currency)}</Text>
-              </View>
-            ))
-          ) : (
-            <EmptyState title="Cart is empty" subtitle="Tap a product above to add it to the sale." icon="cart-outline" />
-          )}
-          <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border, paddingTop: 12, gap: 4 }}>
-            <Text style={{ color: tokens.colors.textSecondary }}>Subtotal: {formatMoney(subtotal, business?.currency)}</Text>
-            <Text style={{ color: tokens.colors.textSecondary }}>Discount: {formatMoney(discountTotal, business?.currency)}</Text>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Total: {formatMoney(total, business?.currency)}</Text>
+              </Card>
+            );
+          })
+        ) : (
+          <EmptyState
+            title={search ? "No matching sales" : "No sales yet"}
+            subtitle={search ? "Try a different receipt number, method, or status." : "Use Record Sale to create the first entry."}
+            icon="receipt-outline"
+          />
+        )}
+      </AppScrollView>
+
+      <SimpleModal visible={modalVisible} title="Record sale" onClose={() => setModalVisible(false)}>
+        <View style={{ gap: 12, maxHeight: "100%" }}>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+            Choose one product, enter the quantity, and save. The total updates automatically.
+          </Text>
+          <InputField label="Search products" value={productSearch} onChangeText={setProductSearch} placeholder="Find a product" />
+          <View style={{ gap: 10, maxHeight: 240 }}>
+            {filteredProducts.length ? (
+              filteredProducts.map((product) => {
+                const selected = product.id === selectedProductId;
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => setSelectedProductId(product.id)}
+                    style={{
+                      padding: 14,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: selected ? tokens.colors.primaryStrong : tokens.colors.border,
+                      backgroundColor: selected ? "rgba(37,99,235,0.08)" : tokens.colors.surfaceAlt,
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                      <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800", flex: 1 }}>{product.name}</Text>
+                      <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
+                    </View>
+                    <Text style={{ color: tokens.colors.textSecondary }}>
+                      {product.sku ?? "No SKU"} • Stock {product.stockOnHand}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <EmptyState title="No matching products" subtitle="Try a different product name or SKU." icon="cube-outline" />
+            )}
           </View>
-          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Payment method</Text>
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
-              <Pressable key={method} onPress={() => setPaymentMethod(method)}>
-                <Badge label={formatPaymentMethodLabel(method)} tone={paymentMethod === method ? "success" : "primary"} />
-              </Pressable>
-            ))}
-          </View>
-          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Payment status</Text>
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            {(["paid", "partial", "pending_confirmation", "credit", "unpaid"] as const).map((status) => (
-              <Pressable key={status} onPress={() => setPaymentStatus(status)}>
-                <Badge label={formatPaymentStatusLabel(status)} tone={paymentStatus === status ? "success" : status === "unpaid" ? "danger" : "primary"} />
-              </Pressable>
-            ))}
-          </View>
-          <Controller
-            control={control}
-            name="amountPaid"
-            render={({ field: { value, onChange } }) => (
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
               <InputField
-                label="Amount received"
-                value={String(value)}
-                onChangeText={(text) => onChange(Number(text || 0))}
+                label="Quantity"
+                value={quantity}
+                onChangeText={setQuantity}
                 keyboardType="decimal-pad"
-                placeholder={String(total)}
-                helperText="Leave at 0 for credit or enter the amount already paid."
+                helperText="Enter how many units are being sold."
               />
-            )}
-          />
-          <Controller
-            control={control}
-            name="notes"
-            render={({ field: { value, onChange } }) => (
-              <InputField label="Payment note" value={value ?? ""} onChangeText={onChange} placeholder="Optional note" helperText="Use this for delivery notes or payment context." />
-            )}
-          />
-        </Card>
-        <PrimaryButton
-          title="Complete sale"
-          onPress={handleSubmit(async (values) => {
-            if (!cart.length) {
-              Alert.alert("Add products", "Tap a product first before completing the sale.");
-              return;
-            }
-            setCheckingOut(true);
-            try {
-              const result = await createSale({
-                customerId: selectedCustomerId,
-                paymentMethod,
-                paymentStatus,
-                amountPaid: values.amountPaid,
-                notes: values.notes ?? null,
-                items: cart.map((line) => ({
-                  productId: line.productId,
-                  quantity: line.quantity,
-                  unitPrice: line.unitPrice,
-                  costPrice: line.costPrice,
-                  discount: line.discount
-                }))
-              });
-              setReceipt(result.receipt);
-              setReceiptVisible(true);
-              setCart([]);
-              reset({ amountPaid: 0, notes: "" });
-              setSelectedCustomerId(null);
-              Alert.alert("Sale completed", "Sale created successfully.");
-            } catch (error) {
-              Alert.alert("Sale failed", error instanceof Error ? error.message : "Failed to create sale");
-            } finally {
-              setCheckingOut(false);
-            }
-          })}
-          loading={checkingOut}
-        />
-      </ScrollView>
-      <SimpleModal visible={receiptVisible} title="Receipt ready" onClose={() => setReceiptVisible(false)}>
+            </View>
+            <View style={{ flex: 1, justifyContent: "flex-end" }}>
+              <Card style={{ gap: 6, padding: 14 }}>
+                <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Total</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{formatMoney(total, business?.currency ?? "KES")}</Text>
+              </Card>
+            </View>
+          </View>
+          <PrimaryButton title={saving ? "Saving..." : "Save sale"} onPress={saveSale} loading={saving} disabled={!selectedProduct} />
+          <PrimaryButton title="Close" variant="secondary" onPress={() => setModalVisible(false)} />
+        </View>
+      </SimpleModal>
+
+      <SimpleModal visible={Boolean(receipt)} title="Receipt saved" onClose={() => setReceipt(null)}>
         <View style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.textSecondary, fontFamily: "monospace" }}>{receipt}</Text>
-          <View style={{ gap: 10 }}>
-            <PrimaryButton
-              title="Copy receipt"
-              variant="secondary"
-              onPress={async () => {
-                if (!receipt) return;
-                await copyReceipt(receipt);
-                Alert.alert("Copied", "Receipt text copied to clipboard.");
-              }}
-            />
-            <PrimaryButton
-              title="Share receipt"
-              variant="secondary"
-              onPress={async () => {
-                if (!receipt) return;
-                await shareReceipt(receipt);
-              }}
-            />
-            <PrimaryButton
-              title="Bluetooth print"
-              onPress={async () => {
-                if (!receipt) return;
-                try {
-                  await printBluetoothReceipt(receipt);
-                  Alert.alert("Printed", "Receipt sent to the paired Bluetooth printer.");
-                } catch (error) {
-                  Alert.alert("Printer unavailable", error instanceof Error ? error.message : "Bluetooth printing failed");
-                }
-              }}
-            />
-            <PrimaryButton title="Close" variant="secondary" onPress={() => setReceiptVisible(false)} />
-          </View>
+          <PrimaryButton
+            title="Copy receipt"
+            variant="secondary"
+            onPress={async () => {
+              if (!receipt) return;
+              await copyReceipt(receipt);
+              Alert.alert("Copied", "Receipt text copied to clipboard.");
+            }}
+          />
+          <PrimaryButton
+            title="Share receipt"
+            variant="secondary"
+            onPress={async () => {
+              if (!receipt) return;
+              await shareReceipt(receipt);
+            }}
+          />
+          <PrimaryButton
+            title="Bluetooth print"
+            onPress={async () => {
+              if (!receipt) return;
+              try {
+                await printBluetoothReceipt(receipt);
+                Alert.alert("Printed", "Receipt sent to the paired Bluetooth printer.");
+              } catch (error) {
+                Alert.alert("Printer unavailable", error instanceof Error ? error.message : "Bluetooth printing failed");
+              }
+            }}
+          />
         </View>
       </SimpleModal>
     </Screen>
   );
 }
 
-function formatPaymentMethodLabel(method: "cash" | "mpesa" | "bank" | "credit") {
-  return method === "mpesa" ? "M-Pesa" : method === "cash" ? "Cash" : method === "bank" ? "Bank" : "Credit";
-}
-
-function formatPaymentStatusLabel(status: "paid" | "partial" | "pending_confirmation" | "credit" | "unpaid") {
+function formatPaymentStatusLabel(status: string) {
   switch (status) {
     case "paid":
       return "Paid";
@@ -258,5 +267,7 @@ function formatPaymentStatusLabel(status: "paid" | "partial" | "pending_confirma
       return "Credit sale";
     case "unpaid":
       return "Unpaid";
+    default:
+      return status.replaceAll("_", " ");
   }
 }

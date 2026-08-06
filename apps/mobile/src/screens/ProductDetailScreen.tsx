@@ -1,7 +1,7 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { RouteProp, useRoute } from "@react-navigation/native";
-import { Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatDate } from "@/utils/date";
@@ -9,6 +9,7 @@ import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
 import { getProductHistory } from "@/services/apiClient";
 import type { StockMovement } from "@shared";
+import { hasPermission } from "@shared";
 
 type RootStackParamList = {
   Main: undefined;
@@ -32,8 +33,10 @@ type SaleHistoryRow = {
 
 export function ProductDetailScreen() {
   const route = useRoute<Route>();
+  const navigation = useNavigation<any>();
   const product = useAppStore((state) => state.products.find((item) => item.id === route.params.productId) ?? null);
   const business = useAppStore((state) => state.business);
+  const user = useAppStore((state) => state.user);
   const adjustStock = useAppStore((state) => state.adjustStock);
   const [stockMovements, setStockMovements] = React.useState<StockMovement[]>([]);
   const [salesHistory, setSalesHistory] = React.useState<SaleHistoryRow[]>([]);
@@ -41,15 +44,39 @@ export function ProductDetailScreen() {
   const [restockQty, setRestockQty] = React.useState("0");
   const [restockCost, setRestockCost] = React.useState("0");
   const [restockNote, setRestockNote] = React.useState("Quick restock");
+  const [savingRestock, setSavingRestock] = React.useState(false);
+  const [historyLoading, setHistoryLoading] = React.useState(true);
+  const canManageInventory = hasPermission(user, "manageInventory");
 
   React.useEffect(() => {
     loadHistory().catch(() => undefined);
   }, [route.params.productId]);
 
+  if (!canManageInventory) {
+    return (
+      <Screen>
+        <GradientHeader title="Product details" subtitle="Inventory view" />
+        <View style={{ padding: 16 }}>
+          <EmptyState
+            title="Product details restricted"
+            subtitle="This account cannot view inventory detail. Ask an owner or manager for inventory access."
+            action={<PrimaryButton title="Go back" onPress={() => navigation.goBack()} />}
+            icon="cube-outline"
+          />
+        </View>
+      </Screen>
+    );
+  }
+
   async function loadHistory() {
-    const history = await getProductHistory(route.params.productId);
-    setStockMovements(history.stockMovements);
-    setSalesHistory(history.salesHistory);
+    setHistoryLoading(true);
+    try {
+      const history = await getProductHistory(route.params.productId);
+      setStockMovements(history.stockMovements);
+      setSalesHistory(history.salesHistory);
+    } finally {
+      setHistoryLoading(false);
+    }
   }
 
   if (!product) {
@@ -57,8 +84,9 @@ export function ProductDetailScreen() {
       <Screen>
         <GradientHeader title="Product details" subtitle="Item not found locally" />
         <View style={{ padding: 16 }}>
-          <Card>
-            <Text style={{ color: tokens.colors.textSecondary }}>The selected product is not available in the local catalog yet.</Text>
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Product not found</Text>
+            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>The selected product is not available in the local catalog yet.</Text>
           </Card>
         </View>
       </Screen>
@@ -73,7 +101,7 @@ export function ProductDetailScreen() {
       <GradientHeader
         title={product.name}
         subtitle={`${product.sku ?? "No SKU"} • ${product.unit} • ${business?.currency ?? "KES"}`}
-        right={<Badge label={product.isActive ? "active" : "archived"} tone={product.isActive ? "success" : "warning"} />}
+        right={<Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />}
       />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Card style={{ gap: 12 }}>
@@ -82,27 +110,32 @@ export function ProductDetailScreen() {
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{product.name}</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>{product.barcode ?? "No barcode"}</Text>
             </View>
-            <Badge label={lowStock ? "low stock" : "healthy"} tone={lowStock ? "danger" : "success"} />
+            <Badge label={lowStock ? "Low stock" : "Healthy"} tone={lowStock ? "danger" : "success"} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Stock" value={String(product.stockOnHand)} />
-            <Metric label="Low stock" value={String(product.lowStockThreshold)} />
-            <Metric label="Margin" value={formatMoney(margin, business?.currency)} />
+            <Metric label="Units on hand" value={String(product.stockOnHand)} />
+            <Metric label="Low stock limit" value={String(product.lowStockThreshold)} />
+            <Metric label="Profit per unit" value={formatMoney(margin, business?.currency)} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Buying" value={formatMoney(product.buyingPrice, business?.currency)} />
-            <Metric label="Selling" value={formatMoney(product.sellingPrice, business?.currency)} />
+            <Metric label="Buying price" value={formatMoney(product.buyingPrice, business?.currency)} />
+            <Metric label="Selling price" value={formatMoney(product.sellingPrice, business?.currency)} />
           </View>
-          <PrimaryButton title="Quick restock" onPress={() => setRestockVisible(true)} />
+          <PrimaryButton title="Add stock" onPress={() => setRestockVisible(true)} />
         </Card>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Stock history</Text>
-          {stockMovements.length ? (
+          {historyLoading ? (
+            <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
+              <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />
+              <Text style={{ color: tokens.colors.textSecondary }}>Loading stock activity...</Text>
+            </View>
+          ) : stockMovements.length ? (
             stockMovements.map((movement) => (
               <View key={movement.id} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: tokens.colors.border, gap: 4 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{movement.referenceType}</Text>
+                  <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatReferenceLabel(movement.referenceType)}</Text>
                   <Text style={{ color: movement.quantityDelta < 0 ? tokens.colors.danger : tokens.colors.success, fontWeight: "800" }}>
                     {movement.quantityDelta > 0 ? "+" : ""}
                     {movement.quantityDelta}
@@ -119,12 +152,17 @@ export function ProductDetailScreen() {
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Sales history</Text>
-          {salesHistory.length ? (
+          {historyLoading ? (
+            <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
+              <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />
+              <Text style={{ color: tokens.colors.textSecondary }}>Loading sales activity...</Text>
+            </View>
+          ) : salesHistory.length ? (
             salesHistory.map((sale) => (
               <View key={sale.id} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: tokens.colors.border, gap: 4 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{sale.receiptNumber}</Text>
-                  <Badge label={sale.paymentStatus.replaceAll("_", " ")} tone={sale.paymentStatus === "paid" ? "success" : sale.paymentStatus === "unpaid" ? "danger" : "warning"} />
+                  <Badge label={formatPaymentStatusLabel(sale.paymentStatus)} tone={sale.paymentStatus === "paid" ? "success" : sale.paymentStatus === "unpaid" ? "danger" : "warning"} />
                 </View>
                 <Text style={{ color: tokens.colors.textSecondary }}>
                   Qty {sale.quantity} • {formatMoney(sale.lineTotal, business?.currency)}
@@ -140,12 +178,13 @@ export function ProductDetailScreen() {
 
       <SimpleModal visible={restockVisible} title="Quick restock" onClose={() => setRestockVisible(false)}>
         <View style={{ gap: 12 }}>
-          <InputField label="Quantity" value={restockQty} onChangeText={setRestockQty} keyboardType="decimal-pad" />
-          <InputField label="Unit cost" value={restockCost} onChangeText={setRestockCost} keyboardType="decimal-pad" />
-          <InputField label="Note" value={restockNote} onChangeText={setRestockNote} />
+          <InputField label="Quantity" value={restockQty} onChangeText={setRestockQty} keyboardType="decimal-pad" helperText="How many units are being added." />
+          <InputField label="Unit cost" value={restockCost} onChangeText={setRestockCost} keyboardType="decimal-pad" helperText="What one unit cost you." />
+          <InputField label="Note" value={restockNote} onChangeText={setRestockNote} helperText="Optional note for the stock movement." />
           <PrimaryButton
             title="Save restock"
             onPress={async () => {
+              setSavingRestock(true);
               try {
                 const quantity = Number(restockQty || 0);
                 const unitCost = Number(restockCost || 0);
@@ -161,10 +200,14 @@ export function ProductDetailScreen() {
                 });
                 setRestockVisible(false);
                 await loadHistory();
+                Alert.alert("Stock updated", "Inventory updated successfully.");
               } catch (error) {
                 Alert.alert("Restock failed", error instanceof Error ? error.message : "Failed to update stock");
+              } finally {
+                setSavingRestock(false);
               }
             }}
+            loading={savingRestock}
           />
         </View>
       </SimpleModal>
@@ -179,4 +222,21 @@ function Metric({ label, value }: { label: string; value: string }) {
       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{value}</Text>
     </View>
   );
+}
+
+function formatReferenceLabel(value: string) {
+  if (value === "adjustment") return "Manual adjustment";
+  if (value === "sale") return "Sale";
+  if (value === "restock") return "Restock";
+  return value.replaceAll("_", " ");
+}
+
+function formatPaymentStatusLabel(value: string) {
+  return value === "pending_confirmation"
+    ? "Awaiting confirmation"
+    : value === "paid"
+      ? "Paid"
+      : value === "unpaid"
+        ? "Unpaid"
+        : value.replaceAll("_", " ");
 }

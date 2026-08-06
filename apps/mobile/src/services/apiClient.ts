@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 import { secureStore } from "@/storage/secure";
-import type { Business, Category, Customer, Expense, Payment, Product, Sale, StockMovement, DailySummary } from "@shared";
+import type { AccessPermission, Business, Category, Customer, Expense, Payment, Product, Sale, StockMovement, DailySummary, UserRole } from "@shared";
 
 type RequestOptions = {
   method?: string;
@@ -10,7 +10,7 @@ type RequestOptions = {
 };
 
 export type ApiSession = {
-  user: { id: string; fullName: string; role: string; businessId: string };
+  user: { id: string; fullName: string; role: string; businessId: string; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null };
   business: Business;
   accessToken?: string | null;
 };
@@ -29,6 +29,40 @@ type AuthResponse = {
 };
 
 type RawEntity = Record<string, any> & { _id?: string; id?: string };
+
+export type EmployeeRecord = {
+  id: string;
+  businessId: string;
+  ownerId?: string | null;
+  branchId?: string | null;
+  fullName: string;
+  phone?: string | null;
+  role: UserRole;
+  roleLabel?: string | null;
+  permissions?: AccessPermission[] | null;
+  isActive: boolean;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
+  deletedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EmployeeCatalog = {
+  permissions: AccessPermission[];
+  roles: Array<{ role: UserRole; label: string; permissions: AccessPermission[] }>;
+};
+
+export type AuditLogRecord = {
+  id: string;
+  businessId: string;
+  actorId: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
 
 function withId<T extends RawEntity>(entity: T): T & { id: string } {
   const id = entity.id ?? String(entity._id ?? "");
@@ -241,10 +275,94 @@ export async function getReportsSummary(from?: string, to?: string) {
   return apiRequest<DailySummary>(`/reports/summary${suffix}`);
 }
 
-export async function getTopProducts() {
-  return apiRequest<Array<{ productId: string; productName: string; quantity: number; total: number }>>("/reports/top-products");
+export async function getTopProducts(from?: string, to?: string) {
+  const query = new URLSearchParams();
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiRequest<Array<{ productId: string; productName: string; quantity: number; total: number }>>(`/reports/top-products${suffix}`);
 }
 
-export async function getPaymentBreakdown() {
-  return apiRequest<Array<{ _id: string; total: number; count: number }>>("/reports/payment-breakdown");
+export async function getPaymentBreakdown(from?: string, to?: string) {
+  const query = new URLSearchParams();
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiRequest<Array<{ _id: string; total: number; count: number }>>(`/reports/payment-breakdown${suffix}`);
+}
+
+export async function listEmployees() {
+  const employees = await apiRequest<RawEntity[]>("/employees");
+  return employees.map((employee) => withId(employee)) as EmployeeRecord[];
+}
+
+export async function getEmployeeCatalog() {
+  return apiRequest<EmployeeCatalog>("/employees/catalog");
+}
+
+export async function listEmployeeAuditLogs() {
+  const logs = await apiRequest<RawEntity[]>("/employees/audit");
+  return logs.map((log) => withId(log)) as AuditLogRecord[];
+}
+
+export async function createEmployee(input: {
+  branchId?: string | null;
+  fullName: string;
+  phone?: string | null;
+  password: string;
+  pin?: string | null;
+  role: UserRole;
+  roleLabel?: string | null;
+  permissions?: AccessPermission[] | null;
+  isActive?: boolean;
+}) {
+  const employee = await apiRequest<RawEntity>("/employees", { method: "POST", body: input });
+  return withId(employee) as EmployeeRecord;
+}
+
+export async function updateEmployee(id: string, input: {
+  branchId?: string | null;
+  fullName?: string;
+  phone?: string | null;
+  role?: UserRole;
+  roleLabel?: string | null;
+  permissions?: AccessPermission[] | null;
+  isActive?: boolean;
+}) {
+  const employee = await apiRequest<RawEntity>(`/employees/${encodeURIComponent(id)}`, { method: "PATCH", body: input });
+  return withId(employee) as EmployeeRecord;
+}
+
+export async function suspendEmployee(id: string, reason?: string | null) {
+  const employee = await apiRequest<RawEntity>(`/employees/${encodeURIComponent(id)}/suspend`, {
+    method: "POST",
+    body: { reason: reason ?? "" }
+  });
+  return withId(employee) as EmployeeRecord;
+}
+
+export async function restoreEmployee(id: string) {
+  const employee = await apiRequest<RawEntity>(`/employees/${encodeURIComponent(id)}/restore`, {
+    method: "POST"
+  });
+  return withId(employee) as EmployeeRecord;
+}
+
+export async function resetEmployeeCredentials(
+  id: string,
+  input: { password?: string | null; pin?: string | null }
+) {
+  const result = await apiRequest<{ employee: RawEntity; temporaryPassword: string | null }>(`/employees/${encodeURIComponent(id)}/reset-credentials`, {
+    method: "POST",
+    body: input
+  });
+  return {
+    employee: withId(result.employee) as EmployeeRecord,
+    temporaryPassword: result.temporaryPassword
+  };
+}
+
+export async function deleteEmployee(id: string) {
+  const employee = await apiRequest<RawEntity>(`/employees/${encodeURIComponent(id)}`, { method: "DELETE" });
+  return withId(employee) as EmployeeRecord;
 }

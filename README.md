@@ -1,4 +1,4 @@
-# Vickins Business OS
+# Biz Pro
 
 Production-style monorepo for an offline-first Android POS and business OS for Kenyan SMEs.
 

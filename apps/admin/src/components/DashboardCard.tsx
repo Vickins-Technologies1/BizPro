@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 export function DashboardCard({
@@ -9,14 +11,19 @@ export function DashboardCard({
   children: React.ReactNode;
   accent?: string;
 }) {
+  const [hovered, setHovered] = React.useState(false);
   return (
     <section
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: "linear-gradient(180deg, rgba(17,24,39,0.96), rgba(15,23,42,0.96))",
+        background: "linear-gradient(180deg, rgba(17,24,39,0.96), rgba(15,23,42,0.94))",
         border: "1px solid var(--border)",
-        borderRadius: "var(--radius)",
-        boxShadow: "var(--shadow)",
-        padding: 20,
+        borderRadius: "24px",
+        boxShadow: hovered ? "0 24px 60px rgba(0,0,0,0.42)" : "var(--shadow)",
+        transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
+        padding: 22,
         position: "relative",
         overflow: "hidden"
       }}
@@ -36,7 +43,7 @@ export function DashboardCard({
           }}
         />
       ) : null}
-      <h3 style={{ margin: 0, fontSize: 18, marginBottom: 12, fontFamily: "var(--font-grotesk)" }}>{title}</h3>
+      <h3 style={{ margin: 0, fontSize: 18, marginBottom: 14, fontFamily: "var(--font-grotesk)", letterSpacing: -0.2 }}>{title}</h3>
       {children}
     </section>
   );

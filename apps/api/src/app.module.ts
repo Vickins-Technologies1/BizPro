@@ -14,6 +14,7 @@ import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.modul
 import { SyncModule } from "./modules/sync/sync.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { AuditModule } from "./modules/audit/audit.module";
+import { EmployeesModule } from "./modules/employees/employees.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { RolesGuard } from "./common/roles.guard";
 import { SupportKeyGuard } from "./common/support-key.guard";
@@ -44,7 +45,8 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     SubscriptionsModule,
     SyncModule,
     WebhooksModule,
-    AuditModule
+    AuditModule,
+    EmployeesModule
   ],
   controllers: [HealthController],
   providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]

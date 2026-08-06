@@ -33,7 +33,9 @@
       }
     },
     "splash": {
-      "backgroundColor": "#0B1220"
+      "image": "./assets/brand/biz-pro-logo.png",
+      "backgroundColor": "#0B1220",
+      "resizeMode": "contain"
     },
     "assetBundlePatterns": [
       "**/*"

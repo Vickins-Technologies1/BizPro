@@ -3,7 +3,7 @@ import { Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
@@ -31,6 +31,7 @@ export function PosScreen() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [receiptVisible, setReceiptVisible] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<{ amountPaid: number; notes?: string }>({
     resolver: zodResolver(checkoutSchema),
@@ -48,6 +49,7 @@ export function PosScreen() {
   const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
   const discountTotal = cart.reduce((sum, line) => sum + line.discount, 0);
   const total = subtotal - discountTotal;
+  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId) ?? null;
 
   const addToCart = (product: (typeof products)[number]) => {
     setCart((current) => {
@@ -61,10 +63,17 @@ export function PosScreen() {
 
   return (
     <Screen>
-      <GradientHeader title="POS checkout" subtitle="Fast retail flow that syncs automatically when the internet is available" />
+      <GradientHeader title="POS checkout" subtitle="Quick checkout that stays in sync when the network returns" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Card style={{ gap: 12 }}>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search by name or SKU" />
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: tokens.colors.textSecondary, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Selected customer</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{selectedCustomer?.name ?? "No customer selected"}</Text>
+            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
+              {selectedCustomer ? "This sale will be linked to the selected customer." : "Choose a customer only when you need the sale linked to an account."}
+            </Text>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {customers.slice(0, 4).map((customer) => (
               <Pressable key={customer.id} onPress={() => setSelectedCustomerId(customer.id)}>
@@ -89,32 +98,46 @@ export function PosScreen() {
               </Card>
             </Pressable>
           )}
-          ListEmptyComponent={<Card><Text style={{ color: tokens.colors.textSecondary }}>No matching products.</Text></Card>}
+          ListEmptyComponent={
+            <EmptyState
+              title="No matching products"
+              subtitle={search ? "Try a different product name or SKU." : "Add products to the catalog before starting a sale."}
+              icon="cube-outline"
+            />
+          }
         />
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Cart</Text>
-          {cart.length ? cart.map((line) => (
-            <View key={line.productId} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: tokens.colors.textSecondary }}>{line.name} x{line.quantity}</Text>
-              <Text style={{ color: tokens.colors.text }}>{formatMoney(line.quantity * line.unitPrice, business?.currency)}</Text>
-            </View>
-          )) : <Text style={{ color: tokens.colors.textMuted }}>Add products to start the sale.</Text>}
+          {cart.length ? (
+            cart.map((line) => (
+              <View key={line.productId} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <Text style={{ color: tokens.colors.textSecondary, flex: 1 }}>
+                  {line.name} x{line.quantity}
+                </Text>
+                <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatMoney(line.quantity * line.unitPrice, business?.currency)}</Text>
+              </View>
+            ))
+          ) : (
+            <EmptyState title="Cart is empty" subtitle="Tap a product above to add it to the sale." icon="cart-outline" />
+          )}
           <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border, paddingTop: 12, gap: 4 }}>
             <Text style={{ color: tokens.colors.textSecondary }}>Subtotal: {formatMoney(subtotal, business?.currency)}</Text>
             <Text style={{ color: tokens.colors.textSecondary }}>Discount: {formatMoney(discountTotal, business?.currency)}</Text>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Total: {formatMoney(total, business?.currency)}</Text>
           </View>
+          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Payment method</Text>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
               <Pressable key={method} onPress={() => setPaymentMethod(method)}>
-                <Badge label={method} tone={paymentMethod === method ? "success" : "primary"} />
+                <Badge label={formatPaymentMethodLabel(method)} tone={paymentMethod === method ? "success" : "primary"} />
               </Pressable>
             ))}
           </View>
+          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Payment status</Text>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             {(["paid", "partial", "pending_confirmation", "credit", "unpaid"] as const).map((status) => (
               <Pressable key={status} onPress={() => setPaymentStatus(status)}>
-                <Badge label={status.replaceAll("_", " ")} tone={paymentStatus === status ? "success" : status === "unpaid" ? "danger" : "primary"} />
+                <Badge label={formatPaymentStatusLabel(status)} tone={paymentStatus === status ? "success" : status === "unpaid" ? "danger" : "primary"} />
               </Pressable>
             ))}
           </View>
@@ -128,22 +151,26 @@ export function PosScreen() {
                 onChangeText={(text) => onChange(Number(text || 0))}
                 keyboardType="decimal-pad"
                 placeholder={String(total)}
+                helperText="Leave at 0 for credit or enter the amount already paid."
               />
             )}
           />
           <Controller
             control={control}
             name="notes"
-            render={({ field: { value, onChange } }) => <InputField label="Payment note" value={value ?? ""} onChangeText={onChange} placeholder="Optional note" />}
+            render={({ field: { value, onChange } }) => (
+              <InputField label="Payment note" value={value ?? ""} onChangeText={onChange} placeholder="Optional note" helperText="Use this for delivery notes or payment context." />
+            )}
           />
         </Card>
         <PrimaryButton
-          title="Checkout sale"
+          title="Complete sale"
           onPress={handleSubmit(async (values) => {
             if (!cart.length) {
-              Alert.alert("No items", "Add at least one product.");
+              Alert.alert("Add products", "Tap a product first before completing the sale.");
               return;
             }
+            setCheckingOut(true);
             try {
               const result = await createSale({
                 customerId: selectedCustomerId,
@@ -164,10 +191,14 @@ export function PosScreen() {
               setCart([]);
               reset({ amountPaid: 0, notes: "" });
               setSelectedCustomerId(null);
+              Alert.alert("Sale completed", "Sale created successfully.");
             } catch (error) {
               Alert.alert("Sale failed", error instanceof Error ? error.message : "Failed to create sale");
+            } finally {
+              setCheckingOut(false);
             }
           })}
+          loading={checkingOut}
         />
       </ScrollView>
       <SimpleModal visible={receiptVisible} title="Receipt ready" onClose={() => setReceiptVisible(false)}>
@@ -209,4 +240,23 @@ export function PosScreen() {
       </SimpleModal>
     </Screen>
   );
+}
+
+function formatPaymentMethodLabel(method: "cash" | "mpesa" | "bank" | "credit") {
+  return method === "mpesa" ? "M-Pesa" : method === "cash" ? "Cash" : method === "bank" ? "Bank" : "Credit";
+}
+
+function formatPaymentStatusLabel(status: "paid" | "partial" | "pending_confirmation" | "credit" | "unpaid") {
+  switch (status) {
+    case "paid":
+      return "Paid";
+    case "partial":
+      return "Partial";
+    case "pending_confirmation":
+      return "Awaiting confirmation";
+    case "credit":
+      return "Credit sale";
+    case "unpaid":
+      return "Unpaid";
+  }
 }

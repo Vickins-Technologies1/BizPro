@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
-import type { BusinessType, PlanTier, UserRole, PaymentMethod, PaymentStatus } from "@vbo/shared";
+import type { BusinessType, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
 
 @Schema({ timestamps: true, collection: "businesses" })
 export class Business {
@@ -59,6 +59,9 @@ export class User {
   @Prop({ required: true, index: true })
   businessId!: string;
 
+  @Prop({ type: String, default: null })
+  ownerId?: string | null;
+
   @Prop({ type: String })
   branchId?: string | null;
 
@@ -68,17 +71,29 @@ export class User {
   @Prop({ type: String })
   phone?: string | null;
 
-  @Prop({ type: String })
+  @Prop({ type: String, select: false })
   passwordHash?: string | null;
 
-  @Prop({ type: String })
+  @Prop({ type: String, select: false })
   pinHash?: string | null;
 
   @Prop({ required: true, enum: ["owner", "manager", "cashier"] satisfies UserRole[] })
   role!: UserRole;
 
+  @Prop({ type: String, default: null })
+  roleLabel?: string | null;
+
+  @Prop({ type: [String], default: undefined })
+  permissions?: AccessPermission[] | null;
+
   @Prop({ default: true })
   isActive!: boolean;
+
+  @Prop({ type: Date, default: null })
+  suspendedAt?: Date | null;
+
+  @Prop({ type: String, default: null })
+  suspensionReason?: string | null;
 
   @Prop({ type: Date, default: null })
   deletedAt?: Date | null;

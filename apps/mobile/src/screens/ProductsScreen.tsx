@@ -10,6 +10,8 @@ import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
 import { z } from "zod";
 import { useNavigation } from "@react-navigation/native";
+import { EmptyState } from "@/components/Primitives";
+import { hasPermission } from "@shared";
 
 type FormValues = z.infer<typeof productCreateSchema>;
 
@@ -18,6 +20,7 @@ export function ProductsScreen() {
   const products = useAppStore((state) => state.products);
   const categories = useAppStore((state) => state.categories);
   const business = useAppStore((state) => state.business);
+  const user = useAppStore((state) => state.user);
   const addCategory = useAppStore((state) => state.addCategory);
   const addProduct = useAppStore((state) => state.addProduct);
   const adjustStock = useAppStore((state) => state.adjustStock);
@@ -31,8 +34,19 @@ export function ProductsScreen() {
   const [restockCost, setRestockCost] = useState("0");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [savingStock, setSavingStock] = useState(false);
 
-  const { control, handleSubmit, reset, setValue, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors }
+  } = useForm<FormValues>({
+    mode: "onTouched",
     resolver: zodResolver(productCreateSchema),
     defaultValues: {
       businessId: business?.id ?? "",
@@ -69,12 +83,29 @@ export function ProductsScreen() {
     }
   }, [visible, selectedCategoryId, setValue]);
   const currentCategoryId = watch("categoryId");
+  const canManageInventory = hasPermission(user, "manageInventory");
+
+  if (!canManageInventory) {
+    return (
+      <Screen>
+        <GradientHeader title="Catalog" subtitle="Products, stock, and pricing" />
+        <View style={{ padding: 16 }}>
+          <EmptyState
+            title="Catalog access restricted"
+            subtitle="This account can only view sales work. Ask an owner or manager for inventory access."
+            action={<PrimaryButton title="Go back" onPress={() => navigation.goBack()} />}
+            icon="cube-outline"
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
       <GradientHeader
         title="Catalog"
-        subtitle={`${business?.businessType ?? BUSINESS_TYPES[0]} inventory and product control`}
+        subtitle={`${business?.businessType ?? BUSINESS_TYPES[0]} products, stock, and pricing`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
             <Pressable onPress={() => setCategoryVisible(true)}>
@@ -90,56 +121,90 @@ export function ProductsScreen() {
         <Card>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
         </Card>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          <Pressable onPress={() => setSelectedCategoryId(null)}>
-            <Badge label="All" tone={selectedCategoryId === null ? "success" : "primary"} />
-          </Pressable>
-          {categories.map((category) => (
-            <Pressable key={category.id} onPress={() => setSelectedCategoryId(category.id)}>
-              <Badge label={category.name} tone={selectedCategoryId === category.id ? "success" : "primary"} />
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Pressable onPress={() => setSelectedCategoryId(null)}>
+              <Badge label="All products" tone={selectedCategoryId === null ? "success" : "primary"} />
             </Pressable>
-          ))}
-        </ScrollView>
-        {filtered.map((product) => (
-          <Card key={product.id} style={{ gap: 8 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{product.name}</Text>
-                <Text style={{ color: tokens.colors.textSecondary }}>
-                  {product.sku ?? "No SKU"} • {product.unit} • {categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized"}
-                </Text>
+            {categories.map((category) => (
+              <Pressable key={category.id} onPress={() => setSelectedCategoryId(category.id)}>
+                <Badge label={category.name} tone={selectedCategoryId === category.id ? "success" : "primary"} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Card>
+        {filtered.length ? (
+          filtered.map((product) => (
+            <Card key={product.id} style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{product.name}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary }}>
+                    {product.sku ?? "No SKU"} • {product.unit} • {categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized"}
+                  </Text>
+                </View>
+                <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
               </View>
-              <Badge label={product.isActive ? "active" : "archived"} tone={product.isActive ? "success" : "warning"} />
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: tokens.colors.textSecondary }}>Stock: {product.stockOnHand}</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>Low: {product.lowStockThreshold}</Text>
-            </View>
-            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(product.sellingPrice, business?.currency)}</Text>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable onPress={() => navigation.navigate("ProductDetail", { productId: product.id })}>
-                <Badge label="view details" tone="primary" />
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setRestockProductId(product.id);
-                  setRestockQty("0");
-                  setRestockCost(String(product.buyingPrice));
-                  setRestockVisible(true);
-                }}
-              >
-                <Badge label="restock" tone="success" />
-              </Pressable>
-            </View>
-          </Card>
-        ))}
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: tokens.colors.textSecondary }}>Stock: {product.stockOnHand}</Text>
+                <Text style={{ color: tokens.colors.textSecondary }}>Low: {product.lowStockThreshold}</Text>
+              </View>
+              <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>
+                Selling price {formatMoney(product.sellingPrice, business?.currency)}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                <Pressable onPress={() => navigation.navigate("ProductDetail", { productId: product.id })}>
+                  <Badge label="Details" tone="primary" />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setRestockProductId(product.id);
+                    setRestockQty("0");
+                    setRestockCost(String(product.buyingPrice));
+                    setRestockVisible(true);
+                  }}
+                >
+                  <Badge label="Restock" tone="success" />
+                </Pressable>
+              </View>
+            </Card>
+          ))
+        ) : (
+          <EmptyState
+            title={search ? "No matching products" : "No products yet"}
+            subtitle={search ? "Try a different product name or SKU, or clear the search to see everything." : "Create your first product to start tracking stock and sales."}
+            action={<PrimaryButton title="Add product" onPress={() => setVisible(true)} />}
+            icon="cube-outline"
+          />
+        )}
       </ScrollView>
       <SimpleModal visible={visible} title="Add product" onClose={() => setVisible(false)}>
         <ScrollView contentContainerStyle={{ gap: 12 }}>
-          <Controller control={control} name="name" render={({ field: { value, onChange } }) => <InputField label="Product name" value={value} onChangeText={onChange} />} />
-          <Controller control={control} name="sku" render={({ field: { value, onChange } }) => <InputField label="SKU" value={(value as string) ?? ""} onChangeText={onChange} />} />
-          <Controller control={control} name="barcode" render={({ field: { value, onChange } }) => <InputField label="Barcode" value={(value as string) ?? ""} onChangeText={onChange} />} />
-          <Controller control={control} name="unit" render={({ field: { value, onChange } }) => <InputField label="Unit" value={value} onChangeText={onChange} />} />
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { value, onChange } }) => (
+              <InputField label="Product name" value={value} onChangeText={onChange} error={errors.name?.message} helperText="Use the name staff will recognize quickly." />
+            )}
+          />
+          <Controller
+            control={control}
+            name="sku"
+            render={({ field: { value, onChange } }) => <InputField label="SKU" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional shelf or lookup code." />}
+          />
+          <Controller
+            control={control}
+            name="barcode"
+            render={({ field: { value, onChange } }) => <InputField label="Barcode" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional barcode for scanner input." />}
+          />
+          <Controller
+            control={control}
+            name="unit"
+            render={({ field: { value, onChange } }) => (
+              <InputField label="Unit" value={value} onChangeText={onChange} error={errors.unit?.message} helperText="Examples: pcs, kg, box, or bottle." />
+            )}
+          />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Pressable onPress={() => setValue("categoryId", null)}>
               <Badge label="No category" tone={!currentCategoryId ? "success" : "primary"} />
@@ -150,13 +215,78 @@ export function ProductsScreen() {
               </Pressable>
             ))}
           </View>
-          <Controller control={control} name="buyingPrice" render={({ field: { value, onChange } }) => <InputField label="Buying price" value={String(value)} onChangeText={(text) => onChange(Number(text || 0))} keyboardType="decimal-pad" />} />
-          <Controller control={control} name="sellingPrice" render={({ field: { value, onChange } }) => <InputField label="Selling price" value={String(value)} onChangeText={(text) => onChange(Number(text || 0))} keyboardType="decimal-pad" />} />
-          <Controller control={control} name="stockOnHand" render={({ field: { value, onChange } }) => <InputField label="Opening stock" value={String(value)} onChangeText={(text) => onChange(Number(text || 0))} keyboardType="decimal-pad" />} />
-          <Controller control={control} name="lowStockThreshold" render={({ field: { value, onChange } }) => <InputField label="Low stock threshold" value={String(value)} onChangeText={(text) => onChange(Number(text || 0))} keyboardType="decimal-pad" />} />
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="buyingPrice"
+                render={({ field: { value, onChange } }) => (
+                  <InputField
+                    label="Buying price"
+                    value={String(value)}
+                    onChangeText={(text) => onChange(Number(text || 0))}
+                    keyboardType="decimal-pad"
+                    error={errors.buyingPrice?.message}
+                    helperText="How much you paid for one unit."
+                  />
+                )}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="sellingPrice"
+                render={({ field: { value, onChange } }) => (
+                  <InputField
+                    label="Selling price"
+                    value={String(value)}
+                    onChangeText={(text) => onChange(Number(text || 0))}
+                    keyboardType="decimal-pad"
+                    error={errors.sellingPrice?.message}
+                    helperText="What customers pay for one unit."
+                  />
+                )}
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="stockOnHand"
+                render={({ field: { value, onChange } }) => (
+                  <InputField
+                    label="Opening stock"
+                    value={String(value)}
+                    onChangeText={(text) => onChange(Number(text || 0))}
+                    keyboardType="decimal-pad"
+                    error={errors.stockOnHand?.message}
+                    helperText="Start with the stock you already have."
+                  />
+                )}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="lowStockThreshold"
+                render={({ field: { value, onChange } }) => (
+                  <InputField
+                    label="Low stock"
+                    value={String(value)}
+                    onChangeText={(text) => onChange(Number(text || 0))}
+                    keyboardType="decimal-pad"
+                    error={errors.lowStockThreshold?.message}
+                    helperText="You will be warned when stock falls below this level."
+                  />
+                )}
+              />
+            </View>
+          </View>
           <PrimaryButton
             title="Save product"
             onPress={handleSubmit(async (values) => {
+              setSavingProduct(true);
               try {
                 await addProduct({
                   businessId: business?.id ?? "",
@@ -171,45 +301,53 @@ export function ProductsScreen() {
                   lowStockThreshold: values.lowStockThreshold,
                   isActive: values.isActive
                 });
-                await loadCatalog();
                 reset({ businessId: business?.id ?? "", categoryId: null, name: "", sku: "", barcode: "", unit: "pcs", buyingPrice: 0, sellingPrice: 0, stockOnHand: 0, lowStockThreshold: 5, isActive: true });
                 setVisible(false);
+                Alert.alert("Product created", "Product created successfully.");
               } catch (error) {
                 Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save product");
+              } finally {
+                setSavingProduct(false);
               }
             })}
+            loading={savingProduct}
           />
         </ScrollView>
       </SimpleModal>
       <SimpleModal visible={categoryVisible} title="Add category" onClose={() => setCategoryVisible(false)}>
         <View style={{ gap: 12 }}>
-          <InputField label="Category name" value={categoryName} onChangeText={setCategoryName} placeholder="Fast Moving" />
+          <InputField label="Category name" value={categoryName} onChangeText={setCategoryName} placeholder="Fast Moving" helperText="Use a simple name like Drinks or Cleaning." />
           <PrimaryButton
             title="Save category"
             onPress={async () => {
+              setSavingCategory(true);
               try {
                 if (!categoryName.trim()) {
                   Alert.alert("Missing name", "Enter a category name.");
                   return;
                 }
                 await addCategory({ businessId: business?.id ?? "", name: categoryName.trim(), color: null, sortOrder: categories.length + 1 });
-                await loadCatalog();
                 setCategoryName("");
                 setCategoryVisible(false);
+                Alert.alert("Category created", "Category created successfully.");
               } catch (error) {
                 Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save category");
+              } finally {
+                setSavingCategory(false);
               }
             }}
+            loading={savingCategory}
           />
         </View>
       </SimpleModal>
       <SimpleModal visible={restockVisible} title="Add stock" onClose={() => setRestockVisible(false)}>
         <View style={{ gap: 12 }}>
-          <InputField label="Quantity to add" value={restockQty} onChangeText={setRestockQty} keyboardType="decimal-pad" />
-          <InputField label="Unit cost" value={restockCost} onChangeText={setRestockCost} keyboardType="decimal-pad" />
+          <InputField label="Quantity to add" value={restockQty} onChangeText={setRestockQty} keyboardType="decimal-pad" helperText="Enter how many units are being added." />
+          <InputField label="Unit cost" value={restockCost} onChangeText={setRestockCost} keyboardType="decimal-pad" helperText="Use the cost paid for one unit." />
           <PrimaryButton
             title="Save stock"
             onPress={async () => {
+              setSavingStock(true);
               try {
                 if (!restockProductId) {
                   Alert.alert("Missing product", "Select a product first.");
@@ -223,10 +361,14 @@ export function ProductsScreen() {
                 }
                 await adjustStock({ productId: restockProductId, quantityDelta: qty, unitCost: cost, note: "Manual restock" });
                 setRestockVisible(false);
+                Alert.alert("Stock updated", "Inventory updated successfully.");
               } catch (error) {
                 Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to add stock");
+              } finally {
+                setSavingStock(false);
               }
             }}
+            loading={savingStock}
           />
         </View>
       </SimpleModal>

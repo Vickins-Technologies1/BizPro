@@ -1,4 +1,5 @@
 import type { BUSINESS_TYPES, PAYMENT_METHODS, PAYMENT_STATUSES, PLAN_TIERS, SYNC_ACTIONS, USER_ROLES } from "./constants";
+import type { AccessPermission } from "./access";
 
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 export type PlanTier = (typeof PLAN_TIERS)[number];
@@ -36,12 +37,17 @@ export interface Business {
 }
 
 export interface User extends BaseEntity {
+  ownerId?: string | null;
   branchId?: string | null;
   fullName: string;
   phone?: string | null;
   pinHash?: string | null;
   role: UserRole;
+  roleLabel?: string | null;
+  permissions?: AccessPermission[] | null;
   isActive: boolean;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
 }
 
 export interface Device extends BaseEntity {

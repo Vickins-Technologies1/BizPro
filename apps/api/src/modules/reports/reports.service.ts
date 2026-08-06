@@ -50,9 +50,16 @@ export class ReportsService {
     };
   }
 
-  topProducts(businessId: string) {
+  topProducts(businessId: string, from?: string, to?: string) {
+    const filter: Record<string, unknown> = { businessId };
+    if (from || to) {
+      filter.createdAt = {
+        ...(from ? { $gte: new Date(from) } : {}),
+        ...(to ? { $lte: new Date(to) } : {})
+      };
+    }
     return this.saleModel.aggregate([
-      { $match: { businessId } },
+      { $match: filter },
       { $unwind: "$items" },
       {
         $group: {
@@ -67,9 +74,16 @@ export class ReportsService {
     ]);
   }
 
-  paymentBreakdown(businessId: string) {
+  paymentBreakdown(businessId: string, from?: string, to?: string) {
+    const filter: Record<string, unknown> = { businessId };
+    if (from || to) {
+      filter.createdAt = {
+        ...(from ? { $gte: new Date(from) } : {}),
+        ...(to ? { $lte: new Date(to) } : {})
+      };
+    }
     return this.saleModel.aggregate([
-      { $match: { businessId } },
+      { $match: filter },
       {
         $group: {
           _id: "$paymentMethod",

@@ -7,8 +7,8 @@ const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk" });
 
 export const metadata: Metadata = {
-  title: "Vickins Admin",
-  description: "Executive support dashboard for Vickins Business OS"
+  title: "Biz Pro Admin",
+  description: "Executive support dashboard for Biz Pro"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

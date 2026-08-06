@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import type { UserRole } from "@shared";
+import type { AccessPermission, UserRole } from "@shared";
+import { getEffectivePermissions, hasPermission } from "@shared";
 import { Badge, Card, Screen } from "@/components/Primitives";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
@@ -18,7 +19,7 @@ type Destination = {
   kind: DestinationKind;
   screen: string;
   tabScreen?: string;
-  roles: UserRole[];
+  permission: AccessPermission;
   recommended?: boolean;
 };
 
@@ -31,7 +32,7 @@ const destinations: Destination[] = [
     kind: "tab",
     screen: "Main",
     tabScreen: "Dashboard",
-    roles: ["owner", "manager"]
+    permission: "viewDashboard"
   },
   {
     title: "Point of Sale",
@@ -41,7 +42,7 @@ const destinations: Destination[] = [
     kind: "tab",
     screen: "Main",
     tabScreen: "POS",
-    roles: ["owner", "manager", "cashier"],
+    permission: "createSales",
     recommended: true
   },
   {
@@ -52,7 +53,7 @@ const destinations: Destination[] = [
     kind: "tab",
     screen: "Main",
     tabScreen: "Catalog",
-    roles: ["owner", "manager"]
+    permission: "manageInventory"
   },
   {
     title: "Customers",
@@ -62,7 +63,7 @@ const destinations: Destination[] = [
     kind: "tab",
     screen: "Main",
     tabScreen: "Customers",
-    roles: ["owner", "manager", "cashier"]
+    permission: "manageCustomers"
   },
   {
     title: "Insights",
@@ -71,7 +72,7 @@ const destinations: Destination[] = [
     tone: "warning",
     kind: "stack",
     screen: "Reports",
-    roles: ["owner", "manager"]
+    permission: "viewReports"
   },
   {
     title: "Expenses",
@@ -80,7 +81,25 @@ const destinations: Destination[] = [
     tone: "danger",
     kind: "stack",
     screen: "Expenses",
-    roles: ["owner", "manager"]
+    permission: "manageExpenses"
+  },
+  {
+    title: "Employees",
+    subtitle: "Create staff accounts, tune roles, and review access history.",
+    icon: "shield-checkmark-outline",
+    tone: "primary",
+    kind: "stack",
+    screen: "Employees",
+    permission: "manageEmployees"
+  },
+  {
+    title: "Team Access",
+    subtitle: "Review access rules and role matrices.",
+    icon: "shield-outline",
+    tone: "primary",
+    kind: "stack",
+    screen: "TeamAccess",
+    permission: "manageEmployees"
   },
   {
     title: "Settings",
@@ -89,7 +108,7 @@ const destinations: Destination[] = [
     tone: "primary",
     kind: "stack",
     screen: "Settings",
-    roles: ["owner", "manager", "cashier"]
+    permission: "manageSettings"
   }
 ];
 
@@ -99,7 +118,9 @@ export function RoleLaunchpadScreen() {
   const business = useAppStore((state) => state.business);
   const role = (user?.role ?? "cashier") as UserRole;
   const styles = React.useMemo(() => createStyles(), [tokens]);
-  const visibleDestinations = destinations.filter((destination) => destination.roles.includes(role));
+  const permissions = getEffectivePermissions(user);
+  const visibleDestinations = destinations.filter((destination) => hasPermission(user, destination.permission));
+  const roleLabel = user?.roleLabel ?? (role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier");
 
   return (
     <Screen>
@@ -108,14 +129,14 @@ export function RoleLaunchpadScreen() {
           <View style={styles.heroGlowTop} />
           <View style={styles.heroGlowBottom} />
           <View style={styles.heroRow}>
-            <View style={styles.brandMark}>
-              <Text style={styles.brandLetter}>V</Text>
-            </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Badge label={`${role} access`} tone="success" />
-              <Text style={styles.heroTitle}>{business?.name ?? "Vickins Business OS"}</Text>
+              <View style={styles.brandMark}>
+                <Text style={styles.brandLetter}>B</Text>
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+              <Badge label={`${roleLabel} access`} tone="success" />
+              <Text style={styles.heroTitle}>{business?.name ?? "Biz Pro"}</Text>
               <Text style={styles.heroSubtitle}>
-                {user?.fullName ?? "Team member"} can jump straight into the areas allowed for this role.
+                {user?.fullName ?? "Team member"} can jump straight into the areas allowed for this access profile.
               </Text>
             </View>
           </View>
@@ -124,8 +145,13 @@ export function RoleLaunchpadScreen() {
         <Card style={styles.panel}>
           <Text style={styles.panelTitle}>Choose a workspace</Text>
           <Text style={styles.panelSubtitle}>
-            Select the part of the app you want to open right now. The available destinations below are filtered for your role.
+            Only the destinations available to your current role are shown below.
           </Text>
+          <View style={styles.accessSummaryRow}>
+            <Badge label={`${permissions.length} permissions`} tone="primary" />
+            <Badge label={roleLabel} tone="success" />
+            <Badge label={business?.name ?? "Biz Pro"} tone="warning" />
+          </View>
         </Card>
 
         <View style={styles.destinationList}>
@@ -262,6 +288,12 @@ function createStyles() {
     panelSubtitle: {
       color: tokens.colors.textSecondary,
       lineHeight: 20
+    },
+    accessSummaryRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 8
     },
     destinationList: {
       gap: 12

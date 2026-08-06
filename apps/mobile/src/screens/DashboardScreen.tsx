@@ -1,25 +1,56 @@
 import React, { useEffect } from "react";
 import { ScrollView, Text, View, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Card, GradientHeader, PrimaryButton, Screen, StatCard } from "@/components/Primitives";
+import { Card, EmptyState, GradientHeader, PrimaryButton, Screen, StatCard } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
 import { useNavigation } from "@react-navigation/native";
+import { getEffectivePermissions, hasPermission } from "@shared";
 
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
   const dashboard = useAppStore((state) => state.dashboard);
   const pendingSync = useAppStore((state) => state.pendingSync);
+  const user = useAppStore((state) => state.user);
   const loadDashboard = useAppStore((state) => state.loadDashboard);
   const refreshPendingSync = useAppStore((state) => state.refreshPendingSync);
   const syncNow = useAppStore((state) => state.syncNow);
+  const permissions = getEffectivePermissions(user);
+  const canViewDashboard = hasPermission(user, "viewDashboard");
 
   useEffect(() => {
     loadDashboard().catch(() => undefined);
     refreshPendingSync().catch(() => undefined);
   }, [loadDashboard, refreshPendingSync]);
+
+  if (!canViewDashboard) {
+    return (
+      <Screen>
+        <GradientHeader title={business?.name ?? "Business"} subtitle={`${business?.businessType?.replaceAll("_", " ")} • limited access`} />
+        <View style={{ padding: 16 }}>
+          <EmptyState
+            title="Dashboard access restricted"
+            subtitle="This account does not have permission to view the dashboard metrics. Ask an owner or manager to grant view access."
+            action={<PrimaryButton title="Open settings" onPress={() => navigation.navigate("Settings")} />}
+            icon="speedometer-outline"
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+      if (!dashboard) {
+    return (
+      <Screen>
+        <GradientHeader title={business?.name ?? "Business"} subtitle={`${business?.businessType?.replaceAll("_", " ")} • loading metrics`} />
+        <View style={{ padding: 16 }}>
+          <EmptyState title="Loading dashboard" subtitle="Pulling in sales, expense, and stock metrics now." icon="speedometer-outline" />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -60,28 +91,38 @@ export function DashboardScreen() {
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Quick actions</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {[
-              ["New Sale", () => navigation.navigate("POS")],
-              ["Add Product", () => navigation.navigate("Catalog")],
-              ["Add Stock", () => navigation.navigate("Catalog")],
-              ["Add Customer", () => navigation.navigate("Customers")],
-              ["Add Expense", () => navigation.navigate("Expenses")],
-              ["View Reports", () => navigation.navigate("Reports")],
-              ["Settings", () => navigation.navigate("Settings")]
-            ].map(([label, handler]) => (
-              <View key={label as string} style={{ width: "48%" }}>
-                <PrimaryButton title={label as string} variant="secondary" onPress={handler as () => void} />
-              </View>
-            ))}
+              { label: "New sale", permission: "createSales" as const, handler: () => navigation.navigate("POS") },
+              { label: "Products", permission: "addProducts" as const, handler: () => navigation.navigate("Catalog") },
+              { label: "Stock", permission: "manageInventory" as const, handler: () => navigation.navigate("Catalog") },
+              { label: "Customers", permission: "manageCustomers" as const, handler: () => navigation.navigate("Customers") },
+              { label: "Expenses", permission: "manageExpenses" as const, handler: () => navigation.navigate("Expenses") },
+              { label: "Insights", permission: "viewReports" as const, handler: () => navigation.navigate("Reports") },
+              { label: "Employees", permission: "manageEmployees" as const, handler: () => navigation.navigate("Employees") },
+              { label: "Settings", permission: "manageSettings" as const, handler: () => navigation.navigate("Settings") }
+            ]
+              .filter((action) => hasPermission(user, action.permission))
+              .map((action) => (
+                <View key={action.label} style={{ width: "48%" }}>
+                  <PrimaryButton title={action.label} variant="secondary" onPress={action.handler} />
+                </View>
+              ))}
           </View>
+          <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+            {permissions.length} permissions active on this account.
+          </Text>
         </Card>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Top products</Text>
-          {(dashboard?.topProducts ?? []).slice(0, 5).map((item) => (
-            <View key={item.productId} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: tokens.colors.textSecondary }}>{item.productName}</Text>
-              <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{item.quantity}</Text>
-            </View>
-          ))}
+          {(dashboard?.topProducts ?? []).length ? (
+            (dashboard?.topProducts ?? []).slice(0, 5).map((item) => (
+              <View key={item.productId} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: tokens.colors.textSecondary }}>{item.productName}</Text>
+                <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{item.quantity}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={{ color: tokens.colors.textSecondary }}>No product movement yet. Top products will appear after the first few sales.</Text>
+          )}
         </Card>
       </ScrollView>
     </Screen>

@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { Model, Types } from "mongoose";
 import bcrypt from "bcryptjs";
+import { ROLE_ACCESS, getEffectivePermissions, type AccessPermission } from "@vbo/shared";
 import { Business, BusinessDocument, Branch, BranchDocument, Device, DeviceDocument, Subscription, SubscriptionDocument, SubscriptionPlan, SubscriptionPlanDocument, User, UserDocument } from "../schemas";
 import { RegisterDto, LoginDto } from "./dto";
 
@@ -13,6 +14,9 @@ type AuthTokenResponse = {
     businessId: string;
     role: string;
     fullName: string;
+    ownerId?: string | null;
+    roleLabel?: string | null;
+    permissions?: AccessPermission[];
   };
   business: {
     id: string;
@@ -91,15 +95,22 @@ export class AuthService {
       const pinHash = pin ? await bcrypt.hash(pin, 10) : null;
       const owner = await this.userModel.create({
         businessId: effectiveBusinessId,
+        ownerId: null,
         branchId: branch._id.toString(),
         fullName: ownerName,
         phone,
         passwordHash,
         pinHash,
         role: "owner",
+        roleLabel: "Owner",
+        permissions: [...ROLE_ACCESS.owner],
         isActive: true,
+        suspendedAt: null,
+        suspensionReason: null,
         deletedAt: null
       });
+      owner.ownerId = owner._id.toString();
+      await owner.save();
       const device = await this.deviceModel.create({
         businessId: effectiveBusinessId,
         deviceName: "Owner setup",
@@ -187,20 +198,27 @@ export class AuthService {
     if (!user) throw new UnauthorizedException("Session not found");
     const business = await this.findBusiness(user.businessId);
     if (!business) throw new UnauthorizedException("Business not found");
-    return { user, business };
+    return {
+      user: this.normalizeUser(user),
+      business: this.normalizeBusiness(business)
+    };
   }
 
   private issueToken(
-    user: { _id: unknown; businessId: string; role: string; fullName: string },
+    user: { _id: unknown; businessId: string; role: string; fullName: string; ownerId?: string | null; permissions?: AccessPermission[] | null; roleLabel?: string | null },
     business: { _id: unknown; externalId?: string | null; name: string; slug: string; businessType: string; currency: string; planTier: string; billingStatus: string },
     businessIdOverride?: string
   ): AuthTokenResponse {
     const businessId = businessIdOverride ?? user.businessId;
+    const permissions = getEffectivePermissions(user);
     const payload = {
       sub: String(user._id),
       businessId,
       role: user.role,
-      fullName: user.fullName
+      fullName: user.fullName,
+      ownerId: user.ownerId ?? null,
+      permissions,
+      roleLabel: user.roleLabel ?? null
     };
     return {
       accessToken: this.jwtService.sign(payload),
@@ -208,17 +226,40 @@ export class AuthService {
         id: String(user._id),
         businessId,
         role: user.role,
-        fullName: user.fullName
+        fullName: user.fullName,
+        ownerId: user.ownerId ?? null,
+        roleLabel: user.roleLabel ?? null,
+        permissions
       },
       business: {
-        id: business.externalId ?? String(business._id),
-        name: business.name,
-        slug: business.slug,
-        businessType: business.businessType,
-        currency: business.currency,
-        planTier: business.planTier,
-        billingStatus: business.billingStatus
+        ...this.normalizeBusiness(business)
       }
+    };
+  }
+
+  private normalizeUser(
+    user: { _id: unknown; businessId: string; role: string; fullName: string; ownerId?: string | null; permissions?: AccessPermission[] | null; roleLabel?: string | null }
+  ) {
+    return {
+      id: String(user._id),
+      businessId: user.businessId,
+      role: user.role,
+      fullName: user.fullName,
+      ownerId: user.ownerId ?? null,
+      roleLabel: user.roleLabel ?? null,
+      permissions: getEffectivePermissions(user)
+    };
+  }
+
+  private normalizeBusiness(business: { _id: unknown; externalId?: string | null; name: string; slug: string; businessType: string; currency: string; planTier: string; billingStatus: string }) {
+    return {
+      id: business.externalId ?? String(business._id),
+      name: business.name,
+      slug: business.slug,
+      businessType: business.businessType,
+      currency: business.currency,
+      planTier: business.planTier,
+      billingStatus: business.billingStatus
     };
   }
 
@@ -262,12 +303,12 @@ export class AuthService {
     const businessFilter = businessId ? { businessId } : {};
 
     if (phone) {
-      const byPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phone }).lean();
+      const byPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phone }).select("+passwordHash +pinHash").lean();
       if (byPhone) return byPhone;
     }
 
     const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const fullName = new RegExp(`^${escaped}$`, "i");
-    return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).lean();
+    return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).select("+passwordHash +pinHash").lean();
   }
 }

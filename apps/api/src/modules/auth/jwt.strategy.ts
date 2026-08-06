@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
+import type { AccessPermission } from "@vbo/shared";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; businessId: string; role: string; fullName: string }) {
+  async validate(payload: { sub: string; businessId: string; role: string; fullName: string; permissions?: AccessPermission[]; roleLabel?: string | null }) {
     return payload;
   }
 }

@@ -13,9 +13,12 @@ import { CustomersScreen } from "@/screens/CustomersScreen";
 import { ReportsScreen } from "@/screens/ReportsScreen";
 import { ExpensesScreen } from "@/screens/ExpensesScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { TeamAccessScreen } from "@/screens/TeamAccessScreen";
+import { EmployeesScreen } from "@/screens/EmployeesScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { OnboardingScreen } from "@/screens/OnboardingScreen";
 import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
+import { hasPermission, type AccessPermission } from "@shared";
 
 type RootStackParamList = {
   Launchpad: undefined;
@@ -23,6 +26,8 @@ type RootStackParamList = {
   Expenses: undefined;
   Reports: undefined;
   Settings: undefined;
+  TeamAccess: undefined;
+  Employees: undefined;
   ProductDetail: { productId: string };
 };
 
@@ -35,7 +40,26 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tabs = createBottomTabNavigator();
 
+type TabItem = {
+  name: string;
+  component: React.ComponentType<any>;
+  icon: keyof typeof Ionicons.glyphMap;
+  permission: AccessPermission;
+};
+
 function TabNavigator() {
+  const user = useAppStore((state) => state.user);
+  const tabs = React.useMemo(
+    () =>
+      [
+        { name: "Dashboard", component: DashboardScreen, icon: "grid-outline", permission: "viewDashboard" as AccessPermission },
+        { name: "POS", component: PosScreen, icon: "scan-outline", permission: "createSales" as AccessPermission },
+        { name: "Catalog", component: ProductsScreen, icon: "cube-outline", permission: "manageInventory" as AccessPermission },
+        { name: "Customers", component: CustomersScreen, icon: "people-outline", permission: "manageCustomers" as AccessPermission },
+        { name: "Insights", component: ReportsScreen, icon: "bar-chart-outline", permission: "viewReports" as AccessPermission }
+      ] as TabItem[],
+    []
+  ).filter((tab) => hasPermission(user, tab.permission));
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
@@ -47,22 +71,14 @@ function TabNavigator() {
         tabBarActiveTintColor: tokens.colors.primaryStrong,
         tabBarInactiveTintColor: tokens.colors.textMuted,
         tabBarIcon: ({ color, size }) => {
-          const map: Record<string, keyof typeof Ionicons.glyphMap> = {
-            Dashboard: "grid-outline",
-            POS: "scan-outline",
-            Catalog: "cube-outline",
-            Customers: "people-outline",
-            Insights: "bar-chart-outline"
-          };
-          return <Ionicons name={map[route.name] ?? "ellipse-outline"} color={color} size={size} />;
+          const current = tabs.find((tab) => tab.name === route.name);
+          return <Ionicons name={current?.icon ?? "ellipse-outline"} color={color} size={size} />;
         }
       })}
     >
-      <Tabs.Screen name="Dashboard" component={DashboardScreen} />
-      <Tabs.Screen name="POS" component={PosScreen} />
-      <Tabs.Screen name="Catalog" component={ProductsScreen} />
-      <Tabs.Screen name="Customers" component={CustomersScreen} />
-      <Tabs.Screen name="Insights" component={ReportsScreen} />
+      {tabs.map((tab) => (
+        <Tabs.Screen key={tab.name} name={tab.name as any} component={tab.component as any} />
+      ))}
     </Tabs.Navigator>
   );
 }
@@ -108,6 +124,8 @@ export function RootNavigator() {
           <RootStack.Screen name="Expenses" component={ExpensesScreen} />
           <RootStack.Screen name="Reports" component={ReportsScreen} />
           <RootStack.Screen name="Settings" component={SettingsScreen} />
+          <RootStack.Screen name="TeamAccess" component={TeamAccessScreen} />
+          <RootStack.Screen name="Employees" component={EmployeesScreen} />
         </RootStack.Navigator>
       ) : (
         <AuthNavigator />

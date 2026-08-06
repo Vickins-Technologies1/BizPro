@@ -7,6 +7,7 @@ import { buildReceiptText } from "@/services/receiptService";
 import { registerBusiness, loginBusiness, authMe, listCategories, listProducts, listCustomers, listSales, listExpenses, createCategory, createProduct, adjustProductStock, createCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { setThemeTokens, type ThemeMode } from "@/theme/tokens";
+import type { AccessPermission } from "@shared";
 
 export interface DashboardSummary extends DailySummary {
   topProducts: Array<{ productId: string; productName: string; quantity: number; total: number }>;
@@ -18,7 +19,7 @@ interface AppState {
   authLoading: boolean;
   themeMode: ThemeMode;
   business: Business | null;
-  user: { id: string; fullName: string; role: string; businessId?: string } | null;
+  user: { id: string; fullName: string; role: string; businessId?: string; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null } | null;
   deviceId: string;
   pendingSync: number;
   syncMessage: string;
@@ -59,7 +60,7 @@ interface AppState {
 }
 
 type StoredSession = {
-  user: { id: string; fullName: string; role: string; businessId?: string };
+  user: { id: string; fullName: string; role: string; businessId?: string; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null };
   accessToken?: string | null;
 };
 
@@ -271,7 +272,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       color: input.color ?? null,
       sortOrder: input.sortOrder
     });
-    await get().loadCatalog();
+    await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
     return category;
   },
   addProduct: async (input) => {
@@ -288,7 +289,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       lowStockThreshold: input.lowStockThreshold,
       isActive: input.isActive
     });
-    await Promise.all([get().loadCatalog(), get().loadDashboard()]);
+    await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
     return product;
   },
   adjustStock: async (input) => {
@@ -299,7 +300,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       note: input.note ?? "Stock adjustment",
       referenceType: "adjustment"
     });
-    await Promise.all([get().loadCatalog(), get().loadDashboard()]);
+    await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
     return product;
   },
   addCustomer: async (input) => {
@@ -311,7 +312,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       notes: input.notes ?? null,
       balance: input.balance ?? 0
     });
-    await get().loadCatalog();
+    await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
     return customer;
   },
   addExpense: async (input) => {
@@ -323,7 +324,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       expenseDate: input.expenseDate,
       recordedById: input.recordedById ?? null
     });
-    await Promise.all([get().loadDashboard(), get().loadCatalog()]);
+    await Promise.allSettled([get().loadDashboard(), get().loadCatalog()]);
     return expense;
   },
   recordDebtPayment: async (input) => {
@@ -333,7 +334,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       reference: input.reference ?? null,
       note: input.note ?? null
     });
-    await Promise.all([get().loadDashboard(), get().loadCatalog()]);
+    await Promise.allSettled([get().loadDashboard(), get().loadCatalog()]);
     return payment;
   },
   createSale: async (input) => {
@@ -371,7 +372,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         };
       })
     });
-    await Promise.all([get().loadCatalog(), get().loadDashboard()]);
+    await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
     const receipt = buildReceiptText(sale, sale.items, business.currency);
     return { sale, receipt };
   },
@@ -380,7 +381,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!business) return;
     set({ syncMessage: "Refreshing from cloud..." });
     try {
-      await Promise.all([get().loadCatalog(), get().loadDashboard()]);
+      await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
       set({ syncMessage: "Cloud data refreshed" });
     } catch (error) {
       set({ syncMessage: error instanceof Error ? error.message : "Refresh failed" });

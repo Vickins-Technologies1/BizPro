@@ -1,8 +1,9 @@
 import { env } from "@/config/env";
+import type { AccessPermission } from "@shared";
 
 type RemoteAuthResponse = {
   accessToken: string;
-  user: { id: string; businessId: string; role: string; fullName: string };
+  user: { id: string; businessId: string; role: string; fullName: string; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null };
   business: { id: string; name: string; slug: string; businessType: string; currency: string; planTier: string; billingStatus: string };
 };
 

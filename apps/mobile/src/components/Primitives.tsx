@@ -22,7 +22,7 @@ export function AppFooter() {
   return (
     <View style={styles.footer}>
       <View style={styles.footerDivider} />
-      <Text style={styles.footerText}>Developed By Vickins Technologies</Text>
+      <Text style={styles.footerText}>Powered by Vickins Technologies</Text>
     </View>
   );
 }
@@ -75,16 +75,29 @@ export function PrimaryButton({
   title,
   onPress,
   loading,
-  variant = "primary"
+  variant = "primary",
+  disabled = false
 }: {
   title: string;
   onPress?: () => void;
   loading?: boolean;
   variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
 }) {
   const styles = usePrimitiveStyles();
+  const isDisabled = loading || disabled;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.button, buttonStyle(variant), pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
+      style={({ pressed }) => [
+        styles.button,
+        buttonStyle(variant),
+        isDisabled && { opacity: 0.7 },
+        pressed && !isDisabled && { opacity: 0.9, transform: [{ scale: 0.985 }] }
+      ]}
+    >
       {loading ? <ActivityIndicator color={tokens.colors.text} /> : <Text style={styles.buttonText}>{title}</Text>}
     </Pressable>
   );
@@ -96,7 +109,9 @@ export function InputField({
   onChangeText,
   placeholder,
   secureTextEntry,
-  keyboardType = "default"
+  keyboardType = "default",
+  helperText,
+  error
 }: {
   label: string;
   value: string;
@@ -104,6 +119,8 @@ export function InputField({
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: React.ComponentProps<typeof TextInput>["keyboardType"];
+  helperText?: string;
+  error?: string | null | undefined;
 }) {
   const inputRef = React.useRef<React.ElementRef<typeof TextInput>>(null);
   const [passwordVisible, setPasswordVisible] = React.useState(false);
@@ -136,8 +153,9 @@ export function InputField({
         placeholderTextColor={tokens.colors.textMuted}
         secureTextEntry={isSecureEntry}
         keyboardType={keyboardType}
-        style={styles.input}
+        style={[styles.input, error ? styles.inputError : null]}
       />
+      {error ? <Text style={styles.helperError}>{error}</Text> : helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
     </View>
   );
 }
@@ -154,15 +172,22 @@ export function Badge({ label, tone = "primary" }: { label: string; tone?: "prim
 export function EmptyState({
   title,
   subtitle,
-  action
+  action,
+  icon
 }: {
   title: string;
   subtitle: string;
   action?: React.ReactNode;
+  icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const styles = usePrimitiveStyles();
   return (
     <Card style={styles.empty}>
+      {icon ? (
+        <View style={styles.emptyIcon}>
+          <Ionicons name={icon} size={28} color={tokens.colors.primaryStrong} />
+        </View>
+      ) : null}
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
       {action ? <View style={{ marginTop: 12 }}>{action}</View> : null}
@@ -239,25 +264,25 @@ function createStyles() {
     },
     header: {
       marginHorizontal: 16,
-      padding: 18,
-      borderRadius: tokens.radii.lg,
+      padding: 20,
+      borderRadius: 24,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       flexDirection: "row",
       alignItems: "center",
       gap: 12
     },
-    title: { color: tokens.colors.text, fontSize: 26, fontWeight: "800" },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 4, fontSize: 13 },
+    title: { color: tokens.colors.text, fontSize: 27, fontWeight: "800", letterSpacing: -0.4 },
+    subtitle: { color: tokens.colors.textSecondary, marginTop: 6, fontSize: 13, lineHeight: 18 },
     card: {
       backgroundColor: tokens.colors.surface,
-      borderRadius: tokens.radii.lg,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 16,
+      padding: 18,
       ...tokens.shadow.card
     },
-    statCard: { gap: 8, minHeight: 126 },
+    statCard: { gap: 8, minHeight: 132 },
     iconWrap: {
       width: 34,
       height: 34,
@@ -269,11 +294,11 @@ function createStyles() {
     statValue: { color: tokens.colors.text, fontSize: 22, fontWeight: "800" },
     statHint: { color: tokens.colors.textSecondary, fontSize: 12 },
     button: {
-      minHeight: 52,
-      borderRadius: 16,
+      minHeight: 56,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 16
+      paddingHorizontal: 18
     },
     buttonText: { color: tokens.colors.text, fontSize: 15, fontWeight: "700" },
     fieldLabel: { color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
@@ -287,8 +312,8 @@ function createStyles() {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingVertical: 2,
-      paddingHorizontal: 4
+      paddingVertical: 4,
+      paddingHorizontal: 6
     },
     passwordToggleText: {
       color: tokens.colors.primaryStrong,
@@ -298,14 +323,18 @@ function createStyles() {
       letterSpacing: 0.4
     },
     input: {
-      minHeight: 52,
-      borderRadius: 16,
+      minHeight: 56,
+      borderRadius: 18,
       backgroundColor: tokens.colors.surface,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       paddingHorizontal: 16,
       color: tokens.colors.text,
       fontSize: 15
+    },
+    inputError: {
+      borderColor: tokens.colors.danger,
+      backgroundColor: withAlpha(tokens.colors.danger, 0.06)
     },
     badge: {
       borderRadius: 999,
@@ -314,23 +343,34 @@ function createStyles() {
       alignSelf: "flex-start"
     },
     badgeText: { fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4 },
-    empty: { alignItems: "center", justifyContent: "center", gap: 8 },
-    emptyTitle: { color: tokens.colors.text, fontSize: 18, fontWeight: "800" },
-    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center" },
+    empty: { alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18 },
+    emptyIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: withAlpha(tokens.colors.primary, 0.1)
+    },
+    emptyTitle: { color: tokens.colors.text, fontSize: 18, fontWeight: "800", textAlign: "center" },
+    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 },
+    helperText: { color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 },
+    helperError: { color: tokens.colors.danger, fontSize: 12, lineHeight: 17, fontWeight: "700" },
     modalOverlay: {
       flex: 1,
       backgroundColor: tokens.colors.overlay,
       alignItems: "center",
-      justifyContent: "flex-end",
+      justifyContent: "center",
       padding: 16
     },
     modalCard: {
       width: "100%",
+      maxHeight: "92%",
       backgroundColor: tokens.colors.surface,
-      borderRadius: 28,
+      borderRadius: 30,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 16
+      padding: 18
     },
     modalHeader: {
       flexDirection: "row",
@@ -353,9 +393,9 @@ function createStyles() {
     },
     footerText: {
       color: tokens.colors.textMuted,
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: "700",
-      letterSpacing: 0.6,
+      letterSpacing: 0.5,
       textAlign: "center"
     }
   });

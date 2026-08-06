@@ -3,7 +3,7 @@ import { formatMoney } from "@/utils/money";
 
 export function buildReceiptText(sale: Sale, items: SaleItem[], currency = "KES") {
   const lines = [
-    "Vickins Business OS",
+    "Biz Pro",
     `Receipt #${sale.receiptNumber}`,
     `Date: ${new Date(sale.createdAt).toLocaleString()}`,
     "--------------------------------",

@@ -1,33 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchJson } from "../lib/api";
-import { DashboardCard } from "./DashboardCard";
 import { BUSINESS_TYPES } from "@vbo/shared";
-
-type Business = {
-  _id: string;
-  externalId?: string | null;
-  name: string;
-  slug: string;
-  businessType: string;
-  currency: string;
-  planTier: string;
-  billingStatus: string;
-  createdAt: string;
-};
-
-type Device = { _id: string; deviceName: string; platform: string; trusted: boolean; lastSeenAt?: string };
-type Subscription = { _id: string; planCode: string; status: string; expiresAt?: string };
-type SyncHealth = { pendingEvents: number; checkpoints: Array<{ lastPulledAt?: string; lastPushedAt?: string; serverCursor?: string }> };
-type ReconciliationLog = { _id: string; reference: string; status: string; createdAt: string };
+import { DashboardCard } from "./DashboardCard";
+import { fetchJson } from "../lib/api";
+import { listBusinesses, resolveBusinessId, type AdminBusiness, type AdminDevice, type AdminReconciliationLog, type AdminSubscription, type AdminSyncHealth } from "../lib/admin-api";
 
 type Row = {
-  business: Business;
-  devices: Device[];
-  subscription: Subscription | null;
-  syncHealth: SyncHealth;
-  logs: ReconciliationLog[];
+  business: AdminBusiness;
+  devices: AdminDevice[];
+  subscription: AdminSubscription | null;
+  syncHealth: AdminSyncHealth;
+  logs: AdminReconciliationLog[];
 };
 
 function LoadingState() {
@@ -56,16 +40,15 @@ function ErrorState({ message }: { message: string }) {
 }
 
 async function loadData() {
-  const businesses = await fetchJson<Business[]>("/businesses");
-  const primary = businesses.slice(0, 5);
+  const businesses = await listBusinesses();
   const rows = await Promise.all(
-    primary.map(async (business) => {
-      const businessId = business.externalId ?? business._id;
+    businesses.slice(0, 5).map(async (business) => {
+      const businessId = resolveBusinessId(business);
       const [devices, subscription, syncHealth, logs] = await Promise.all([
-        fetchJson<Device[]>(`/devices?businessId=${businessId}`),
-        fetchJson<Subscription | null>(`/subscriptions/current?businessId=${businessId}`),
-        fetchJson<SyncHealth>(`/sync/health?businessId=${businessId}`),
-        fetchJson<ReconciliationLog[]>(`/webhooks/tuma/logs`, {
+        fetchJson<AdminDevice[]>(`/devices?businessId=${encodeURIComponent(businessId)}`),
+        fetchJson<AdminSubscription | null>(`/subscriptions/current?businessId=${encodeURIComponent(businessId)}`),
+        fetchJson<AdminSyncHealth>(`/sync/health?businessId=${encodeURIComponent(businessId)}`),
+        fetchJson<AdminReconciliationLog[]>("/webhooks/tuma/logs", {
           method: "POST",
           body: JSON.stringify({ businessId })
         })
@@ -120,7 +103,7 @@ export function AdminDashboard() {
     <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
       <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16 }}>
         <div>
-          <div style={{ textTransform: "uppercase", letterSpacing: 2, color: "var(--text-muted)", fontSize: 12 }}>Vickins Support Console</div>
+          <div style={{ textTransform: "uppercase", letterSpacing: 2, color: "var(--text-muted)", fontSize: 12 }}>Biz Pro Support Console</div>
           <h1 style={{ margin: "8px 0 0", fontSize: 40, fontFamily: "var(--font-grotesk)" }}>Executive operations dashboard</h1>
           <p style={{ margin: "8px 0 0", color: "var(--text-secondary)" }}>Business coverage, subscription posture, sync health, and payment reconciliation.</p>
         </div>
@@ -130,20 +113,20 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 16, marginBottom: 24 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
         {([
           ["Businesses", totalBusinesses, "rgba(59,130,246,0.35)"],
           ["Active plans", activePlans, "rgba(16,185,129,0.35)"],
           ["Pending sync", pendingSync, "rgba(245,158,11,0.35)"],
           ["Trusted devices", trustRate, "rgba(239,68,68,0.32)"]
         ] as Array<[string, number, string]>).map(([label, value, accent]) => (
-          <DashboardCard key={label as string} title={label as string} accent={accent as string}>
-            <div style={{ fontSize: 34, fontFamily: "var(--font-grotesk)", fontWeight: 700 }}>{value as number}</div>
+          <DashboardCard key={label} title={label} accent={accent}>
+            <div style={{ fontSize: 34, fontFamily: "var(--font-grotesk)", fontWeight: 700 }}>{value}</div>
           </DashboardCard>
         ))}
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(340px, 1fr)", gap: 16 }}>
         <DashboardCard title="Businesses">
           <div style={{ display: "grid", gap: 12 }}>
             {rows.map(({ business, devices, subscription, syncHealth }) => (
@@ -151,26 +134,40 @@ export function AdminDashboard() {
                 key={business._id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1.4fr 0.8fr 0.8fr 0.9fr 0.8fr",
-                  gap: 12,
-                  alignItems: "center",
-                  padding: 14,
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.06)"
+                  gap: 10,
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)"
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: 700 }}>{business.name}</div>
-                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                    {business.slug} • {business.businessType}
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{business.name}</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>
+                      {business.slug} • {business.businessType}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(37,99,235,0.18)", color: "var(--text)", fontSize: 12, fontWeight: 700 }}>
+                      {subscription?.planCode ?? business.planTier}
+                    </span>
+                    <span style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(16,185,129,0.18)", color: "var(--text)", fontSize: 12, fontWeight: 700 }}>
+                      {syncHealth.pendingEvents} pending
+                    </span>
                   </div>
                 </div>
-                <div>{subscription?.planCode ?? business.planTier}</div>
-                <div>{devices.length} devices</div>
-                <div>{syncHealth.pendingEvents} pending</div>
-                <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                  {syncHealth.checkpoints[0]?.lastPulledAt ? new Date(syncHealth.checkpoints[0].lastPulledAt).toLocaleString() : "No sync yet"}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", fontSize: 12, marginBottom: 4 }}>Devices</div>
+                    <div>{devices.length}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "var(--text-muted)", fontSize: 12, marginBottom: 4 }}>Last sync</div>
+                    <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+                      {syncHealth.checkpoints[0]?.lastPulledAt ? new Date(syncHealth.checkpoints[0].lastPulledAt).toLocaleString() : "No sync yet"}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

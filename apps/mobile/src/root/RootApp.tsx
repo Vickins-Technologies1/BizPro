@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { ActivityIndicator, AppState, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { ActivityIndicator, Animated, AppState, Image, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import NetInfo from "@react-native-community/netinfo";
@@ -7,6 +7,8 @@ import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
+
+const splashLogo = require("../../assets/brand/biz-pro-logo.png");
 
 export function RootApp() {
   const bootstrap = useAppStore((state) => state.bootstrap);
@@ -50,42 +52,113 @@ export function RootApp() {
   }, [business, syncNow]);
 
   if (loading) {
-    return (
-      <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1 }}>
-          <LinearGradient colors={[tokens.colors.background, tokens.colors.backgroundAlt]} style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-            <View style={{ alignItems: "center", gap: 16 }}>
-              <View
-                style={{
-                  width: 92,
-                  height: 92,
-                  borderRadius: 28,
-                  backgroundColor: "rgba(37,99,235,0.14)",
-                  borderWidth: 1,
-                  borderColor: tokens.colors.border,
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <Text style={{ color: tokens.colors.text, fontSize: 30, fontWeight: "900" }}>V</Text>
-              </View>
-              <Text style={{ color: tokens.colors.text, fontSize: 26, fontWeight: "800", letterSpacing: 0.6 }}>Vickins Business OS</Text>
-              <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", maxWidth: 280 }}>
-                Executive internet-first business control for serious SMEs.
-              </Text>
-              <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 10 }} />
-            </View>
-          </LinearGradient>
-        </SafeAreaView>
-        <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
-      </SafeAreaProvider>
-    );
+    return <LoadingSplash themeMode={themeMode} />;
   }
 
   return (
     <SafeAreaProvider>
       <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
       <RootNavigator />
+    </SafeAreaProvider>
+  );
+}
+
+function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
+  const drift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const driftLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, { toValue: 1, duration: 2200, useNativeDriver: true }),
+        Animated.timing(drift, { toValue: 0, duration: 2200, useNativeDriver: true })
+      ])
+    );
+
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 520, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true })
+    ]).start(() => driftLoop.start());
+
+    return () => {
+      driftLoop.stop();
+    };
+  }, [drift, fade, scale]);
+
+  const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [10, -8] });
+  const glowScale = drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  const glowOpacity = drift.interpolate({ inputRange: [0, 1], outputRange: [0.34, 0.58] });
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1 }}>
+        <LinearGradient
+          colors={[tokens.colors.background, tokens.colors.backgroundAlt]}
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            backgroundColor: tokens.colors.background
+          }}
+        >
+          <View
+            style={{
+              position: "absolute",
+              width: 320,
+              height: 320,
+              borderRadius: 320,
+              backgroundColor: "rgba(37,99,235,0.18)"
+            }}
+          />
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              width: 360,
+              height: 360,
+              borderRadius: 360,
+              backgroundColor: "rgba(14,165,233,0.14)",
+              opacity: glowOpacity,
+              transform: [{ scale: glowScale }]
+            }}
+          />
+
+          <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
+            <View
+              style={{
+                width: 184,
+                height: 184,
+                borderRadius: 52,
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderWidth: 1,
+                borderColor: tokens.colors.border,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: "#000",
+                shadowOpacity: 0.22,
+                shadowRadius: 28,
+                shadowOffset: { width: 0, height: 16 },
+                elevation: 10
+              }}
+            >
+              <Image source={splashLogo} resizeMode="contain" style={{ width: 154, height: 154 }} />
+            </View>
+            <View style={{ alignItems: "center", gap: 8, maxWidth: 320 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 24, fontWeight: "800", letterSpacing: 0.5 }}>Biz Pro</Text>
+              <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
+                Preparing your workspace and syncing your latest data.
+              </Text>
+              <Text style={{ color: tokens.colors.textMuted, textAlign: "center", fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Powered by Vickins Technologies
+              </Text>
+            </View>
+            <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 6 }} />
+          </Animated.View>
+        </LinearGradient>
+      </SafeAreaView>
+      <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
     </SafeAreaProvider>
   );
 }

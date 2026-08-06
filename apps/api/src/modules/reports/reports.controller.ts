@@ -18,13 +18,13 @@ export class ReportsController {
 
   @Get("top-products")
   @Roles("owner", "manager")
-  topProducts(@CurrentUser() user: { businessId: string }) {
-    return this.reports.topProducts(user.businessId);
+  topProducts(@CurrentUser() user: { businessId: string }, @Query("from") from?: string, @Query("to") to?: string) {
+    return this.reports.topProducts(user.businessId, from, to);
   }
 
   @Get("payment-breakdown")
   @Roles("owner", "manager")
-  paymentBreakdown(@CurrentUser() user: { businessId: string }) {
-    return this.reports.paymentBreakdown(user.businessId);
+  paymentBreakdown(@CurrentUser() user: { businessId: string }, @Query("from") from?: string, @Query("to") to?: string) {
+    return this.reports.paymentBreakdown(user.businessId, from, to);
   }
 }

@@ -13,7 +13,7 @@ export function buildUpstreamUrl(pathParts: string[], requestUrl: string) {
 export function buildProxyHeaders(request: NextRequest) {
   const headers = new Headers();
 
-  request.headers.forEach((value, key) => {
+  request.headers.forEach((value: string, key: string) => {
     const lower = key.toLowerCase();
     if (lower === "host" || lower === "content-length" || lower === "connection") {
       return;

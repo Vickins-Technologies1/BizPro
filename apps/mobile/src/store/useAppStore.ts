@@ -3,7 +3,7 @@ import type { Business, Category, Customer, DailySummary, Expense, Payment, Prod
 import { secureStore } from "@/storage/secure";
 import { createId } from "@/utils/id";
 import { dateKey } from "@/utils/date";
-import { buildReceiptText } from "@/services/receiptService";
+import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receiptService";
 import { registerBusiness, loginBusiness, authMe, listCategories, listProducts, listCustomers, listSales, listExpenses, createCategory, createProduct, adjustProductStock, createCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { setThemeTokens, type ThemeMode } from "@/theme/tokens";
@@ -54,7 +54,7 @@ interface AppState {
     taxTotal?: number;
     notes?: string | null;
     items: Array<{ productId: string; quantity: number; unitPrice: number; costPrice: number; discount: number }>;
-  }) => Promise<{ sale: Sale; receipt: string }>;
+  }) => Promise<{ sale: Sale; receipt: ReceiptArtifacts }>;
   syncNow: () => Promise<void>;
   refreshPendingSync: () => Promise<void>;
 }
@@ -237,9 +237,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setThemeMode: async (mode) => {
     const themeMode: ThemeMode = mode === "dark" ? "dark" : "light";
-    await secureStore.setThemeMode(themeMode);
     setThemeTokens(themeMode);
     set({ themeMode });
+    await secureStore.setThemeMode(themeMode);
   },
   loadDashboard: async () => {
     const business = get().business;
@@ -355,6 +355,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       amountPaid: input.amountPaid,
       discountTotal,
       taxTotal,
+      grandTotal,
       notes: input.notes ?? null,
       receiptNumber,
       subtotal,
@@ -373,7 +374,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
     });
     await Promise.allSettled([get().loadCatalog(), get().loadDashboard()]);
-    const receipt = buildReceiptText(sale, sale.items, business.currency);
+    const servedBy = get().user?.fullName?.trim() || get().user?.roleLabel?.trim() || get().user?.role || "Staff";
+    const receipt = buildReceiptArtifacts(sale, sale.items, business.currency, servedBy, business.name);
     return { sale, receipt };
   },
   syncNow: async () => {

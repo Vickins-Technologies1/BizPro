@@ -1,0 +1,23 @@
+★ eas-cli@21.6.0 is now available.
+To upgrade, run:
+npm install -g eas-cli
+Proceeding with outdated version.
+
+Found eas-cli in your project dependencies.
+It's recommended to use the "cli.version" field in eas.json to enforce the eas-cli version for your project.
+Learn more: https://github.com/expo/eas-cli#enforcing-eas-cli-version-for-your-project
+
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+
+
+
+√ Using remote Android credentials (Expo server)
+√ Using Keystore from configuration: Build Credentials _wy4WFrcv4 (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files/ Compressing project files- Compressing project files\ Compressing project files| Compressing project files√ Compressed project files 6s (3.1 MB)
+- Uploading to EAS Build (0 / 3.1 MB)\ Uploading to EAS Build (64.0 KB / 3.1 MB)| Uploading to EAS Build (64.0 KB / 3.1 MB)/ Uploading to EAS Build (64.0 KB / 3.1 MB)- Uploading to EAS Build (192 KB / 3.1 MB)\ Uploading to EAS Build (192 KB / 3.1 MB)| Uploading to EAS Build (192 KB / 3.1 MB)/ Uploading to EAS Build (255 KB / 3.1 MB)- Uploading to EAS Build (320 KB / 3.1 MB)\ Uploading to EAS Build (511 KB / 3.1 MB)| Uploading to EAS Build (576 KB / 3.1 MB)/ Uploading to EAS Build (640 KB / 3.1 MB)- Uploading to EAS Build (640 KB / 3.1 MB)\ Uploading to EAS Build (704 KB / 3.1 MB)| Uploading to EAS Build (704 KB / 3.1 MB)/ Uploading to EAS Build (1.1 MB / 3.1 MB)- Uploading to EAS Build (1.3 MB / 3.1 MB)\ Uploading to EAS Build (2.1 MB / 3.1 MB)| Uploading to EAS Build (3.1 MB / 3.1 MB)/ Uploading to EAS Build (3.1 MB / 3.1 MB)- Uploading to EAS Build (3.1 MB / 3.1 MB)\ Uploading to EAS Build (3.1 MB / 3.1 MB)| Uploading to EAS Build (3.1 MB / 3.1 MB)/ Uploading to EAS Build (3.1 MB / 3.1 MB)- Uploading to EAS Build (3.1 MB / 3.1 MB)\ Uploading to EAS Build (3.1 MB / 3.1 MB)√ Uploaded to EAS 3s
+
+See logs: https://expo.dev/accounts/vickinss-team/projects/bizpro/builds/73e41aff-c256-4a84-a786-b3b2f90a14ea
+

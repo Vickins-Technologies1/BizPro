@@ -1,5 +1,8 @@
 import { Share } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 type BluetoothModule = {
   BluetoothManager?: Record<string, (...args: any[]) => Promise<any> | any>;
@@ -10,10 +13,27 @@ export async function copyReceipt(receiptText: string) {
   await Clipboard.setStringAsync(receiptText);
 }
 
-export async function shareReceipt(receiptText: string) {
+export async function shareReceiptPdf(html: string, fileName: string) {
+  const file = await Print.printToFileAsync({ html });
+  const targetPath = `${FileSystem.cacheDirectory ?? ""}${fileName}`;
+  await FileSystem.moveAsync({
+    from: file.uri,
+    to: targetPath
+  });
+
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(targetPath, {
+      mimeType: "application/pdf",
+      dialogTitle: "Share receipt PDF",
+      UTI: "com.adobe.pdf"
+    });
+    return;
+  }
+
   await Share.share({
-    message: receiptText,
-    title: "Receipt"
+    url: targetPath,
+    message: "Receipt PDF",
+    title: "Receipt PDF"
   });
 }
 

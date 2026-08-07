@@ -15,11 +15,13 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
 import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isSameDay, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 
 export function Screen({ children, hideFooter = true }: { children: React.ReactNode; hideFooter?: boolean }) {
   const styles = usePrimitiveStyles();
+  useAppStore((state) => state.themeMode);
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
@@ -479,29 +481,29 @@ function createStyles() {
     screen: {
       flex: 1,
       backgroundColor: tokens.colors.background,
-      paddingTop: 12
+      paddingTop: 10
     },
     header: {
       marginHorizontal: 16,
-      padding: 20,
-      borderRadius: 24,
+      padding: 16,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       flexDirection: "row",
       alignItems: "center",
       gap: 12
     },
-    title: { color: tokens.colors.text, fontSize: 27, fontWeight: "800", letterSpacing: -0.4 },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 6, fontSize: 13, lineHeight: 18 },
+    title: { color: tokens.colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
+    subtitle: { color: tokens.colors.textSecondary, marginTop: 5, fontSize: 12, lineHeight: 17 },
     card: {
       backgroundColor: tokens.colors.surface,
-      borderRadius: 22,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 18,
+      padding: 14,
       ...tokens.shadow.card
     },
-    statCard: { gap: 8, minHeight: 132 },
+    statCard: { gap: 6, minHeight: 120 },
     iconWrap: {
       width: 34,
       height: 34,
@@ -509,18 +511,18 @@ function createStyles() {
       alignItems: "center",
       justifyContent: "center"
     },
-    statLabel: { color: tokens.colors.textMuted, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.8 },
-    statValue: { color: tokens.colors.text, fontSize: 22, fontWeight: "800" },
+    statLabel: { color: tokens.colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.7 },
+    statValue: { color: tokens.colors.text, fontSize: 19, fontWeight: "800" },
     statHint: { color: tokens.colors.textSecondary, fontSize: 12 },
     button: {
-      minHeight: 56,
-      borderRadius: 18,
+      minHeight: 48,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 18
+      paddingHorizontal: 16
     },
-    buttonText: { color: tokens.colors.text, fontSize: 15, fontWeight: "700" },
-    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
+    buttonText: { color: tokens.colors.text, fontSize: 14, fontWeight: "700" },
+    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.55 },
     fieldLabelRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -531,7 +533,7 @@ function createStyles() {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingVertical: 4,
+      paddingVertical: 3,
       paddingHorizontal: 6
     },
     passwordToggleText: {
@@ -542,14 +544,14 @@ function createStyles() {
       letterSpacing: 0.4
     },
     input: {
-      minHeight: 56,
-      borderRadius: 18,
+      minHeight: 48,
+      borderRadius: 16,
       backgroundColor: tokens.colors.surface,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      paddingHorizontal: 16,
+      paddingHorizontal: 14,
       color: tokens.colors.text,
-      fontSize: 15
+      fontSize: 14
     },
     inputError: {
       borderColor: tokens.colors.danger,
@@ -557,12 +559,12 @@ function createStyles() {
     },
     badge: {
       borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
       alignSelf: "flex-start"
     },
-    badgeText: { fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4 },
-    empty: { alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18 },
+    badgeText: { fontSize: 11, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.35 },
+    empty: { alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 14 },
     emptyIcon: {
       width: 52,
       height: 52,
@@ -595,15 +597,15 @@ function createStyles() {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 16
+      marginBottom: 14
     },
-    modalTitle: { color: tokens.colors.text, fontSize: 18, fontWeight: "800" },
+    modalTitle: { color: tokens.colors.text, fontSize: 16, fontWeight: "800" },
     calendarShell: {
       backgroundColor: tokens.colors.surfaceAlt,
       borderRadius: 24,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 14,
+      padding: 12,
       gap: 12
     },
     calendarTopRow: {
@@ -613,9 +615,9 @@ function createStyles() {
       gap: 10
     },
     calendarNavButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 14,
+      width: 36,
+      height: 36,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: tokens.colors.surface,
@@ -624,7 +626,7 @@ function createStyles() {
     },
     calendarMonth: {
       color: tokens.colors.text,
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: "800"
     },
     calendarWeekRow: {
@@ -645,8 +647,8 @@ function createStyles() {
       columnGap: 8
     },
     calendarDayButton: {
-      width: 38,
-      height: 38,
+      width: 36,
+      height: 36,
       borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
@@ -670,8 +672,8 @@ function createStyles() {
       color: tokens.colors.textMuted
     },
     calendarDaySpacer: {
-      width: 38,
-      height: 38
+      width: 36,
+      height: 36
     },
     calendarSummary: {
       flexDirection: "row",
@@ -684,9 +686,9 @@ function createStyles() {
       lineHeight: 18
     },
     scrollContent: {
-      padding: 16,
-      gap: 16,
-      paddingBottom: 28
+      padding: 14,
+      gap: 14,
+      paddingBottom: 24
     },
     skeleton: {
       backgroundColor: withAlpha(tokens.colors.textMuted, 0.14)

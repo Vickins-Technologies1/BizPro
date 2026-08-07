@@ -261,6 +261,7 @@ export async function createSale(input: {
   amountPaid: number;
   discountTotal?: number;
   taxTotal?: number;
+  grandTotal: number;
   notes?: string | null;
   receiptNumber: string;
   subtotal: number;

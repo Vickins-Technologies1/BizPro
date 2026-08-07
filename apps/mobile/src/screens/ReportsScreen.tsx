@@ -32,6 +32,7 @@ export function ReportsScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const liveDataVersion = useAppStore((state) => `${state.sales.length}:${state.expenses.length}`);
   const canViewReports = hasPermission(user, "viewReports");
 
   const [activeFilter, setActiveFilter] = React.useState<Filter>("week");
@@ -44,6 +45,7 @@ export function ReportsScreen() {
   const [error, setError] = React.useState<string | null>(null);
   const [pickerVisible, setPickerVisible] = React.useState(false);
   const requestIdRef = React.useRef(0);
+  const initializedRef = React.useRef(false);
 
   const currentRange = React.useMemo(() => {
     if (activeFilter === "custom") return customRange;
@@ -52,8 +54,15 @@ export function ReportsScreen() {
 
   React.useEffect(() => {
     if (!currentRange) return;
-    void loadReports(currentRange.from, currentRange.to);
+    const range = toApiRange(currentRange);
+    void loadReports(range.from, range.to);
   }, [currentRange?.from, currentRange?.to]);
+
+  React.useEffect(() => {
+    if (!initializedRef.current || !currentRange) return;
+    const range = toApiRange(currentRange);
+    void loadReports(range.from, range.to, "refresh");
+  }, [liveDataVersion, currentRange?.from, currentRange?.to]);
 
   async function loadReports(from: string, to: string, mode: "replace" | "refresh" = "replace") {
     const requestId = ++requestIdRef.current;
@@ -78,12 +87,14 @@ export function ReportsScreen() {
       if (requestId !== requestIdRef.current) return;
       setLoading(false);
       setRefreshing(false);
+      initializedRef.current = true;
     }
   }
 
   async function handleRefresh() {
     if (!currentRange || loading || refreshing) return;
-    await loadReports(currentRange.from, currentRange.to, "refresh");
+    const range = toApiRange(currentRange);
+    await loadReports(range.from, range.to, "refresh");
   }
 
   function openCustomRange() {
@@ -180,7 +191,14 @@ export function ReportsScreen() {
             <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
               {error}
             </Text>
-            <PrimaryButton title="Try again" onPress={() => currentRange && void loadReports(currentRange.from, currentRange.to)} />
+            <PrimaryButton
+              title="Try again"
+              onPress={() => {
+                if (!currentRange) return;
+                const range = toApiRange(currentRange);
+                void loadReports(range.from, range.to);
+              }}
+            />
           </Card>
         ) : !hasContent ? (
           <EmptyState
@@ -271,9 +289,21 @@ function presetRange(filter: Exclude<Filter, "custom">): RangeState {
   return { from: format(startOfDay(start), "yyyy-MM-dd"), to: format(endOfDay(today), "yyyy-MM-dd") };
 }
 
+function toApiRange(range: RangeState) {
+  const from = new Date(`${range.from}T00:00:00`);
+  const to = new Date(`${range.to}T23:59:59.999`);
+  return {
+    from: from.toISOString(),
+    to: to.toISOString()
+  };
+}
+
 function formatRangeLabel(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00`);
   const to = new Date(`${toDate}T00:00:00`);
+  if (fromDate === toDate) {
+    return format(from, "MMM d, yyyy");
+  }
   return `${format(from, "MMM d")} - ${format(to, "MMM d, yyyy")}`;
 }
 

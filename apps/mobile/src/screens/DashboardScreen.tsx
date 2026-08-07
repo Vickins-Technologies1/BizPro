@@ -21,6 +21,7 @@ export function DashboardScreen() {
   const business = useAppStore((state) => state.business);
   const pendingSync = useAppStore((state) => state.pendingSync);
   const user = useAppStore((state) => state.user);
+  const liveDataVersion = useAppStore((state) => `${state.sales.length}:${state.expenses.length}`);
   const syncNow = useAppStore((state) => state.syncNow);
   const permissions = getEffectivePermissions(user);
   const canViewDashboard = hasPermission(user, "viewDashboard");
@@ -36,6 +37,7 @@ export function DashboardScreen() {
   const [pickerVisible, setPickerVisible] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const requestIdRef = React.useRef(0);
+  const initializedRef = React.useRef(false);
 
   const currentRange = React.useMemo(() => {
     if (activeFilter === "custom") return customRange;
@@ -44,8 +46,15 @@ export function DashboardScreen() {
 
   React.useEffect(() => {
     if (!currentRange) return;
-    void loadDashboard(currentRange.from, currentRange.to);
+    const range = toApiRange(currentRange);
+    void loadDashboard(range.from, range.to);
   }, [currentRange?.from, currentRange?.to]);
+
+  React.useEffect(() => {
+    if (!initializedRef.current || !currentRange) return;
+    const range = toApiRange(currentRange);
+    void loadDashboard(range.from, range.to, "refresh");
+  }, [liveDataVersion, currentRange?.from, currentRange?.to]);
 
   async function loadDashboard(from: string, to: string, mode: "replace" | "refresh" = "replace") {
     const requestId = ++requestIdRef.current;
@@ -70,12 +79,14 @@ export function DashboardScreen() {
       if (requestId !== requestIdRef.current) return;
       setLoading(false);
       setRefreshing(false);
+      initializedRef.current = true;
     }
   }
 
   async function handleRefresh() {
     if (!currentRange || loading || refreshing) return;
-    await loadDashboard(currentRange.from, currentRange.to, "refresh");
+    const range = toApiRange(currentRange);
+    await loadDashboard(range.from, range.to, "refresh");
   }
 
   function handleSync() {
@@ -173,7 +184,14 @@ export function DashboardScreen() {
             <Ionicons name="alert-circle-outline" size={30} color={tokens.colors.danger} />
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Dashboard unavailable</Text>
             <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>{error}</Text>
-            <PrimaryButton title="Try again" onPress={() => currentRange && void loadDashboard(currentRange.from, currentRange.to)} />
+            <PrimaryButton
+              title="Try again"
+              onPress={() => {
+                if (!currentRange) return;
+                const range = toApiRange(currentRange);
+                void loadDashboard(range.from, range.to);
+              }}
+            />
           </Card>
         ) : !hasContent ? (
           <EmptyState
@@ -281,9 +299,21 @@ function presetRange(filter: Exclude<Filter, "custom">): RangeState {
   return { from: format(startOfDay(start), "yyyy-MM-dd"), to: format(endOfDay(today), "yyyy-MM-dd") };
 }
 
+function toApiRange(range: RangeState) {
+  const from = new Date(`${range.from}T00:00:00`);
+  const to = new Date(`${range.to}T23:59:59.999`);
+  return {
+    from: from.toISOString(),
+    to: to.toISOString()
+  };
+}
+
 function formatRangeLabel(fromDate: string, toDate: string) {
   const from = new Date(`${fromDate}T00:00:00`);
   const to = new Date(`${toDate}T00:00:00`);
+  if (fromDate === toDate) {
+    return format(from, "MMM d, yyyy");
+  }
   return `${format(from, "MMM d")} - ${format(to, "MMM d, yyyy")}`;
 }
 

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
+import { endOfDay, parseISO, startOfDay } from "date-fns";
 import { Customer, CustomerDocument, Expense, ExpenseDocument, Product, ProductDocument, Sale, SaleDocument } from "../schemas";
 
 @Injectable()
@@ -13,15 +14,14 @@ export class ReportsService {
   ) {}
 
   async summary(businessId: string, from?: string, to?: string) {
-    const range: Record<string, Date> = {};
-    if (from) range.$gte = new Date(from);
-    if (to) range.$lte = new Date(to);
+    const saleRange = buildDateRange(from, to);
+    const expenseRange = buildDateRange(from, to);
     const filter: Record<string, unknown> = { businessId };
-    if (Object.keys(range).length) filter.createdAt = range;
+    if (saleRange) filter.createdAt = saleRange;
     const [salesDocs, expenses, lowStockItems, debtors] = await Promise.all([
       this.saleModel.find(filter).lean(),
       this.expenseModel.aggregate([
-        { $match: { businessId, ...(from || to ? { expenseDate: { ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to) } : {}) } } : {}) } },
+        { $match: { businessId, ...(expenseRange ? { expenseDate: expenseRange } : {}) } },
         { $group: { _id: null, expensesTotal: { $sum: "$amount" } } }
       ]),
       this.productModel.find({ businessId, deletedAt: null }).lean(),
@@ -52,11 +52,9 @@ export class ReportsService {
 
   topProducts(businessId: string, from?: string, to?: string) {
     const filter: Record<string, unknown> = { businessId };
-    if (from || to) {
-      filter.createdAt = {
-        ...(from ? { $gte: new Date(from) } : {}),
-        ...(to ? { $lte: new Date(to) } : {})
-      };
+    const range = buildDateRange(from, to);
+    if (range) {
+      filter.createdAt = range;
     }
     return this.saleModel.aggregate([
       { $match: filter },
@@ -76,11 +74,9 @@ export class ReportsService {
 
   paymentBreakdown(businessId: string, from?: string, to?: string) {
     const filter: Record<string, unknown> = { businessId };
-    if (from || to) {
-      filter.createdAt = {
-        ...(from ? { $gte: new Date(from) } : {}),
-        ...(to ? { $lte: new Date(to) } : {})
-      };
+    const range = buildDateRange(from, to);
+    if (range) {
+      filter.createdAt = range;
     }
     return this.saleModel.aggregate([
       { $match: filter },
@@ -94,4 +90,24 @@ export class ReportsService {
       { $sort: { total: -1 } }
     ]);
   }
+}
+
+function buildDateRange(from?: string, to?: string) {
+  if (!from && !to) return null;
+  const range: Record<string, Date> = {};
+  if (from) range.$gte = normalizeRangeBound(from, "from");
+  if (to) range.$lte = normalizeRangeBound(to, "to");
+  return range;
+}
+
+function normalizeRangeBound(value: string, bound: "from" | "to") {
+  const parsed = parseISO(value);
+  const date = Number.isNaN(parsed.getTime()) ? new Date(value) : parsed;
+  if (Number.isNaN(date.getTime())) {
+    return new Date(0);
+  }
+  if (value.includes("T")) {
+    return date;
+  }
+  return bound === "from" ? startOfDay(date) : endOfDay(date);
 }

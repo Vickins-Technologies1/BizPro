@@ -40,6 +40,8 @@ export function ProductsScreen() {
   const [savingStock, setSavingStock] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
 
   const {
     control,
@@ -75,6 +77,16 @@ export function ProductsScreen() {
       ),
     [products, search, selectedCategoryId]
   );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageProducts = useMemo(() => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, filtered]);
+
+  React.useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategoryId]);
 
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
@@ -165,44 +177,93 @@ export function ProductsScreen() {
           </ScrollView>
         </Card>
         {filtered.length ? (
-          filtered.map((product) => (
-            <Card key={product.id} style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{product.name}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>
-                    {product.sku ?? "No SKU"} • {product.unit} • {categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized"}
+          <>
+            <View style={{ gap: 10 }}>
+              {pageProducts.map((product) => {
+                const categoryName = categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized";
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => navigation.navigate("ProductDetail", { productId: product.id })}
+                    style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] }]}
+                  >
+                    <Card style={{ gap: 10, padding: 12 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>
+                            {product.name}
+                          </Text>
+                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>
+                            {product.sku ?? "No SKU"} • {product.unit} • {categoryName}
+                          </Text>
+                        </View>
+                        <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
+                      </View>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Stock {product.stockOnHand}</Text>
+                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Low {product.lowStockThreshold}</Text>
+                        <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>View details</Text>
+                      </View>
+                      <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "800" }}>
+                        {formatMoney(product.sellingPrice, business?.currency)}
+                      </Text>
+                      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                        <Pressable
+                          onPress={(event) => {
+                            event?.stopPropagation?.();
+                            setRestockProductId(product.id);
+                            setRestockQty("0");
+                            setRestockCost(String(product.buyingPrice));
+                            setRestockVisible(true);
+                          }}
+                        >
+                          <Badge label="Restock" tone="success" />
+                        </Pressable>
+                        <Pressable
+                          onPress={(event) => {
+                            event?.stopPropagation?.();
+                            void handleDeleteProduct(product.id, product.name);
+                          }}
+                        >
+                          <Badge label={deletingProductId === product.id ? "Deleting..." : "Delete"} tone="danger" />
+                        </Pressable>
+                      </View>
+                    </Card>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {totalPages > 1 ? (
+              <Card style={{ gap: 10 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
+                    Page {currentPage} of {totalPages}
+                  </Text>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+                    Showing {Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filtered.length, currentPage * pageSize)} of {filtered.length}
                   </Text>
                 </View>
-                <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: tokens.colors.textSecondary }}>Stock: {product.stockOnHand}</Text>
-                <Text style={{ color: tokens.colors.textSecondary }}>Low: {product.lowStockThreshold}</Text>
-              </View>
-              <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>
-                Selling price {formatMoney(product.sellingPrice, business?.currency)}
-              </Text>
-              <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-                <Pressable onPress={() => navigation.navigate("ProductDetail", { productId: product.id })}>
-                  <Badge label="Details" tone="primary" />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setRestockProductId(product.id);
-                    setRestockQty("0");
-                    setRestockCost(String(product.buyingPrice));
-                    setRestockVisible(true);
-                  }}
-                  >
-                    <Badge label="Restock" tone="success" />
-                  </Pressable>
-                  <Pressable onPress={() => void handleDeleteProduct(product.id, product.name)}>
-                    <Badge label={deletingProductId === product.id ? "Deleting..." : "Delete"} tone="danger" />
-                  </Pressable>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      title="Previous"
+                      variant="secondary"
+                      disabled={currentPage === 1}
+                      onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      title="Next"
+                      variant="secondary"
+                      disabled={currentPage === totalPages}
+                      onPress={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    />
+                  </View>
                 </View>
               </Card>
-            ))
+            ) : null}
+          </>
         ) : (
           <EmptyState
             title={search ? "No matching products" : "No products yet"}

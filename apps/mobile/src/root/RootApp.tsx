@@ -7,7 +7,7 @@ import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
 
-const splashLogo = require("../../assets/brand/biz-pro-logo.png");
+const splashLogo = require("../../assets/brand/biz-pro-logo-transparent.png");
 
 export function RootApp() {
   const bootstrap = useAppStore((state) => state.bootstrap);
@@ -90,43 +90,22 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-            backgroundColor: tokens.colors.background
-          }}
-        >
-          <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
-            <View
-              style={{
-                width: 184,
-                height: 184,
-                borderRadius: 52,
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderWidth: 1,
-                borderColor: tokens.colors.border,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#000",
-                shadowOpacity: 0.22,
-                shadowRadius: 28,
-                shadowOffset: { width: 0, height: 16 },
-                elevation: 10
-              }}
-            >
-              <Image source={splashLogo} resizeMode="contain" style={{ width: 154, height: 154 }} />
-            </View>
-            <View style={{ alignItems: "center", gap: 8, maxWidth: 320 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 24, fontWeight: "800", letterSpacing: 0.5 }}>Biz Pro</Text>
-              <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
-                Preparing your workspace and syncing your latest data.
-              </Text>
-            </View>
-            <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 6 }} />
-          </Animated.View>
+        <View style={{ flex: 1, backgroundColor: tokens.colors.background, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20 }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
+              <Image
+                source={splashLogo}
+                resizeMode="contain"
+                style={{ width: 260, height: 260, backgroundColor: "transparent" }}
+              />
+              <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 4 }} />
+            </Animated.View>
+          </View>
+          <View style={{ alignItems: "center", paddingBottom: 6 }}>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
+              Powered by Vickins Technologies
+            </Text>
+          </View>
         </View>
       </SafeAreaView>
       <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />

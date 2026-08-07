@@ -1,0 +1,34 @@
+[
+  {
+    "id": "73e41aff-c256-4a84-a786-b3b2f90a14ea",
+    "status": "NEW",
+    "platform": "ANDROID",
+    "artifacts": {},
+    "initiatingActor": {
+      "id": "ceac22d0-fb9c-4b4e-ae57-1d3bf1c3a765",
+      "displayName": "vickins"
+    },
+    "logFiles": [],
+    "project": {
+      "id": "691dea44-6740-4044-9780-7748566a6b51",
+      "name": "BizPro",
+      "slug": "bizpro",
+      "ownerAccount": {
+        "id": "f614b323-c412-4279-ae8c-66e721438a66",
+        "name": "vickinss-team"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "51.0.0",
+    "appVersion": "0.1.0",
+    "appBuildVersion": "17",
+    "gitCommitHash": "bba12c5522c02e2f74511ee50295d993b70be0b3",
+    "gitCommitMessage": "Update application functionality and configuration",
+    "priority": "NORMAL",
+    "createdAt": "2026-08-06T14:29:25.521Z",
+    "updatedAt": "2026-08-06T14:29:25.521Z",
+    "expirationDate": "2026-08-20T14:29:25.571Z",
+    "isForIosSimulator": false
+  }
+]

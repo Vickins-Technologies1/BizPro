@@ -1,12 +1,16 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { BusinessesService } from "./businesses.service";
 import { IsIn, IsOptional, IsString } from "class-validator";
+import { BUSINESS_TYPES, INDUSTRY_KEYS, type BusinessType, type IndustryKey } from "@vbo/shared";
 import { SupportKeyGuard } from "../../common/support-key.guard";
 
 class CreateBusinessDto {
   @IsString() name!: string;
   @IsString() slug!: string;
-  @IsIn(["retail_shop", "boutique", "cosmetics", "accessories", "wines_spirits", "hardware", "agrovet", "restaurant"]) businessType!: any;
+  @IsOptional()
+  @IsIn(INDUSTRY_KEYS)
+  industryKey?: IndustryKey;
+  @IsIn(BUSINESS_TYPES) businessType!: BusinessType;
   @IsString() @IsOptional() currency?: string;
   @IsIn(["lite", "standard", "pro"]) planTier!: any;
 }

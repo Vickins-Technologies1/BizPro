@@ -7,15 +7,16 @@ import { hasPermission } from "@shared";
 import type { DailySummary } from "@shared";
 import {
   AppScrollView,
-  Badge,
   Card,
   DateRangePickerModal,
   EmptyState,
+  ErrorState,
   GradientHeader,
   PrimaryButton,
   Screen,
   SkeletonBlock,
-  StatCard
+  StatCard,
+  Tag
 } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
@@ -32,6 +33,7 @@ export function ReportsScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const liveDataVersion = useAppStore((state) => `${state.sales.length}:${state.expenses.length}`);
   const canViewReports = hasPermission(user, "viewReports");
 
@@ -56,13 +58,13 @@ export function ReportsScreen() {
     if (!currentRange) return;
     const range = toApiRange(currentRange);
     void loadReports(range.from, range.to);
-  }, [currentRange?.from, currentRange?.to]);
+  }, [currentRange?.from, currentRange?.to, selectedBranchId]);
 
   React.useEffect(() => {
     if (!initializedRef.current || !currentRange) return;
     const range = toApiRange(currentRange);
     void loadReports(range.from, range.to, "refresh");
-  }, [liveDataVersion, currentRange?.from, currentRange?.to]);
+  }, [liveDataVersion, currentRange?.from, currentRange?.to, selectedBranchId]);
 
   async function loadReports(from: string, to: string, mode: "replace" | "refresh" = "replace") {
     const requestId = ++requestIdRef.current;
@@ -72,9 +74,9 @@ export function ReportsScreen() {
 
     try {
       const [summaryResponse, topProductsResponse, paymentResponse] = await Promise.all([
-        getReportsSummary(from, to),
-        getTopProducts(from, to),
-        getPaymentBreakdown(from, to)
+        getReportsSummary(from, to, selectedBranchId),
+        getTopProducts(from, to, selectedBranchId),
+        getPaymentBreakdown(from, to, selectedBranchId)
       ]);
       if (requestId !== requestIdRef.current) return;
       setSummary(summaryResponse);
@@ -112,11 +114,11 @@ export function ReportsScreen() {
   if (!canViewReports) {
     return (
       <Screen>
-        <GradientHeader title="Insights" subtitle="Daily performance, top movers, and margins" />
+        <GradientHeader title="Reports" subtitle="Daily performance, top movers, and margins" />
         <View style={{ padding: 16 }}>
           <EmptyState
-            title="Insights access restricted"
-            subtitle="This account cannot view business insights. Ask an owner or manager to grant reporting access."
+            title="Reports access restricted"
+            subtitle="This account cannot view business reports. Ask an owner or manager to grant reporting access."
             action={<PrimaryButton title="Go back" onPress={() => navigation.goBack()} />}
             icon="bar-chart-outline"
           />
@@ -128,7 +130,7 @@ export function ReportsScreen() {
   return (
     <Screen>
       <GradientHeader
-        title="Insights"
+        title="Reports"
         subtitle={`${rangeLabel} • trend and performance overview`}
         right={
           <Pressable onPress={() => navigation.goBack()}>
@@ -152,13 +154,9 @@ export function ReportsScreen() {
               ["month", "This Month"],
               ["year", "This Year"]
             ] as Array<[Exclude<Filter, "custom">, string]>).map(([filter, label]) => (
-              <Pressable key={filter} onPress={() => setActiveFilter(filter)} disabled={loading && !summary}>
-                <Badge label={label} tone={activeFilter === filter ? "success" : "primary"} />
-              </Pressable>
+              <Tag key={filter} label={label} tone="primary" selected={activeFilter === filter} onPress={() => setActiveFilter(filter)} />
             ))}
-            <Pressable onPress={openCustomRange}>
-              <Badge label="Custom Range" tone={activeFilter === "custom" ? "success" : "warning"} />
-            </Pressable>
+            <Tag label="Custom Range" tone="warning" selected={activeFilter === "custom"} onPress={openCustomRange} />
           </View>
           <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Showing {rangeLabel}.</Text>
           {error ? <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>{error}</Text> : null}
@@ -185,21 +183,20 @@ export function ReportsScreen() {
             </Card>
           </View>
         ) : error && !summary ? (
-          <Card style={{ gap: 12, alignItems: "center" }}>
-            <Ionicons name="alert-circle-outline" size={30} color={tokens.colors.danger} />
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Insights unavailable</Text>
-            <Text style={{ color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
-              {error}
-            </Text>
-            <PrimaryButton
-              title="Try again"
-              onPress={() => {
-                if (!currentRange) return;
-                const range = toApiRange(currentRange);
-                void loadReports(range.from, range.to);
-              }}
-            />
-          </Card>
+          <ErrorState
+            title="Reports unavailable"
+            subtitle={error}
+            action={
+              <PrimaryButton
+                title="Try again"
+                onPress={() => {
+                  if (!currentRange) return;
+                  const range = toApiRange(currentRange);
+                  void loadReports(range.from, range.to);
+                }}
+              />
+            }
+          />
         ) : !hasContent ? (
           <EmptyState
             title="Nothing to show yet"

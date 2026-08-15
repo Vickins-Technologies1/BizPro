@@ -15,6 +15,12 @@ export const appTheme = {
   get radii() {
     return tokens.radii;
   },
+  get motion() {
+    return tokens.motion;
+  },
+  get shadow() {
+    return tokens.shadow;
+  },
   get typography() {
     return tokens.typography;
   }

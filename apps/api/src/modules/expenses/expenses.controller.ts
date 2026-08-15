@@ -9,6 +9,8 @@ import { CurrentUser } from "../../common/current-user.decorator";
 
 class CreateExpenseDto {
   @IsString() businessId!: string;
+  @IsOptional() @IsString() externalId?: string;
+  @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() categoryId?: string;
   @IsNumber() amount!: number;
   @IsString() note!: string;
@@ -23,13 +25,13 @@ export class ExpensesController {
 
   @Get()
   @Roles("owner", "manager")
-  list(@CurrentUser() user: { businessId: string }) {
-    return this.expenses.list(user.businessId);
+  list(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("branchId") branchId?: string) {
+    return this.expenses.list(user.businessId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Post()
   @Roles("owner", "manager")
-  create(@CurrentUser() user: { businessId: string; sub: string }, @Body() dto: CreateExpenseDto) {
-    return this.expenses.create({ ...dto, businessId: user.businessId, recordedById: user.sub });
+  create(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Body() dto: CreateExpenseDto) {
+    return this.expenses.create({ ...dto, businessId: user.businessId, branchId: dto.branchId ?? user.branchId ?? null, recordedById: user.sub }, { role: user.role ?? null, branchId: user.branchId ?? null });
   }
 }

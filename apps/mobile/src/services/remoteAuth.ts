@@ -4,7 +4,7 @@ import type { AccessPermission } from "@shared";
 type RemoteAuthResponse = {
   accessToken: string;
   user: { id: string; businessId: string; role: string; fullName: string; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null };
-  business: { id: string; name: string; slug: string; businessType: string; currency: string; planTier: string; billingStatus: string };
+  business: { id: string; name: string; slug: string; industryKey: string; businessType: string; currency: string; planTier: string; billingStatus: string };
 };
 
 async function requestJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -48,6 +48,7 @@ export async function remoteRegister(input: {
   phone: string;
   password: string;
   businessName: string;
+  industryKey?: string;
   businessType: string;
   planTier: string;
   currency: string;

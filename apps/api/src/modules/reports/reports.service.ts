@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { endOfDay, parseISO, startOfDay } from "date-fns";
 import { Customer, CustomerDocument, Expense, ExpenseDocument, Product, ProductDocument, Sale, SaleDocument } from "../schemas";
+import { buildBranchMatch, resolveReadBranchId, type BranchScope } from "../../common/branch-scope";
 
 @Injectable()
 export class ReportsService {
@@ -13,20 +14,21 @@ export class ReportsService {
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>
   ) {}
 
-  async summary(businessId: string, from?: string, to?: string) {
+  async summary(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
     const saleRange = buildDateRange(from, to);
     const expenseRange = buildDateRange(from, to);
-    const filter: Record<string, unknown> = { businessId };
+    const filter: Record<string, unknown> = { businessId, ...buildBranchMatch(branchId) };
     if (saleRange) filter.createdAt = saleRange;
     const [salesDocs, expenses, lowStockItems, debtors] = await Promise.all([
       this.saleModel.find(filter).lean(),
       this.expenseModel.aggregate([
-        { $match: { businessId, ...(expenseRange ? { expenseDate: expenseRange } : {}) } },
+        { $match: { businessId, ...buildBranchMatch(branchId), ...(expenseRange ? { expenseDate: expenseRange } : {}) } },
         { $group: { _id: null, expensesTotal: { $sum: "$amount" } } }
       ]),
-      this.productModel.find({ businessId, deletedAt: null }).lean(),
+      this.productModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
       this.customerModel.aggregate([
-        { $match: { businessId, balance: { $gt: 0 } } },
+        { $match: { businessId, balance: { $gt: 0 }, ...buildBranchMatch(branchId) } },
         { $group: { _id: null, debtTotal: { $sum: "$balance" } } }
       ])
     ]);
@@ -50,8 +52,9 @@ export class ReportsService {
     };
   }
 
-  topProducts(businessId: string, from?: string, to?: string) {
-    const filter: Record<string, unknown> = { businessId };
+  topProducts(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const filter: Record<string, unknown> = { businessId, ...buildBranchMatch(branchId) };
     const range = buildDateRange(from, to);
     if (range) {
       filter.createdAt = range;
@@ -72,8 +75,9 @@ export class ReportsService {
     ]);
   }
 
-  paymentBreakdown(businessId: string, from?: string, to?: string) {
-    const filter: Record<string, unknown> = { businessId };
+  paymentBreakdown(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const filter: Record<string, unknown> = { businessId, ...buildBranchMatch(branchId) };
     const range = buildDateRange(from, to);
     if (range) {
       filter.createdAt = range;

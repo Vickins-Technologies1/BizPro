@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import {
   AppScrollView,
+  AppVirtualizedList,
   Badge,
   Card,
   EmptyState,
@@ -19,7 +20,9 @@ import { tokens } from "@/theme/tokens";
 import {
   ACCESS_PERMISSIONS,
   ROLE_ACCESS,
+  ROLE_PRESETS,
   formatPermissionLabel,
+  formatRoleLabel,
   getEffectivePermissions,
   hasPermission,
   type AccessPermission,
@@ -58,6 +61,7 @@ export function EmployeesScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const canManageEmployees = hasPermission(user, "manageEmployees");
   const permissions = getEffectivePermissions(user);
 
@@ -80,6 +84,8 @@ export function EmployeesScreen() {
   const [saving, setSaving] = React.useState(false);
   const [acting, setActing] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ tone: "success" | "warning" | "danger"; message: string } | null>(null);
+  const deferredSearch = React.useDeferredValue(search);
+  const deferredAuditSearch = React.useDeferredValue(auditSearch);
 
   const selectedEmployee = React.useMemo(
     () => employees.find((employee) => employee.id === selectedEmployeeId) ?? null,
@@ -91,23 +97,23 @@ export function EmployeesScreen() {
   const effectiveOwnerName = businessOwner?.fullName ?? user?.fullName ?? "Business owner";
 
   const filteredEmployees = React.useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     return employees.filter((employee) => {
       if (!query) return true;
       const haystack = [employee.fullName, employee.phone ?? "", employee.branchId ?? "", employee.roleLabel ?? employee.role].join(" ").toLowerCase();
       return haystack.includes(query);
     });
-  }, [employees, search]);
+  }, [deferredSearch, employees]);
 
   const filteredAuditLogs = React.useMemo(() => {
-    const query = auditSearch.trim().toLowerCase();
+    const query = deferredAuditSearch.trim().toLowerCase();
     return auditLogs.filter((log) => {
       if (!matchesAuditScope(log.action, auditScope)) return false;
       if (!query) return true;
       const payloadText = JSON.stringify(log.payload ?? {}).toLowerCase();
       return [log.action, log.actorId, log.entityId, payloadText].join(" ").toLowerCase().includes(query);
     });
-  }, [auditLogs, auditScope, auditSearch]);
+  }, [auditLogs, auditScope, deferredAuditSearch]);
 
   const metrics = React.useMemo(() => {
     const active = employees.filter((employee) => employee.isActive).length;
@@ -119,7 +125,7 @@ export function EmployeesScreen() {
   React.useEffect(() => {
     if (!canManageEmployees) return;
     void refreshWorkspace();
-  }, [canManageEmployees]);
+  }, [canManageEmployees, selectedBranchId]);
 
   React.useEffect(() => {
     if (!selectedEmployee) return;
@@ -135,7 +141,7 @@ export function EmployeesScreen() {
     setError(null);
     try {
       const [employeeList, permissionCatalogResponse, auditList] = await Promise.all([
-        listEmployees(),
+        listEmployees(selectedBranchId),
         getEmployeeCatalog(),
         listEmployeeAuditLogs()
       ]);
@@ -153,7 +159,7 @@ export function EmployeesScreen() {
   async function openCreate() {
     setMode("create");
     setSelectedEmployeeId(null);
-    setDraft(createDraft("cashier"));
+    setDraft(createDraft("cashier", selectedBranchId ?? user?.branchId ?? null));
     setSuspendReason("");
     setResetPassword("");
     setResetPin("");
@@ -322,154 +328,161 @@ export function EmployeesScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshWorkspace}>
-        <Card style={{ gap: 8 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Owned by the business owner account</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Use this workspace to add team members, assign preset roles, fine-tune permissions, and review access history.
-          </Text>
-          {error ? (
-            <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>
-              We couldn&apos;t load the employee workspace. {error}
-            </Text>
-          ) : null}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <Badge label={`Owner: ${effectiveOwnerName}`} tone="success" />
-            <Badge label={`${permissions.length} permissions`} tone="primary" />
+      <AppVirtualizedList
+        refreshing={refreshing}
+        onRefresh={refreshWorkspace}
+        data={filteredEmployees}
+        keyExtractor={(employee) => employee.id}
+        ListHeaderComponent={
+          <View style={{ gap: 12 }}>
+            <Card style={{ gap: 8 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Owned by the business owner account</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+                Use this workspace to add team members, assign preset roles, fine-tune permissions, and review access history.
+              </Text>
+              {error ? (
+                <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>
+                  We couldn&apos;t load the employee workspace. {error}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Badge label={`Owner: ${effectiveOwnerName}`} tone="success" />
+                <Badge label={`${permissions.length} permissions`} tone="primary" />
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <PrimaryButton title="Add employee" onPress={openCreate} />
+                <PrimaryButton title={refreshing ? "Refreshing..." : "Refresh"} variant="secondary" onPress={refreshWorkspace} />
+              </View>
+              {feedback ? (
+                <Text
+                  style={{
+                    color:
+                      feedback.tone === "danger"
+                        ? tokens.colors.danger
+                        : feedback.tone === "warning"
+                          ? tokens.colors.warning
+                          : tokens.colors.success,
+                    fontSize: 13,
+                    lineHeight: 18
+                  }}
+                >
+                  {feedback.message}
+                </Text>
+              ) : null}
+            </Card>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <StatCard label="Employees" value={`${employees.length}`} icon="people-outline" tone="primary" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <StatCard label="Active" value={`${metrics.active}`} icon="checkmark-circle-outline" tone="success" />
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <StatCard label="Suspended" value={`${metrics.suspended}`} icon="pause-circle-outline" tone="warning" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <StatCard label="Custom rules" value={`${metrics.custom}`} icon="options-outline" tone="primary" />
+              </View>
+            </View>
+
+            <Card style={{ gap: 12 }}>
+              <InputField label="Search employees" value={search} onChangeText={setSearch} placeholder="Name, phone, branch, or role" />
+              {loading ? <Text style={{ color: tokens.colors.textSecondary }}>Loading employee workspace...</Text> : null}
+            </Card>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <PrimaryButton title="Add employee" onPress={openCreate} />
-            <PrimaryButton title={refreshing ? "Refreshing..." : "Refresh"} variant="secondary" onPress={refreshWorkspace} />
-          </View>
-          {feedback ? (
-            <Text
+        }
+        renderItem={({ item: employee }) => {
+          const isCurrent = employee.id === selectedEmployeeId;
+          const summaryPermissions = employee.permissions ?? ROLE_ACCESS[employee.role];
+          return (
+            <Pressable
+              onPress={() => {
+                setSelectedEmployeeId(employee.id);
+                openEdit(employee);
+              }}
               style={{
-                color:
-                  feedback.tone === "danger"
-                    ? tokens.colors.danger
-                    : feedback.tone === "warning"
-                      ? tokens.colors.warning
-                      : tokens.colors.success,
-                fontSize: 13,
-                lineHeight: 18
+                padding: 14,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: isCurrent ? tokens.colors.primaryStrong : tokens.colors.border,
+                backgroundColor: isCurrent ? "rgba(37,99,235,0.08)" : tokens.colors.surfaceAlt,
+                gap: 10
               }}
             >
-              {feedback.message}
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{employee.fullName}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 13 }}>
+                    {employee.roleLabel ?? formatPresetLabel(employee.role)} • {employee.phone ?? "No phone"} • {employee.branchId ?? "Main branch"}
+                  </Text>
+                </View>
+                <Badge label={employee.isActive ? "active" : "suspended"} tone={employee.isActive ? "success" : "warning"} />
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                <Badge label={`${summaryPermissions.length} permissions`} tone="primary" />
+                <Badge label={employee.ownerId ? "Owner linked" : "No owner link"} tone="success" />
+                <Badge label={isPreset(employee.role, summaryPermissions) ? "preset" : "custom"} tone="warning" />
+              </View>
+            </Pressable>
+          );
+        }}
+        ListEmptyComponent={
+          <EmptyState
+            title={search ? "No matching employees" : "No team members yet"}
+            subtitle={search ? "Try a different search term." : "Add the first team member to start sharing access."}
+            action={<PrimaryButton title="Add first employee" onPress={openCreate} />}
+          />
+        }
+        ListFooterComponent={
+          <Card style={{ gap: 12 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Audit log viewer</Text>
+            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+              Track access changes, credential resets, and employee lifecycle events from the owner app.
             </Text>
-          ) : null}
-        </Card>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Employees" value={`${employees.length}`} icon="people-outline" tone="primary" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Active" value={`${metrics.active}`} icon="checkmark-circle-outline" tone="success" />
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Suspended" value={`${metrics.suspended}`} icon="pause-circle-outline" tone="warning" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Custom rules" value={`${metrics.custom}`} icon="options-outline" tone="primary" />
-          </View>
-        </View>
-
-        <Card style={{ gap: 12 }}>
-          <InputField label="Search employees" value={search} onChangeText={setSearch} placeholder="Name, phone, branch, or role" />
-          {loading ? (
-            <Text style={{ color: tokens.colors.textSecondary }}>Loading employee workspace...</Text>
-          ) : filteredEmployees.length ? (
-            filteredEmployees.map((employee) => {
-              const isCurrent = employee.id === selectedEmployeeId;
-              const summaryPermissions = employee.permissions ?? ROLE_ACCESS[employee.role];
-              return (
-                <Pressable
-                  key={employee.id}
-                  onPress={() => {
-                    setSelectedEmployeeId(employee.id);
-                    openEdit(employee);
-                  }}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {([
+                ["access", "Access"],
+                ["credentials", "Credentials"],
+                ["status", "Suspensions"],
+                ["all", "All"]
+              ] as Array<[AuditScope, string]>).map(([scope, label]) => (
+                <Pressable key={scope} onPress={() => setAuditScope(scope)}>
+                  <Badge label={label} tone={auditScope === scope ? "success" : "primary"} />
+                </Pressable>
+              ))}
+            </View>
+            <InputField label="Search audit logs" value={auditSearch} onChangeText={setAuditSearch} placeholder="employee, action, or actor" />
+            {filteredAuditLogs.length ? (
+              filteredAuditLogs.map((log) => (
+                <View
+                  key={log.id}
                   style={{
                     padding: 14,
-                    borderRadius: 18,
+                    borderRadius: 16,
                     borderWidth: 1,
-                    borderColor: isCurrent ? tokens.colors.primaryStrong : tokens.colors.border,
-                    backgroundColor: isCurrent ? "rgba(37,99,235,0.08)" : tokens.colors.surfaceAlt,
-                    gap: 10
+                    borderColor: tokens.colors.border,
+                    backgroundColor: tokens.colors.surfaceAlt,
+                    gap: 6
                   }}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{employee.fullName}</Text>
-                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 13 }}>
-                        {employee.roleLabel ?? formatPresetLabel(employee.role)} • {employee.phone ?? "No phone"} • {employee.branchId ?? "Main branch"}
-                      </Text>
-                    </View>
-                    <Badge label={employee.isActive ? "active" : "suspended"} tone={employee.isActive ? "success" : "warning"} />
+                    <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{formatAuditTitle(log)}</Text>
+                    <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{log.action}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    <Badge label={`${summaryPermissions.length} permissions`} tone="primary" />
-                    <Badge label={employee.ownerId ? "Owner linked" : "No owner link"} tone="success" />
-                    <Badge label={isPreset(employee.role, summaryPermissions) ? "preset" : "custom"} tone="warning" />
-                  </View>
-                </Pressable>
-              );
-            })
-          ) : (
-            <EmptyState
-              title={search ? "No matching employees" : "No team members yet"}
-              subtitle={search ? "Try a different search term." : "Add the first team member to start sharing access."}
-              action={<PrimaryButton title="Add first employee" onPress={openCreate} />}
-            />
-          )}
-        </Card>
-
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Audit log viewer</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Track access changes, credential resets, and employee lifecycle events from the owner app.
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {([
-              ["access", "Access"],
-              ["credentials", "Credentials"],
-              ["status", "Suspensions"],
-              ["all", "All"]
-            ] as Array<[AuditScope, string]>).map(([scope, label]) => (
-              <Pressable key={scope} onPress={() => setAuditScope(scope)}>
-                <Badge label={label} tone={auditScope === scope ? "success" : "primary"} />
-              </Pressable>
-            ))}
-          </View>
-          <InputField label="Search audit logs" value={auditSearch} onChangeText={setAuditSearch} placeholder="employee, action, or actor" />
-          {filteredAuditLogs.length ? (
-            filteredAuditLogs.map((log) => (
-              <View
-                key={log.id}
-                style={{
-                  padding: 14,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: tokens.colors.border,
-                  backgroundColor: tokens.colors.surfaceAlt,
-                  gap: 6
-                }}
-              >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                  <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{formatAuditTitle(log)}</Text>
-                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{log.action}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{summarizeAudit(log)}</Text>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{new Date(log.createdAt).toLocaleString()}</Text>
                 </View>
-                <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{summarizeAudit(log)}</Text>
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{new Date(log.createdAt).toLocaleString()}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={{ color: tokens.colors.textSecondary }}>No audit events match the current filters.</Text>
-          )}
-        </Card>
-      </AppScrollView>
+              ))
+            ) : (
+              <Text style={{ color: tokens.colors.textSecondary }}>No audit events match the current filters.</Text>
+            )}
+          </Card>
+        }
+        contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
+      />
 
       <SimpleModal
         visible={draftModalVisible}
@@ -564,11 +577,11 @@ export function EmployeesScreen() {
   );
 }
 
-function createDraft(role: UserRole): EmployeeDraft {
+function createDraft(role: UserRole, branchId?: string | null): EmployeeDraft {
   return {
     fullName: "",
     phone: "",
-    branchId: "",
+    branchId: branchId ?? "",
     role,
     roleLabel: formatPresetLabel(role),
     permissions: [...ROLE_ACCESS[role]],
@@ -593,15 +606,16 @@ function employeeToDraft(employee: EmployeeRecord): EmployeeDraft {
 }
 
 function fallbackRoleCatalog() {
-  return [
-    { role: "owner" as const, label: "Owner", permissions: ROLE_ACCESS.owner },
-    { role: "manager" as const, label: "Manager", permissions: ROLE_ACCESS.manager },
-    { role: "cashier" as const, label: "Cashier", permissions: ROLE_ACCESS.cashier }
-  ];
+  return ROLE_PRESETS.map((preset) => ({
+    role: preset.role,
+    label: preset.label,
+    description: preset.description,
+    permissions: [...ROLE_ACCESS[preset.role]]
+  }));
 }
 
 function formatPresetLabel(role: UserRole) {
-  return role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier";
+  return formatRoleLabel(role);
 }
 
 function applyRolePreset(role: UserRole, setDraft: React.Dispatch<React.SetStateAction<EmployeeDraft>>) {

@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { AccessPermission, UserRole } from "@shared";
-import { getEffectivePermissions, hasPermission } from "@shared";
+import { formatRoleLabel, getEffectivePermissions, hasPermission } from "@shared";
 import { Badge, Card, Screen } from "@/components/Primitives";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
@@ -120,7 +120,7 @@ export function RoleLaunchpadScreen() {
   const styles = React.useMemo(() => createStyles(), [tokens]);
   const permissions = getEffectivePermissions(user);
   const visibleDestinations = destinations.filter((destination) => hasPermission(user, destination.permission));
-  const roleLabel = user?.roleLabel ?? (role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier");
+  const roleLabel = user?.roleLabel ?? formatRoleLabel(role);
 
   return (
     <Screen hideFooter={false}>

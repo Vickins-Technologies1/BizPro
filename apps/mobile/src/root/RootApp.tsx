@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { ActivityIndicator, Animated, AppState, Image, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { Asset } from "expo-asset";
 import NetInfo from "@react-native-community/netinfo";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
@@ -16,6 +17,10 @@ export function RootApp() {
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncNow = useAppStore((state) => state.syncNow);
   const themeMode = useAppStore((state) => state.themeMode);
+
+  useEffect(() => {
+    void Asset.fromModule(splashLogo).downloadAsync().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     bootstrap();

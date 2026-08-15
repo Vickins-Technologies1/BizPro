@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
-import { IsOptional, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 import { CategoriesService } from "./categories.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -8,8 +8,10 @@ import { CurrentUser } from "../../common/current-user.decorator";
 
 class CreateCategoryDto {
   @IsString() businessId!: string;
+  @IsOptional() @IsString() externalId?: string;
   @IsString() name!: string;
   @IsString() @IsOptional() color?: string;
+  @IsOptional() @IsNumber() sortOrder?: number;
 }
 
 @Controller("categories")

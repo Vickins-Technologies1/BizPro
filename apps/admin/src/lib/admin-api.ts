@@ -1,5 +1,5 @@
 import { fetchJson } from "./api";
-import { ACCESS_PERMISSIONS, ROLE_ACCESS, type AccessPermission, type UserRole } from "@vbo/shared";
+import { ACCESS_PERMISSIONS, ROLE_ACCESS, ROLE_PRESETS, formatRoleLabel, type AccessPermission, type UserRole } from "@vbo/shared";
 
 export type AdminBusiness = {
   _id: string;
@@ -46,7 +46,7 @@ export type AdminReconciliationLog = {
 
 export type PermissionCatalog = {
   permissions: AccessPermission[];
-  roles: Array<{ role: UserRole; label: string; permissions: AccessPermission[] }>;
+  roles: Array<{ role: UserRole; label: string; description?: string; permissions: AccessPermission[] }>;
 };
 
 export type EmployeeRecord = {
@@ -171,7 +171,7 @@ export async function deleteBusinessEmployee(businessId: string, employeeId: str
 }
 
 export function formatPresetLabel(role: UserRole) {
-  return role === "owner" ? "Business Owner" : role === "manager" ? "Manager" : "Cashier";
+  return role === "owner" ? "Business Owner" : formatRoleLabel(role);
 }
 
 export function cloneRolePermissions(role: UserRole) {

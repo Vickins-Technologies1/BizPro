@@ -4,20 +4,32 @@ import { Model } from "mongoose";
 import {
   AuditLog,
   AuditLogDocument,
+  Brand,
+  BrandDocument,
   Category,
   CategoryDocument,
   Customer,
   CustomerDocument,
+  CustomerGroup,
+  CustomerGroupDocument,
   Expense,
   ExpenseDocument,
   Payment,
   PaymentDocument,
   Product,
   ProductDocument,
+  PurchaseOrder,
+  PurchaseOrderDocument,
   Sale,
   SaleDocument,
+  StockAdjustment,
+  StockAdjustmentDocument,
   StockMovement,
   StockMovementDocument,
+  StockTransfer,
+  StockTransferDocument,
+  Supplier,
+  SupplierDocument,
   SyncCheckpoint,
   SyncCheckpointDocument,
   SyncEvent,
@@ -31,8 +43,14 @@ export class SyncService {
     @InjectModel(SyncEvent.name) private readonly syncEventModel: Model<SyncEventDocument>,
     @InjectModel(SyncCheckpoint.name) private readonly checkpointModel: Model<SyncCheckpointDocument>,
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
+    @InjectModel(Brand.name) private readonly brandModel: Model<BrandDocument>,
     @InjectModel(Category.name) private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>,
+    @InjectModel(CustomerGroup.name) private readonly customerGroupModel: Model<CustomerGroupDocument>,
+    @InjectModel(Supplier.name) private readonly supplierModel: Model<SupplierDocument>,
+    @InjectModel(PurchaseOrder.name) private readonly purchaseOrderModel: Model<PurchaseOrderDocument>,
+    @InjectModel(StockTransfer.name) private readonly stockTransferModel: Model<StockTransferDocument>,
+    @InjectModel(StockAdjustment.name) private readonly stockAdjustmentModel: Model<StockAdjustmentDocument>,
     @InjectModel(Expense.name) private readonly expenseModel: Model<ExpenseDocument>,
     @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
@@ -83,10 +101,16 @@ export class SyncService {
 
   async pull(businessId: string, deviceId: string, since?: string) {
     const after = since ? new Date(since) : new Date(0);
-    const [categories, products, customers, expenses, sales, payments, stockMovements] = await Promise.all([
+    const [categories, brands, products, customers, customerGroups, suppliers, purchaseOrders, stockTransfers, stockAdjustments, expenses, sales, payments, stockMovements] = await Promise.all([
       this.categoryModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.brandModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.productModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.customerModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.customerGroupModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.supplierModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.purchaseOrderModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.stockTransferModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.stockAdjustmentModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.expenseModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.saleModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.paymentModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
@@ -94,8 +118,14 @@ export class SyncService {
     ]);
     const changes = [
       ...categories.map((payload) => ({ entityType: "category", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...brands.map((payload) => ({ entityType: "brand", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...products.map((payload) => ({ entityType: "product", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...customers.map((payload) => ({ entityType: "customer", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...customerGroups.map((payload) => ({ entityType: "customerGroup", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...suppliers.map((payload) => ({ entityType: "supplier", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...purchaseOrders.map((payload) => ({ entityType: "purchaseOrder", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...stockTransfers.map((payload) => ({ entityType: "stockTransfer", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...stockAdjustments.map((payload) => ({ entityType: "stockAdjustment", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...expenses.map((payload) => ({ entityType: "expense", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...sales.map((payload) => ({ entityType: "sale", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...payments.map((payload) => ({ entityType: "payment", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
@@ -125,9 +155,14 @@ export class SyncService {
           externalId: event.entityId,
           businessId,
           categoryId: (event.payload.categoryId as string | null) ?? null,
+          brandId: (event.payload.brandId as string | null) ?? null,
+          supplierId: (event.payload.supplierId as string | null) ?? null,
           name: String(event.payload.name),
           sku: (event.payload.sku as string | null) ?? null,
           barcode: (event.payload.barcode as string | null) ?? null,
+          batchNumber: (event.payload.batchNumber as string | null) ?? null,
+          expiryDate: event.payload.expiryDate ? new Date(String(event.payload.expiryDate)) : null,
+          serialNumber: (event.payload.serialNumber as string | null) ?? null,
           unit: String(event.payload.unit ?? "pcs"),
           buyingPrice: Number(event.payload.buyingPrice ?? 0),
           sellingPrice: Number(event.payload.sellingPrice ?? 0),
@@ -141,6 +176,21 @@ export class SyncService {
       await this.auditLogModel.create({ businessId, entityType: "product", entityId: event.entityId, action: event.action, payload: event.payload });
       return;
     }
+    if (event.entityType === "brand") {
+      await this.brandModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          name: String(event.payload.name ?? ""),
+          description: (event.payload.description as string | null) ?? null,
+          isActive: Boolean(event.payload.isActive ?? true),
+          deletedAt: null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
     if (event.entityType === "category") {
       await this.categoryModel.findOneAndUpdate(
         { businessId, externalId: event.entityId },
@@ -150,6 +200,87 @@ export class SyncService {
           name: String(event.payload.name ?? ""),
           color: (event.payload.color as string | null) ?? null,
           sortOrder: Number(event.payload.sortOrder ?? 0),
+          deletedAt: null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
+    if (event.entityType === "supplier") {
+      await this.supplierModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          code: (event.payload.code as string | null) ?? null,
+          name: String(event.payload.name ?? ""),
+          phone: (event.payload.phone as string | null) ?? null,
+          email: (event.payload.email as string | null) ?? null,
+          contactName: (event.payload.contactName as string | null) ?? null,
+          notes: (event.payload.notes as string | null) ?? null,
+          isActive: Boolean(event.payload.isActive ?? true),
+          deletedAt: null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
+    if (event.entityType === "purchaseOrder") {
+      await this.purchaseOrderModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          supplierId: (event.payload.supplierId as string | null) ?? null,
+          orderNumber: String(event.payload.orderNumber ?? event.entityId),
+          status: String(event.payload.status ?? "draft"),
+          orderDate: event.payload.orderDate ? new Date(String(event.payload.orderDate)) : new Date(),
+          expectedDate: event.payload.expectedDate ? new Date(String(event.payload.expectedDate)) : null,
+          receivedAt: event.payload.receivedAt ? new Date(String(event.payload.receivedAt)) : null,
+          subtotal: Number(event.payload.subtotal ?? 0),
+          taxTotal: Number(event.payload.taxTotal ?? 0),
+          total: Number(event.payload.total ?? 0),
+          notes: (event.payload.notes as string | null) ?? null,
+          items: Array.isArray(event.payload.items) ? event.payload.items : [],
+          deletedAt: null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
+    if (event.entityType === "stockTransfer") {
+      await this.stockTransferModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          fromBranchId: (event.payload.fromBranchId as string | null) ?? null,
+          toBranchId: (event.payload.toBranchId as string | null) ?? null,
+          transferNumber: String(event.payload.transferNumber ?? event.entityId),
+          status: String(event.payload.status ?? "draft"),
+          transferDate: event.payload.transferDate ? new Date(String(event.payload.transferDate)) : new Date(),
+          receivedAt: event.payload.receivedAt ? new Date(String(event.payload.receivedAt)) : null,
+          note: (event.payload.note as string | null) ?? null,
+          items: Array.isArray(event.payload.items) ? event.payload.items : [],
+          deletedAt: null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
+    if (event.entityType === "stockAdjustment") {
+      await this.stockAdjustmentModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          productId: String(event.payload.productId ?? ""),
+          adjustmentNumber: String(event.payload.adjustmentNumber ?? event.entityId),
+          quantityDelta: Number(event.payload.quantityDelta ?? 0),
+          unitCost: Number(event.payload.unitCost ?? 0),
+          reason: String(event.payload.reason ?? "Adjustment"),
+          referenceId: (event.payload.referenceId as string | null) ?? null,
+          note: (event.payload.note as string | null) ?? null,
           deletedAt: null
         },
         { upsert: true, new: true }

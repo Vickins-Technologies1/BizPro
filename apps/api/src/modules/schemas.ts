@@ -1,6 +1,14 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
-import type { BusinessType, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
+import type { BusinessType, IndustryKey, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
+import { BUSINESS_TYPES, INDUSTRY_KEYS, USER_ROLES } from "@vbo/shared";
+import { buildBusinessSchemas } from "./business.schemas";
+import { buildCatalogSchemas } from "./catalog.schemas";
+import { buildFinanceSchemas } from "./finance.schemas";
+import { buildSuppliersSchemas } from "./suppliers.schemas";
+import { buildSyncSchemas } from "./sync.schemas";
+import { buildSubscriptionSchemas } from "./subscription.schemas";
+import { buildOpsSchemas } from "./ops.schemas";
 
 @Schema({ timestamps: true, collection: "businesses" })
 export class Business {
@@ -13,8 +21,11 @@ export class Business {
   @Prop({ required: true, unique: true, index: true })
   slug!: string;
 
-  @Prop({ required: true, enum: ["retail_shop", "boutique", "cosmetics", "accessories", "wines_spirits", "hardware", "agrovet", "restaurant"] satisfies BusinessType[] })
+  @Prop({ required: true, enum: [...BUSINESS_TYPES] satisfies BusinessType[] })
   businessType!: BusinessType;
+
+  @Prop({ type: String, enum: INDUSTRY_KEYS, default: null })
+  industryKey?: IndustryKey | null;
 
   @Prop({ required: true, default: "KES" })
   currency!: string;
@@ -77,7 +88,7 @@ export class User {
   @Prop({ type: String, select: false })
   pinHash?: string | null;
 
-  @Prop({ required: true, enum: ["owner", "manager", "cashier"] satisfies UserRole[] })
+  @Prop({ required: true, enum: [...USER_ROLES] satisfies UserRole[] })
   role!: UserRole;
 
   @Prop({ type: String, default: null })
@@ -147,6 +158,29 @@ export class Category {
 export type CategoryDocument = HydratedDocument<Category>;
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
+@Schema({ timestamps: true, collection: "brands" })
+export class Brand {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ type: String, default: null })
+  description?: string | null;
+
+  @Prop({ default: true })
+  isActive!: boolean;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type BrandDocument = HydratedDocument<Brand>;
+export const BrandSchema = SchemaFactory.createForClass(Brand);
+
 @Schema({ timestamps: true, collection: "products" })
 export class Product {
   @Prop({ type: String, index: true })
@@ -155,8 +189,17 @@ export class Product {
   @Prop({ required: true, index: true })
   businessId!: string;
 
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
   @Prop({ type: String })
   categoryId?: string | null;
+
+  @Prop({ type: String })
+  brandId?: string | null;
+
+  @Prop({ type: String })
+  supplierId?: string | null;
 
   @Prop({ required: true })
   name!: string;
@@ -166,6 +209,15 @@ export class Product {
 
   @Prop({ type: String })
   barcode?: string | null;
+
+  @Prop({ type: String })
+  batchNumber?: string | null;
+
+  @Prop({ type: Date })
+  expiryDate?: Date | null;
+
+  @Prop({ type: String })
+  serialNumber?: string | null;
 
   @Prop({ required: true, default: "pcs" })
   unit!: string;
@@ -191,6 +243,347 @@ export class Product {
 export type ProductDocument = HydratedDocument<Product>;
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
+@Schema({ timestamps: true, collection: "suppliers" })
+export class Supplier {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String, default: null })
+  categoryId?: string | null;
+
+  @Prop({ type: String })
+  code?: string | null;
+
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ type: String })
+  phone?: string | null;
+
+  @Prop({ type: String })
+  email?: string | null;
+
+  @Prop({ type: String })
+  contactName?: string | null;
+
+  @Prop({ type: String })
+  notes?: string | null;
+
+  @Prop({ default: true })
+  isActive!: boolean;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type SupplierDocument = HydratedDocument<Supplier>;
+export const SupplierSchema = SchemaFactory.createForClass(Supplier);
+
+@Schema({ timestamps: true, collection: "supplier_categories" })
+export class SupplierCategory {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ type: String, default: null })
+  description?: string | null;
+
+  @Prop({ type: String, default: null })
+  color?: string | null;
+
+  @Prop({ required: true, default: 0 })
+  sortOrder!: number;
+
+  @Prop({ required: true, default: true })
+  isActive!: boolean;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type SupplierCategoryDocument = HydratedDocument<SupplierCategory>;
+export const SupplierCategorySchema = SchemaFactory.createForClass(SupplierCategory);
+
+@Schema({ timestamps: true, collection: "supplier_contacts" })
+export class SupplierContact {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true, index: true })
+  supplierId!: string;
+
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ type: String, default: null })
+  role?: string | null;
+
+  @Prop({ type: String, default: null })
+  phone?: string | null;
+
+  @Prop({ type: String, default: null })
+  email?: string | null;
+
+  @Prop({ required: true, default: false })
+  isPrimary!: boolean;
+
+  @Prop({ type: String, default: null })
+  notes?: string | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type SupplierContactDocument = HydratedDocument<SupplierContact>;
+export const SupplierContactSchema = SchemaFactory.createForClass(SupplierContact);
+
+@Schema({ timestamps: true, collection: "supplier_documents" })
+export class SupplierFile {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true, index: true })
+  supplierId!: string;
+
+  @Prop({ required: true })
+  title!: string;
+
+  @Prop({ required: true })
+  url!: string;
+
+  @Prop({ type: String, default: null })
+  fileName?: string | null;
+
+  @Prop({ type: String, default: null })
+  documentType?: string | null;
+
+  @Prop({ type: String, default: null })
+  note?: string | null;
+
+  @Prop({ type: String, default: null })
+  uploadedById?: string | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type SupplierFileDocument = HydratedDocument<SupplierFile>;
+export const SupplierFileSchema = SchemaFactory.createForClass(SupplierFile);
+
+@Schema({ timestamps: true, collection: "supplier_payments" })
+export class SupplierPayment {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true, index: true })
+  supplierId!: string;
+
+  @Prop({ type: String, default: null })
+  purchaseOrderId?: string | null;
+
+  @Prop({ required: true })
+  amount!: number;
+
+  @Prop({ required: true })
+  method!: PaymentMethod;
+
+  @Prop({ type: String, default: null })
+  reference?: string | null;
+
+  @Prop({ type: String, default: null })
+  note?: string | null;
+
+  @Prop({ required: true })
+  paymentDate!: Date;
+
+  @Prop({ type: String, default: null })
+  recordedById?: string | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type SupplierPaymentDocument = HydratedDocument<SupplierPayment>;
+export const SupplierPaymentSchema = SchemaFactory.createForClass(SupplierPayment);
+
+export interface PurchaseOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+}
+
+@Schema({ timestamps: true, collection: "purchase_orders" })
+export class PurchaseOrder {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
+  @Prop({ type: String })
+  supplierId?: string | null;
+
+  @Prop({ required: true, index: true })
+  orderNumber!: string;
+
+  @Prop({ required: true, default: "draft" })
+  status!: "draft" | "ordered" | "partially_received" | "received" | "cancelled";
+
+  @Prop({ required: true })
+  orderDate!: Date;
+
+  @Prop({ type: Date })
+  expectedDate?: Date | null;
+
+  @Prop({ type: Date })
+  receivedAt?: Date | null;
+
+  @Prop({ required: true, default: 0 })
+  subtotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  taxTotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  total!: number;
+
+  @Prop({ type: String })
+  notes?: string | null;
+
+  @Prop({ type: Array, default: [] })
+  items!: PurchaseOrderItem[];
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type PurchaseOrderDocument = HydratedDocument<PurchaseOrder>;
+export const PurchaseOrderSchema = SchemaFactory.createForClass(PurchaseOrder);
+
+export interface StockTransferItem {
+  productId: string;
+  quantity: number;
+  unitCost: number;
+  batchNumber?: string | null;
+  serialNumbers?: string[] | null;
+}
+
+@Schema({ timestamps: true, collection: "stock_transfers" })
+export class StockTransfer {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String })
+  fromBranchId?: string | null;
+
+  @Prop({ type: String })
+  toBranchId?: string | null;
+
+  @Prop({ required: true, index: true })
+  transferNumber!: string;
+
+  @Prop({ required: true, default: "draft" })
+  status!: "draft" | "in_transit" | "received" | "cancelled";
+
+  @Prop({ required: true })
+  transferDate!: Date;
+
+  @Prop({ type: Date })
+  receivedAt?: Date | null;
+
+  @Prop({ type: String })
+  note?: string | null;
+
+  @Prop({ type: Array, default: [] })
+  items!: StockTransferItem[];
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type StockTransferDocument = HydratedDocument<StockTransfer>;
+export const StockTransferSchema = SchemaFactory.createForClass(StockTransfer);
+
+@Schema({ timestamps: true, collection: "stock_adjustments" })
+export class StockAdjustment {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true, index: true })
+  productId!: string;
+
+  @Prop({ required: true, index: true })
+  adjustmentNumber!: string;
+
+  @Prop({ required: true })
+  quantityDelta!: number;
+
+  @Prop({ required: true, default: 0 })
+  unitCost!: number;
+
+  @Prop({ required: true })
+  reason!: string;
+
+  @Prop({ type: String })
+  referenceId?: string | null;
+
+  @Prop({ type: String })
+  note?: string | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type StockAdjustmentDocument = HydratedDocument<StockAdjustment>;
+export const StockAdjustmentSchema = SchemaFactory.createForClass(StockAdjustment);
+
+@Schema({ timestamps: true, collection: "customer_groups" })
+export class CustomerGroup {
+  @Prop({ type: String, index: true, unique: true, sparse: true, default: null })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ type: String, default: null })
+  description?: string | null;
+
+  @Prop({ type: String, default: null })
+  color?: string | null;
+
+  @Prop({ default: true })
+  isActive!: boolean;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type CustomerGroupDocument = HydratedDocument<CustomerGroup>;
+export const CustomerGroupSchema = SchemaFactory.createForClass(CustomerGroup);
+
 @Schema({ timestamps: true, collection: "customers" })
 export class Customer {
   @Prop({ type: String, index: true })
@@ -198,6 +591,12 @@ export class Customer {
 
   @Prop({ required: true, index: true })
   businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
+  @Prop({ type: String, index: true, default: null })
+  groupId?: string | null;
 
   @Prop({ required: true })
   name!: string;
@@ -212,7 +611,22 @@ export class Customer {
   notes?: string | null;
 
   @Prop({ required: true, default: 0 })
+  creditLimit!: number;
+
+  @Prop({ required: true, default: 0 })
+  loyaltyPoints!: number;
+
+  @Prop({ required: true, default: 0 })
   balance!: number;
+
+  @Prop({ type: [Object], default: [] })
+  attachments!: Array<{
+    id: string;
+    label: string;
+    url: string;
+    note?: string | null;
+    addedAt: string | Date;
+  }>;
 
   @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
@@ -227,6 +641,9 @@ export class Expense {
 
   @Prop({ required: true, index: true })
   businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
 
   @Prop({ type: String })
   categoryId?: string | null;
@@ -248,6 +665,120 @@ export class Expense {
 }
 export type ExpenseDocument = HydratedDocument<Expense>;
 export const ExpenseSchema = SchemaFactory.createForClass(Expense);
+
+@Schema({ timestamps: true, collection: "bank_accounts" })
+export class BankAccount {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true })
+  bankName!: string;
+
+  @Prop({ required: true })
+  accountName!: string;
+
+  @Prop({ type: String, default: null })
+  accountNumber?: string | null;
+
+  @Prop({ required: true, default: "KES" })
+  currency!: string;
+
+  @Prop({ required: true, default: 0 })
+  openingBalance!: number;
+
+  @Prop({ required: true, default: 0 })
+  currentBalance!: number;
+
+  @Prop({ default: false })
+  isPrimary!: boolean;
+
+  @Prop({ type: String, default: null })
+  notes?: string | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type BankAccountDocument = HydratedDocument<BankAccount>;
+export const BankAccountSchema = SchemaFactory.createForClass(BankAccount);
+
+@Schema({ timestamps: true, collection: "petty_cash_entries" })
+export class PettyCashEntry {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true })
+  label!: string;
+
+  @Prop({ required: true })
+  amount!: number;
+
+  @Prop({ required: true, enum: ["in", "out"] })
+  direction!: "in" | "out";
+
+  @Prop({ type: String, default: null })
+  category?: string | null;
+
+  @Prop({ type: String, default: null })
+  note?: string | null;
+
+  @Prop({ type: String, default: null })
+  recordedById?: string | null;
+
+  @Prop({ required: true })
+  entryDate!: Date;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type PettyCashEntryDocument = HydratedDocument<PettyCashEntry>;
+export const PettyCashEntrySchema = SchemaFactory.createForClass(PettyCashEntry);
+
+@Schema({ timestamps: true, collection: "credit_notes" })
+export class CreditNote {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
+  @Prop({ required: true })
+  reference!: string;
+
+  @Prop({ type: String, default: null })
+  relatedSaleId?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerId?: string | null;
+
+  @Prop({ required: true })
+  amount!: number;
+
+  @Prop({ required: true })
+  reason!: string;
+
+  @Prop({ type: String, default: null })
+  note?: string | null;
+
+  @Prop({ required: true, enum: ["draft", "issued", "void"], default: "draft" })
+  status!: "draft" | "issued" | "void";
+
+  @Prop({ required: true })
+  creditDate!: Date;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type CreditNoteDocument = HydratedDocument<CreditNote>;
+export const CreditNoteSchema = SchemaFactory.createForClass(CreditNote);
 
 export interface SaleItem {
   productId: string;
@@ -323,6 +854,9 @@ export class Payment {
   @Prop({ required: true, index: true })
   businessId!: string;
 
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
   @Prop({ type: String, index: true, default: null })
   customerId?: string | null;
 
@@ -363,6 +897,9 @@ export class StockMovement {
 
   @Prop({ required: true, index: true })
   businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
 
   @Prop({ required: true, index: true })
   productId!: string;
@@ -543,25 +1080,58 @@ export class AuditLog {
 export type AuditLogDocument = HydratedDocument<AuditLog>;
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
 
-export const allSchemas = [
-  { name: Business.name, schema: BusinessSchema },
-  { name: Branch.name, schema: BranchSchema },
-  { name: User.name, schema: UserSchema },
-  { name: Device.name, schema: DeviceSchema },
-  { name: Category.name, schema: CategorySchema },
-  { name: Product.name, schema: ProductSchema },
-  { name: Customer.name, schema: CustomerSchema },
-  { name: Expense.name, schema: ExpenseSchema },
-  { name: Sale.name, schema: SaleSchema },
-  { name: Payment.name, schema: PaymentSchema },
-  { name: StockMovement.name, schema: StockMovementSchema },
-  { name: SyncEvent.name, schema: SyncEventSchema },
-  { name: SyncCheckpoint.name, schema: SyncCheckpointSchema },
-  { name: SubscriptionPlan.name, schema: SubscriptionPlanSchema },
-  { name: Subscription.name, schema: SubscriptionSchema },
-  { name: WebhookLog.name, schema: WebhookLogSchema },
-  { name: PaymentReconciliationLog.name, schema: PaymentReconciliationLogSchema },
-  { name: AuditLog.name, schema: AuditLogSchema }
-] as const;
+export const businessSchemas = buildBusinessSchemas({
+  Business: { name: Business.name, schema: BusinessSchema },
+  Branch: { name: Branch.name, schema: BranchSchema },
+  User: { name: User.name, schema: UserSchema },
+  Device: { name: Device.name, schema: DeviceSchema }
+});
+
+export const catalogSchemas = buildCatalogSchemas({
+  Category: { name: Category.name, schema: CategorySchema },
+  Brand: { name: Brand.name, schema: BrandSchema },
+  Product: { name: Product.name, schema: ProductSchema },
+  CustomerGroup: { name: CustomerGroup.name, schema: CustomerGroupSchema },
+  Customer: { name: Customer.name, schema: CustomerSchema },
+  Supplier: { name: Supplier.name, schema: SupplierSchema },
+  PurchaseOrder: { name: PurchaseOrder.name, schema: PurchaseOrderSchema },
+  StockTransfer: { name: StockTransfer.name, schema: StockTransferSchema },
+  StockAdjustment: { name: StockAdjustment.name, schema: StockAdjustmentSchema }
+});
+
+export const supplierSchemas = buildSuppliersSchemas({
+  SupplierCategory: { name: SupplierCategory.name, schema: SupplierCategorySchema },
+  SupplierContact: { name: SupplierContact.name, schema: SupplierContactSchema },
+  SupplierDocument: { name: SupplierFile.name, schema: SupplierFileSchema },
+  SupplierPayment: { name: SupplierPayment.name, schema: SupplierPaymentSchema }
+});
+
+export const financeSchemas = buildFinanceSchemas({
+  Expense: { name: Expense.name, schema: ExpenseSchema },
+  BankAccount: { name: BankAccount.name, schema: BankAccountSchema },
+  PettyCashEntry: { name: PettyCashEntry.name, schema: PettyCashEntrySchema },
+  CreditNote: { name: CreditNote.name, schema: CreditNoteSchema },
+  Sale: { name: Sale.name, schema: SaleSchema },
+  Payment: { name: Payment.name, schema: PaymentSchema },
+  StockMovement: { name: StockMovement.name, schema: StockMovementSchema }
+});
+
+export const syncSchemas = buildSyncSchemas({
+  SyncEvent: { name: SyncEvent.name, schema: SyncEventSchema },
+  SyncCheckpoint: { name: SyncCheckpoint.name, schema: SyncCheckpointSchema }
+});
+
+export const subscriptionSchemas = buildSubscriptionSchemas({
+  SubscriptionPlan: { name: SubscriptionPlan.name, schema: SubscriptionPlanSchema },
+  Subscription: { name: Subscription.name, schema: SubscriptionSchema }
+});
+
+export const opsSchemas = buildOpsSchemas({
+  WebhookLog: { name: WebhookLog.name, schema: WebhookLogSchema },
+  PaymentReconciliationLog: { name: PaymentReconciliationLog.name, schema: PaymentReconciliationLogSchema },
+  AuditLog: { name: AuditLog.name, schema: AuditLogSchema }
+});
+
+export const allSchemas = [...businessSchemas, ...catalogSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas] as const;
 
 export type MongoId = Types.ObjectId;

@@ -35,8 +35,13 @@ export function ProductDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<any>();
   const product = useAppStore((state) => state.products.find((item) => item.id === route.params.productId) ?? null);
+  const categories = useAppStore((state) => state.categories);
+  const brands = useAppStore((state) => state.brands);
+  const suppliers = useAppStore((state) => state.suppliers);
+  const products = useAppStore((state) => state.products);
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const adjustStock = useAppStore((state) => state.adjustStock);
   const [stockMovements, setStockMovements] = React.useState<StockMovement[]>([]);
   const [salesHistory, setSalesHistory] = React.useState<SaleHistoryRow[]>([]);
@@ -48,6 +53,7 @@ export function ProductDetailScreen() {
   const [historyLoading, setHistoryLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [lookupCode, setLookupCode] = React.useState("");
   const canManageInventory = hasPermission(user, "manageInventory");
 
   React.useEffect(() => {
@@ -73,7 +79,7 @@ export function ProductDetailScreen() {
   async function loadHistory() {
     setHistoryLoading(true);
     try {
-      const history = await getProductHistory(route.params.productId);
+      const history = await getProductHistory(route.params.productId, currentProduct?.branchId ?? selectedBranchId);
       setStockMovements(history.stockMovements);
       setSalesHistory(history.salesHistory);
     } finally {
@@ -100,7 +106,7 @@ export function ProductDetailScreen() {
 
     setDeleting(true);
     try {
-      await deleteProduct(currentProduct.id);
+      await deleteProduct(currentProduct.id, currentProduct.branchId ?? selectedBranchId);
       await useAppStore.getState().loadCatalog();
       Alert.alert("Product deleted", `${currentProduct.name} was removed from the catalog.`);
       navigation.goBack();
@@ -128,12 +134,16 @@ export function ProductDetailScreen() {
   const currentProduct = product;
   const lowStock = currentProduct.stockOnHand <= currentProduct.lowStockThreshold;
   const margin = Math.max(0, currentProduct.sellingPrice - currentProduct.buyingPrice);
+  const categoryName = categories.find((category) => category.id === currentProduct.categoryId)?.name ?? "Uncategorized";
+  const brandName = brands.find((brand) => brand.id === currentProduct.brandId)?.name ?? "No brand";
+  const supplierName = suppliers.find((supplier) => supplier.id === currentProduct.supplierId)?.name ?? "No supplier";
+  const lookupMatch = findProductByCode(products, lookupCode);
 
   return (
     <Screen>
       <GradientHeader
         title={currentProduct.name}
-        subtitle={`${currentProduct.sku ?? "No SKU"} • ${currentProduct.unit} • ${business?.currency ?? "KES"}`}
+        subtitle={`${currentProduct.sku ?? "No SKU"} • ${currentProduct.unit} • ${categoryName}`}
         right={
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Badge label={currentProduct.isActive ? "Active" : "Archived"} tone={currentProduct.isActive ? "success" : "warning"} />
@@ -144,6 +154,54 @@ export function ProductDetailScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshHistory}>
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Quick lookup</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+            Jump to another product by SKU or barcode without leaving inventory detail.
+          </Text>
+          <InputField
+            label="Code"
+            value={lookupCode}
+            onChangeText={setLookupCode}
+            placeholder="Scan or type SKU / barcode"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              if (!lookupMatch) {
+                Alert.alert("No match", "Try the full SKU or barcode.");
+                return;
+              }
+              navigation.push("ProductDetail", { productId: lookupMatch.id });
+              setLookupCode("");
+            }}
+          />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Open product"
+                onPress={() => {
+                  if (!lookupMatch) {
+                    Alert.alert("No match", "Try the full SKU or barcode.");
+                    return;
+                  }
+                  navigation.push("ProductDetail", { productId: lookupMatch.id });
+                  setLookupCode("");
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Clear" variant="secondary" onPress={() => setLookupCode("")} />
+            </View>
+          </View>
+          {lookupMatch ? (
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+              Match: {lookupMatch.name} • {lookupMatch.sku ?? "No SKU"} • {lookupMatch.barcode ?? "No barcode"}
+            </Text>
+          ) : lookupCode.trim() ? (
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>No exact match yet. Try a full code or barcode.</Text>
+          ) : null}
+        </Card>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <View style={{ flex: 1, gap: 6 }}>
@@ -160,6 +218,18 @@ export function ProductDetailScreen() {
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Metric label="Buying price" value={formatMoney(currentProduct.buyingPrice, business?.currency)} />
             <Metric label="Selling price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Metric label="Brand" value={brandName} />
+            <Metric label="Supplier" value={supplierName} />
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Metric label="Batch" value={currentProduct.batchNumber ?? "None"} />
+            <Metric label="Expiry" value={currentProduct.expiryDate ?? "None"} />
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Metric label="Serial" value={currentProduct.serialNumber ?? "None"} />
+            <Metric label="Barcode" value={currentProduct.barcode ?? "No barcode"} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
@@ -295,4 +365,10 @@ function confirmMobile(message: string) {
       { text: "Delete", style: "destructive", onPress: () => resolve(true) }
     ]);
   });
+}
+
+function findProductByCode(products: Array<{ id: string; name: string; sku?: string | null; barcode?: string | null }>, code: string) {
+  const query = code.trim().toLowerCase();
+  if (!query) return null;
+  return products.find((product) => (product.sku ?? "").trim().toLowerCase() === query) ?? products.find((product) => (product.barcode ?? "").trim().toLowerCase() === query) ?? null;
 }

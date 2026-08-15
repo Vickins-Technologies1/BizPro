@@ -2,8 +2,8 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { productCreateSchema, BUSINESS_TYPES } from "@shared";
-import { AppScrollView, Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { INVENTORY_UNITS, productCreateSchema, resolveIndustryModule } from "@shared";
+import { AppScrollView, Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -13,6 +13,9 @@ import { useNavigation } from "@react-navigation/native";
 import { EmptyState } from "@/components/Primitives";
 import { hasPermission } from "@shared";
 import { deleteProduct } from "@/services/apiClient";
+import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 type FormValues = z.infer<typeof productCreateSchema>;
 
@@ -20,28 +23,52 @@ export function ProductsScreen() {
   const navigation = useNavigation<any>();
   const products = useAppStore((state) => state.products);
   const categories = useAppStore((state) => state.categories);
+  const brands = useAppStore((state) => state.brands);
+  const suppliers = useAppStore((state) => state.suppliers);
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const addCategory = useAppStore((state) => state.addCategory);
+  const addBrand = useAppStore((state) => state.addBrand);
   const addProduct = useAppStore((state) => state.addProduct);
+  const addSupplier = useAppStore((state) => state.addSupplier);
   const adjustStock = useAppStore((state) => state.adjustStock);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [search, setSearch] = useState("");
   const [visible, setVisible] = useState(false);
   const [categoryVisible, setCategoryVisible] = useState(false);
+  const [brandVisible, setBrandVisible] = useState(false);
+  const [supplierVisible, setSupplierVisible] = useState(false);
+  const [importVisible, setImportVisible] = useState(false);
   const [restockVisible, setRestockVisible] = useState(false);
   const [restockProductId, setRestockProductId] = useState<string | null>(null);
   const [restockQty, setRestockQty] = useState("0");
   const [restockCost, setRestockCost] = useState("0");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [brandDescription, setBrandDescription] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierCode, setSupplierCode] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierContact, setSupplierContact] = useState("");
+  const [supplierNotes, setSupplierNotes] = useState("");
+  const [importText, setImportText] = useState("");
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [savingSupplier, setSavingSupplier] = useState(false);
   const [savingStock, setSavingStock] = useState(false);
+  const [importingProducts, setImportingProducts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
+  const deferredSearch = React.useDeferredValue(search);
+  const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
 
   const {
     control,
@@ -56,9 +83,14 @@ export function ProductsScreen() {
     defaultValues: {
       businessId: business?.id ?? "",
       categoryId: null,
+      brandId: null,
+      supplierId: null,
       name: "",
       sku: "",
       barcode: "",
+      batchNumber: "",
+      expiryDate: null,
+      serialNumber: "",
       unit: "pcs",
       buyingPrice: 0,
       sellingPrice: 0,
@@ -68,14 +100,29 @@ export function ProductsScreen() {
     }
   });
 
+  const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
+  const brandMap = useMemo(() => new Map(brands.map((brand) => [brand.id, brand])), [brands]);
+  const supplierMap = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier])), [suppliers]);
+
   const filtered = useMemo(
     () =>
       products.filter(
-        (product) =>
+        (product) => {
+          const brandName = brandMap.get(product.brandId ?? "")?.name ?? "";
+          const supplierName = supplierMap.get(product.supplierId ?? "")?.name ?? "";
+          const categoryName = categoryMap.get(product.categoryId ?? "")?.name ?? "";
+          const searchSpace = [product.name, product.sku, product.barcode, product.batchNumber, product.serialNumber, brandName, supplierName, categoryName]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(deferredSearch.toLowerCase()));
+          return (
           (selectedCategoryId ? product.categoryId === selectedCategoryId : true) &&
-          (product.name.toLowerCase().includes(search.toLowerCase()) || (product.sku ?? "").toLowerCase().includes(search.toLowerCase()))
+          (selectedBrandId ? product.brandId === selectedBrandId : true) &&
+          (selectedSupplierId ? product.supplierId === selectedSupplierId : true) &&
+          searchSpace
+          );
+        }
       ),
-    [products, search, selectedCategoryId]
+    [products, deferredSearch, selectedCategoryId, selectedBrandId, selectedSupplierId, categoryMap, brandMap, supplierMap]
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageProducts = useMemo(() => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, filtered]);
@@ -86,7 +133,7 @@ export function ProductsScreen() {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategoryId]);
+  }, [deferredSearch, selectedCategoryId, selectedBrandId, selectedSupplierId]);
 
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
@@ -102,6 +149,172 @@ export function ProductsScreen() {
     }
   }
 
+  function csvEscape(value: string | number | null | undefined) {
+    const text = value == null ? "" : String(value);
+    if (/[",\n\r]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  }
+
+  function splitCsvLine(line: string) {
+    const cells: string[] = [];
+    let current = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      const next = line[index + 1];
+      if (char === '"' && quoted && next === '"') {
+        current += '"';
+        index += 1;
+        continue;
+      }
+      if (char === '"') {
+        quoted = !quoted;
+        continue;
+      }
+      if (char === "," && !quoted) {
+        cells.push(current);
+        current = "";
+        continue;
+      }
+      current += char;
+    }
+    cells.push(current);
+    return cells.map((cell) => cell.trim());
+  }
+
+  function parseProductsCsv(text: string) {
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!lines.length) {
+      return [];
+    }
+    const headerLine = lines[0];
+    if (!headerLine) {
+      return [];
+    }
+    const headers = splitCsvLine(headerLine).map((header) => header.toLowerCase());
+    return lines.slice(1).map((line) => {
+      const values = splitCsvLine(line);
+      const row: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] ?? "";
+      });
+      return row;
+    });
+  }
+
+  async function exportProductsCsv() {
+    if (!products.length) {
+      Alert.alert("Nothing to export", "Create products first, then export the catalog as CSV.");
+      return;
+    }
+    const headers = [
+      "name",
+      "sku",
+      "barcode",
+      "brand",
+      "supplier",
+      "category",
+      "unit",
+      "batchNumber",
+      "expiryDate",
+      "serialNumber",
+      "buyingPrice",
+      "sellingPrice",
+      "stockOnHand",
+      "lowStockThreshold",
+      "isActive"
+    ];
+    const csvRows = [
+      headers.join(","),
+      ...products.map((product) => {
+        const categoryName = categoryMap.get(product.categoryId ?? "")?.name ?? "";
+        const brandName = brandMap.get(product.brandId ?? "")?.name ?? "";
+        const supplierName = supplierMap.get(product.supplierId ?? "")?.name ?? "";
+        return [
+          product.name,
+          product.sku ?? "",
+          product.barcode ?? "",
+          brandName,
+          supplierName,
+          categoryName,
+          product.unit,
+          product.batchNumber ?? "",
+          product.expiryDate ?? "",
+          product.serialNumber ?? "",
+          product.buyingPrice,
+          product.sellingPrice,
+          product.stockOnHand,
+          product.lowStockThreshold,
+          product.isActive ? "true" : "false"
+        ]
+          .map(csvEscape)
+          .join(",");
+      })
+    ];
+    const csv = csvRows.join("\n");
+    const fileName = `biz-pro-products-${Date.now()}.csv`;
+    const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ""}${fileName}`;
+    await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(filePath, { mimeType: "text/csv", dialogTitle: "Export products" });
+      return;
+    }
+    await Clipboard.setStringAsync(csv);
+    Alert.alert("Export ready", "CSV was copied to the clipboard.");
+  }
+
+  async function importProductsCsv() {
+    const rows = parseProductsCsv(importText);
+    if (!rows.length) {
+      Alert.alert("No rows found", "Paste a CSV file with a header row before importing.");
+      return;
+    }
+    setImportingProducts(true);
+    try {
+      let imported = 0;
+      for (const row of rows) {
+        const name = row.name?.trim();
+        if (!name) {
+          continue;
+        }
+        const categoryId = categories.find((category) => category.name.toLowerCase() === (row.category ?? "").trim().toLowerCase())?.id ?? null;
+        const brandId = brands.find((brand) => brand.name.toLowerCase() === (row.brand ?? "").trim().toLowerCase())?.id ?? null;
+        const supplierId = suppliers.find((supplier) => supplier.name.toLowerCase() === (row.supplier ?? "").trim().toLowerCase())?.id ?? null;
+        await addProduct({
+          businessId: business?.id ?? "",
+          categoryId,
+          brandId,
+          supplierId,
+          name,
+          sku: row.sku?.trim() ? row.sku.trim() : null,
+          barcode: row.barcode?.trim() ? row.barcode.trim() : null,
+          batchNumber: row.batchnumber?.trim() ? row.batchnumber.trim() : null,
+          expiryDate: row.expirydate?.trim() ? row.expirydate.trim() : null,
+          serialNumber: row.serialnumber?.trim() ? row.serialnumber.trim() : null,
+          unit: row.unit?.trim() || "pcs",
+          buyingPrice: Number(row.buyingprice ?? 0),
+          sellingPrice: Number(row.sellingprice ?? 0),
+          stockOnHand: Number(row.stockonhand ?? 0),
+          lowStockThreshold: Number(row.lowstockthreshold ?? 5),
+          isActive: (row.isactive ?? "true").trim().toLowerCase() !== "false"
+        });
+        imported += 1;
+      }
+      setImportVisible(false);
+      setImportText("");
+      Alert.alert("Import complete", `Imported ${imported} product${imported === 1 ? "" : "s"} successfully.`);
+    } catch (error) {
+      Alert.alert("Import failed", error instanceof Error ? error.message : "Failed to import products");
+    } finally {
+      setImportingProducts(false);
+    }
+  }
+
   async function handleDeleteProduct(id: string, name: string) {
     if (deletingProductId) return;
     const confirmed = await confirmMobile(`Delete ${name}? This removes it from the active catalog.`);
@@ -109,7 +322,7 @@ export function ProductsScreen() {
 
     setDeletingProductId(id);
     try {
-      await deleteProduct(id);
+      await deleteProduct(id, selectedBranchId);
       await loadCatalog();
       Alert.alert("Product deleted", `${name} was removed from the catalog.`);
     } catch (error) {
@@ -122,9 +335,14 @@ export function ProductsScreen() {
   React.useEffect(() => {
     if (visible) {
       setValue("categoryId", selectedCategoryId);
+      setValue("brandId", selectedBrandId);
+      setValue("supplierId", selectedSupplierId);
     }
-  }, [visible, selectedCategoryId, setValue]);
+  }, [visible, selectedBrandId, selectedCategoryId, selectedSupplierId, setValue]);
   const currentCategoryId = watch("categoryId");
+  const currentBrandId = watch("brandId");
+  const currentSupplierId = watch("supplierId");
+  const currentUnit = watch("unit");
   const canManageInventory = hasPermission(user, "manageInventory");
 
   if (!canManageInventory) {
@@ -147,7 +365,7 @@ export function ProductsScreen() {
     <Screen>
       <GradientHeader
         title="Catalog"
-        subtitle={`${business?.businessType ?? BUSINESS_TYPES[0]} products, stock, and pricing`}
+        subtitle={`${industry.label} products, stock, and pricing`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
             <Pressable onPress={() => setCategoryVisible(true)}>
@@ -163,16 +381,79 @@ export function ProductsScreen() {
         <Card>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
         </Card>
+        <Card style={{ gap: 12 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Inventory tools</Text>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Add brand" variant="secondary" onPress={() => setBrandVisible(true)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Add supplier" variant="secondary" onPress={() => setSupplierVisible(true)} />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Import CSV"
+                variant="secondary"
+                onPress={async () => {
+                  const text = await Clipboard.getStringAsync();
+                  setImportText(text);
+                  setImportVisible(true);
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Export CSV" variant="secondary" onPress={() => void exportProductsCsv()} />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Brands" variant="secondary" onPress={() => navigation.navigate("Brands")} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Suppliers" variant="secondary" onPress={() => navigation.navigate("Suppliers")} />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => navigation.navigate("PurchaseOrders")} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => navigation.navigate("StockTransfers")} />
+            </View>
+          </View>
+        </Card>
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            <Pressable onPress={() => setSelectedCategoryId(null)}>
-              <Badge label="All products" tone={selectedCategoryId === null ? "success" : "primary"} />
-            </Pressable>
+            <Tag label="All products" tone="primary" selected={selectedCategoryId === null} onPress={() => setSelectedCategoryId(null)} />
             {categories.map((category) => (
-              <Pressable key={category.id} onPress={() => setSelectedCategoryId(category.id)}>
-                <Badge label={category.name} tone={selectedCategoryId === category.id ? "success" : "primary"} />
-              </Pressable>
+              <Tag
+                key={category.id}
+                label={category.name}
+                tone="primary"
+                selected={selectedCategoryId === category.id}
+                onPress={() => setSelectedCategoryId(category.id)}
+              />
+            ))}
+          </ScrollView>
+        </Card>
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by brand</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Tag label="All brands" tone="primary" selected={selectedBrandId === null} onPress={() => setSelectedBrandId(null)} />
+            {brands.map((brand) => (
+              <Tag key={brand.id} label={brand.name} tone="primary" selected={selectedBrandId === brand.id} onPress={() => setSelectedBrandId(brand.id)} />
+            ))}
+          </ScrollView>
+        </Card>
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by supplier</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Tag label="All suppliers" tone="primary" selected={selectedSupplierId === null} onPress={() => setSelectedSupplierId(null)} />
+            {suppliers.map((supplier) => (
+              <Tag key={supplier.id} label={supplier.name} tone="primary" selected={selectedSupplierId === supplier.id} onPress={() => setSelectedSupplierId(supplier.id)} />
             ))}
           </ScrollView>
         </Card>
@@ -181,6 +462,8 @@ export function ProductsScreen() {
             <View style={{ gap: 10 }}>
               {pageProducts.map((product) => {
                 const categoryName = categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized";
+                const brandName = brands.find((brand) => brand.id === product.brandId)?.name ?? "No brand";
+                const supplierName = suppliers.find((supplier) => supplier.id === product.supplierId)?.name ?? "No supplier";
                 return (
                   <Pressable
                     key={product.id}
@@ -196,6 +479,9 @@ export function ProductsScreen() {
                           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>
                             {product.sku ?? "No SKU"} • {product.unit} • {categoryName}
                           </Text>
+                          <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 15 }} numberOfLines={1}>
+                            {brandName} • {supplierName}
+                          </Text>
                         </View>
                         <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
                       </View>
@@ -207,6 +493,13 @@ export function ProductsScreen() {
                       <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "800" }}>
                         {formatMoney(product.sellingPrice, business?.currency)}
                       </Text>
+                      {product.batchNumber || product.expiryDate || product.serialNumber ? (
+                        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 15 }}>
+                          {[product.batchNumber ? `Batch ${product.batchNumber}` : null, product.expiryDate ? `Expiry ${product.expiryDate}` : null, product.serialNumber ? `Serial ${product.serialNumber}` : null]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </Text>
+                      ) : null}
                       <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                         <Pressable
                           onPress={(event) => {
@@ -299,14 +592,77 @@ export function ProductsScreen() {
               <InputField label="Unit" value={value} onChangeText={onChange} error={errors.unit?.message} helperText="Examples: pcs, kg, box, or bottle." />
             )}
           />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <Pressable onPress={() => setValue("categoryId", null)}>
-              <Badge label="No category" tone={!currentCategoryId ? "success" : "primary"} />
-            </Pressable>
-            {categories.map((category) => (
-              <Pressable key={category.id} onPress={() => setValue("categoryId", category.id)}>
-                <Badge label={category.name} tone={currentCategoryId === category.id ? "success" : "primary"} />
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Quick units</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {INVENTORY_UNITS.map((unit) => (
+                <Tag key={unit} label={unit} tone="primary" selected={currentUnit === unit} onPress={() => setValue("unit", unit)} />
+              ))}
+            </ScrollView>
+          </View>
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Brand</Text>
+              <Pressable onPress={() => setBrandVisible(true)}>
+                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "700" }}>Add brand</Text>
               </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <Tag label="No brand" tone="primary" selected={!currentBrandId} onPress={() => setValue("brandId", null)} />
+              {brands.map((brand) => (
+                <Tag key={brand.id} label={brand.name} tone="primary" selected={currentBrandId === brand.id} onPress={() => setValue("brandId", brand.id)} />
+              ))}
+            </ScrollView>
+          </View>
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Supplier</Text>
+              <Pressable onPress={() => setSupplierVisible(true)}>
+                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "700" }}>Add supplier</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <Tag label="No supplier" tone="primary" selected={!currentSupplierId} onPress={() => setValue("supplierId", null)} />
+              {suppliers.map((supplier) => (
+                <Tag key={supplier.id} label={supplier.name} tone="primary" selected={currentSupplierId === supplier.id} onPress={() => setValue("supplierId", supplier.id)} />
+              ))}
+            </ScrollView>
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="batchNumber"
+                render={({ field: { value, onChange } }) => (
+                  <InputField label="Batch number" value={(value as string) ?? ""} onChangeText={onChange} helperText="Use for grouped stock or production runs." />
+                )}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="expiryDate"
+                render={({ field: { value, onChange } }) => (
+                  <InputField label="Expiry date" value={(value as string) ?? ""} onChangeText={onChange} placeholder="YYYY-MM-DD" helperText="Leave blank if the item does not expire." />
+                )}
+              />
+            </View>
+          </View>
+          <Controller
+            control={control}
+            name="serialNumber"
+            render={({ field: { value, onChange } }) => <InputField label="Serial number" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional serialized item tracking." />}
+          />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <Tag label="No category" tone="primary" selected={!currentCategoryId} onPress={() => setValue("categoryId", null)} />
+            {categories.map((category) => (
+              <Tag
+                key={category.id}
+                label={category.name}
+                tone="primary"
+                selected={currentCategoryId === category.id}
+                onPress={() => setValue("categoryId", category.id)}
+              />
             ))}
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
@@ -385,9 +741,14 @@ export function ProductsScreen() {
                 await addProduct({
                   businessId: business?.id ?? "",
                   categoryId: values.categoryId ?? null,
+                  brandId: values.brandId ?? null,
+                  supplierId: values.supplierId ?? null,
                   name: values.name,
                   sku: values.sku ? values.sku : null,
                   barcode: values.barcode ? values.barcode : null,
+                  batchNumber: values.batchNumber ? values.batchNumber : null,
+                  expiryDate: values.expiryDate ?? null,
+                  serialNumber: values.serialNumber ? values.serialNumber : null,
                   unit: values.unit,
                   buyingPrice: values.buyingPrice,
                   sellingPrice: values.sellingPrice,
@@ -395,7 +756,24 @@ export function ProductsScreen() {
                   lowStockThreshold: values.lowStockThreshold,
                   isActive: values.isActive
                 });
-                reset({ businessId: business?.id ?? "", categoryId: null, name: "", sku: "", barcode: "", unit: "pcs", buyingPrice: 0, sellingPrice: 0, stockOnHand: 0, lowStockThreshold: 5, isActive: true });
+                reset({
+                  businessId: business?.id ?? "",
+                  categoryId: null,
+                  brandId: null,
+                  supplierId: null,
+                  name: "",
+                  sku: "",
+                  barcode: "",
+                  batchNumber: "",
+                  expiryDate: null,
+                  serialNumber: "",
+                  unit: "pcs",
+                  buyingPrice: 0,
+                  sellingPrice: 0,
+                  stockOnHand: 0,
+                  lowStockThreshold: 5,
+                  isActive: true
+                });
                 setVisible(false);
                 Alert.alert("Product created", "Product created successfully.");
               } catch (error) {
@@ -432,6 +810,120 @@ export function ProductsScreen() {
             }}
             loading={savingCategory}
           />
+        </View>
+      </SimpleModal>
+      <SimpleModal visible={brandVisible} title="Add brand" onClose={() => setBrandVisible(false)}>
+        <View style={{ gap: 12 }}>
+          <InputField label="Brand name" value={brandName} onChangeText={setBrandName} placeholder="Acme" helperText="Use the manufacturer's or product line name." />
+          <InputField
+            label="Description"
+            value={brandDescription}
+            onChangeText={setBrandDescription}
+            helperText="Optional note about the brand."
+            multiline
+            numberOfLines={3}
+          />
+          <PrimaryButton
+            title="Save brand"
+            onPress={async () => {
+              setSavingBrand(true);
+              try {
+                if (!brandName.trim()) {
+                  Alert.alert("Missing name", "Enter a brand name.");
+                  return;
+                }
+                await addBrand({ businessId: business?.id ?? "", name: brandName.trim(), description: brandDescription.trim() || null });
+                setBrandName("");
+                setBrandDescription("");
+                setBrandVisible(false);
+                Alert.alert("Brand created", "Brand created successfully.");
+              } catch (error) {
+                Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save brand");
+              } finally {
+                setSavingBrand(false);
+              }
+            }}
+            loading={savingBrand}
+          />
+        </View>
+      </SimpleModal>
+      <SimpleModal visible={supplierVisible} title="Add supplier" onClose={() => setSupplierVisible(false)}>
+        <View style={{ gap: 12 }}>
+          <InputField label="Supplier name" value={supplierName} onChangeText={setSupplierName} placeholder="Global Supplies Ltd" helperText="Use the vendor or wholesaler name." />
+          <InputField label="Supplier code" value={supplierCode} onChangeText={setSupplierCode} helperText="Optional internal supplier code." />
+          <InputField label="Contact name" value={supplierContact} onChangeText={setSupplierContact} helperText="Who staff should call or email." />
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <InputField label="Phone" value={supplierPhone} onChangeText={setSupplierPhone} keyboardType="phone-pad" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <InputField label="Email" value={supplierEmail} onChangeText={setSupplierEmail} keyboardType="email-address" autoCapitalize="none" />
+            </View>
+          </View>
+          <InputField label="Notes" value={supplierNotes} onChangeText={setSupplierNotes} helperText="Optional delivery or account notes." multiline numberOfLines={3} />
+          <PrimaryButton
+            title="Save supplier"
+            onPress={async () => {
+              setSavingSupplier(true);
+              try {
+                if (!supplierName.trim()) {
+                  Alert.alert("Missing name", "Enter a supplier name.");
+                  return;
+                }
+                await addSupplier({
+                  businessId: business?.id ?? "",
+                  code: supplierCode.trim() || null,
+                  name: supplierName.trim(),
+                  phone: supplierPhone.trim() || null,
+                  email: supplierEmail.trim() || null,
+                  contactName: supplierContact.trim() || null,
+                  notes: supplierNotes.trim() || null
+                });
+                setSupplierName("");
+                setSupplierCode("");
+                setSupplierEmail("");
+                setSupplierPhone("");
+                setSupplierContact("");
+                setSupplierNotes("");
+                setSupplierVisible(false);
+                Alert.alert("Supplier created", "Supplier created successfully.");
+              } catch (error) {
+                Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save supplier");
+              } finally {
+                setSavingSupplier(false);
+              }
+            }}
+            loading={savingSupplier}
+          />
+        </View>
+      </SimpleModal>
+      <SimpleModal visible={importVisible} title="Import products" onClose={() => setImportVisible(false)}>
+        <View style={{ gap: 12 }}>
+          <InputField
+            label="CSV content"
+            value={importText}
+            onChangeText={setImportText}
+            helperText="Paste CSV with headers like name,sku,barcode,brand,supplier,category,unit,buyingPrice,sellingPrice."
+            multiline
+            numberOfLines={10}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Paste clipboard"
+                variant="secondary"
+                onPress={async () => {
+                  const text = await Clipboard.getStringAsync();
+                  setImportText(text);
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Import" onPress={() => void importProductsCsv()} loading={importingProducts} />
+            </View>
+          </View>
         </View>
       </SimpleModal>
       <SimpleModal visible={restockVisible} title="Add stock" onClose={() => setRestockVisible(false)}>

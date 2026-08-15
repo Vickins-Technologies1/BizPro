@@ -20,6 +20,7 @@ class SaleItemDto {
 
 class CreateSaleDto {
   @IsString() businessId!: string;
+  @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string;
   @IsOptional() @IsString() customerId?: string;
   @IsOptional() @IsString() cashierId?: string;
@@ -46,13 +47,13 @@ export class SalesController {
 
   @Get()
   @Roles("owner", "manager", "cashier")
-  list(@CurrentUser() user: { businessId: string }) {
-    return this.sales.list(user.businessId);
+  list(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("branchId") branchId?: string) {
+    return this.sales.list(user.businessId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Post()
   @Roles("owner", "manager", "cashier")
-  create(@CurrentUser() user: { businessId: string; sub: string }, @Body() dto: CreateSaleDto) {
-    return this.sales.create({ ...dto, businessId: user.businessId, cashierId: user.sub });
+  create(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Body() dto: CreateSaleDto) {
+    return this.sales.create({ ...dto, businessId: user.businessId, branchId: dto.branchId ?? user.branchId ?? null, cashierId: user.sub }, { role: user.role ?? null, branchId: user.branchId ?? null });
   }
 }

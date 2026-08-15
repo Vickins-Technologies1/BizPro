@@ -3,8 +3,9 @@ import { InjectModel } from "@nestjs/mongoose";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { Model } from "mongoose";
-import { ACCESS_PERMISSIONS, ROLE_ACCESS, type AccessPermission, type UserRole } from "@vbo/shared";
+import { ACCESS_PERMISSIONS, ROLE_ACCESS, ROLE_PRESETS, formatRoleLabel, type AccessPermission, type UserRole } from "@vbo/shared";
 import { AuditLog, AuditLogDocument, User, UserDocument } from "../schemas";
+import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 
 type EmployeeInput = {
   businessId: string;
@@ -36,8 +37,9 @@ export class EmployeesService {
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>
   ) {}
 
-  async list(businessId: string) {
-    const employees = await this.userModel.find({ businessId, deletedAt: null }).sort({ createdAt: -1 }).lean();
+  async list(businessId: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const employees = await this.userModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).sort({ createdAt: -1 }).lean();
     return employees.map((employee) => this.sanitizeEmployee(employee));
   }
 
@@ -46,6 +48,7 @@ export class EmployeesService {
   }
 
   async create(actor: { sub: string; businessId: string; role?: string }, input: EmployeeInput) {
+    const branchId = resolveWriteBranchId({ role: actor.role ?? null, branchId: input.branchId ?? null }, input.branchId ?? null);
     const ownerId = await this.resolveBusinessOwnerId(input.businessId);
     const permissions = this.normalizePermissions(input.role, input.permissions);
     const passwordHash = await bcrypt.hash(input.password, 10);
@@ -54,7 +57,7 @@ export class EmployeesService {
     const employee = await this.userModel.create({
       businessId: input.businessId,
       ownerId,
-      branchId: input.branchId ?? null,
+      branchId,
       fullName: input.fullName.trim(),
       phone: input.phone?.trim() ?? null,
       passwordHash,
@@ -78,8 +81,9 @@ export class EmployeesService {
     return this.sanitizeEmployee(employee.toObject());
   }
 
-  async update(actor: { sub: string; businessId: string; role?: string }, id: string, input: EmployeePatch) {
-    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null });
+  async update(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string, input: EmployeePatch) {
+    const branchId = resolveReadBranchId({ role: actor.role ?? null, branchId: actor.branchId ?? null }, input.branchId ?? null);
+    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null, ...buildBranchMatch(branchId) });
     if (!employee) throw new NotFoundException("Employee not found");
 
     if (input.role === "owner" && actor.role !== "owner") {
@@ -88,7 +92,7 @@ export class EmployeesService {
 
     if (typeof input.fullName === "string") employee.fullName = input.fullName.trim();
     if (input.phone !== undefined) employee.phone = input.phone?.trim() || null;
-    if (input.branchId !== undefined) employee.branchId = input.branchId ?? null;
+    if (input.branchId !== undefined && actor.role === "owner") employee.branchId = input.branchId ?? null;
     if (input.role) employee.role = input.role;
     if (input.roleLabel !== undefined) employee.roleLabel = input.roleLabel?.trim() || null;
     if (input.permissions !== undefined) employee.permissions = this.normalizePermissions(employee.role, input.permissions);
@@ -114,8 +118,8 @@ export class EmployeesService {
     return this.sanitizeEmployee(employee.toObject());
   }
 
-  async suspend(actor: { sub: string; businessId: string; role?: string }, id: string, reason?: string | null) {
-    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null });
+  async suspend(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string, reason?: string | null) {
+    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId({ role: actor.role ?? null, branchId: actor.branchId ?? null }, actor.branchId ?? null)) });
     if (!employee) throw new NotFoundException("Employee not found");
     if (String(employee._id) === actor.sub) throw new BadRequestException("You cannot suspend your own account");
     employee.isActive = false;
@@ -128,8 +132,8 @@ export class EmployeesService {
     return this.sanitizeEmployee(employee.toObject());
   }
 
-  async restore(actor: { sub: string; businessId: string; role?: string }, id: string) {
-    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null });
+  async restore(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string) {
+    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId({ role: actor.role ?? null, branchId: actor.branchId ?? null }, actor.branchId ?? null)) });
     if (!employee) throw new NotFoundException("Employee not found");
     employee.isActive = true;
     employee.suspendedAt = null;
@@ -139,8 +143,8 @@ export class EmployeesService {
     return this.sanitizeEmployee(employee.toObject());
   }
 
-  async remove(actor: { sub: string; businessId: string; role?: string }, id: string) {
-    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null });
+  async remove(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string) {
+    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId({ role: actor.role ?? null, branchId: actor.branchId ?? null }, actor.branchId ?? null)) });
     if (!employee) throw new NotFoundException("Employee not found");
     if (String(employee._id) === actor.sub) throw new BadRequestException("You cannot delete your own account");
     employee.deletedAt = new Date();
@@ -152,8 +156,8 @@ export class EmployeesService {
     return this.sanitizeEmployee(employee.toObject());
   }
 
-  async resetCredentials(actor: { sub: string; businessId: string; role?: string }, id: string, input: { password?: string | null; pin?: string | null }) {
-    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null });
+  async resetCredentials(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string, input: { password?: string | null; pin?: string | null }) {
+    const employee = await this.userModel.findOne({ _id: id, businessId: actor.businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId({ role: actor.role ?? null, branchId: actor.branchId ?? null }, actor.branchId ?? null)) });
     if (!employee) throw new NotFoundException("Employee not found");
 
     let tempPassword: string | null = null;
@@ -170,7 +174,7 @@ export class EmployeesService {
     }
 
     await employee.save();
-      await this.audit(actor, employee.businessId, employee._id.toString(), "employee.reset_credentials", {
+    await this.audit(actor, employee.businessId, employee._id.toString(), "employee.reset_credentials", {
       passwordReset: Boolean(input.password?.trim() || tempPassword),
       pinReset: input.pin !== undefined
     });
@@ -184,11 +188,12 @@ export class EmployeesService {
   catalog() {
     return {
       permissions: ACCESS_PERMISSIONS,
-      roles: [
-        { role: "owner", label: "Owner", permissions: ROLE_ACCESS.owner },
-        { role: "manager", label: "Manager", permissions: ROLE_ACCESS.manager },
-        { role: "cashier", label: "Cashier", permissions: ROLE_ACCESS.cashier }
-      ]
+      roles: ROLE_PRESETS.map((preset) => ({
+        role: preset.role,
+        label: preset.label,
+        description: preset.description,
+        permissions: [...preset.permissions]
+      }))
     };
   }
 
@@ -200,7 +205,7 @@ export class EmployeesService {
 
   private normalizeRoleLabel(role: UserRole, roleLabel?: string | null) {
     if (roleLabel?.trim()) return roleLabel.trim();
-    return role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier";
+    return formatRoleLabel(role);
   }
 
   private generateTemporaryPassword() {

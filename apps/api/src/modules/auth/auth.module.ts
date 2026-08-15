@@ -6,7 +6,8 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./jwt.strategy";
-import { allSchemas } from "../schemas";
+import { businessSchemas, opsSchemas, subscriptionSchemas } from "../schemas";
+import { AuthRateLimitGuard } from "../../common/auth-rate-limit.guard";
 
 @Module({
   imports: [
@@ -19,10 +20,10 @@ import { allSchemas } from "../schemas";
         signOptions: { expiresIn: config.get<string>("JWT_EXPIRES_IN") ?? "7d" }
       })
     }),
-    MongooseModule.forFeature([...allSchemas])
+    MongooseModule.forFeature([...businessSchemas, ...subscriptionSchemas, ...opsSchemas])
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, AuthRateLimitGuard],
   exports: [AuthService]
 })
 export class AuthModule {}

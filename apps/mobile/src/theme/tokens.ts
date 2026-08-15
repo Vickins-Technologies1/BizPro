@@ -6,6 +6,16 @@ const baseTheme = {
   radii: sharedTheme.radii,
   spacing: sharedTheme.spacing,
   typography: sharedTheme.typography,
+  motion: {
+    fast: 140,
+    standard: 220,
+    slow: 320,
+    spring: {
+      damping: 18,
+      stiffness: 180,
+      mass: 0.9
+    }
+  },
   font: {
     display: "System",
     body: "System",
@@ -43,6 +53,13 @@ const lightTheme = {
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 10 },
       elevation: 6
+    },
+    modal: {
+      shadowColor: "#0F172A",
+      shadowOpacity: 0.18,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 16 },
+      elevation: 10
     }
   }
 } as const;
@@ -77,6 +94,13 @@ const darkTheme = {
       shadowRadius: 20,
       shadowOffset: { width: 0, height: 12 },
       elevation: 10
+    },
+    modal: {
+      shadowColor: "#000",
+      shadowOpacity: 0.42,
+      shadowRadius: 30,
+      shadowOffset: { width: 0, height: 16 },
+      elevation: 14
     }
   }
 } as const;

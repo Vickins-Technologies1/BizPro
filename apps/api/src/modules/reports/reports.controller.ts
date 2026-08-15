@@ -12,19 +12,19 @@ export class ReportsController {
 
   @Get("summary")
   @Roles("owner", "manager")
-  summary(@CurrentUser() user: { businessId: string }, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.reports.summary(user.businessId, from, to);
+  summary(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("from") from?: string, @Query("to") to?: string, @Query("branchId") branchId?: string) {
+    return this.reports.summary(user.businessId, from, to, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Get("top-products")
   @Roles("owner", "manager")
-  topProducts(@CurrentUser() user: { businessId: string }, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.reports.topProducts(user.businessId, from, to);
+  topProducts(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("from") from?: string, @Query("to") to?: string, @Query("branchId") branchId?: string) {
+    return this.reports.topProducts(user.businessId, from, to, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Get("payment-breakdown")
   @Roles("owner", "manager")
-  paymentBreakdown(@CurrentUser() user: { businessId: string }, @Query("from") from?: string, @Query("to") to?: string) {
-    return this.reports.paymentBreakdown(user.businessId, from, to);
+  paymentBreakdown(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("from") from?: string, @Query("to") to?: string, @Query("branchId") branchId?: string) {
+    return this.reports.paymentBreakdown(user.businessId, from, to, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 }

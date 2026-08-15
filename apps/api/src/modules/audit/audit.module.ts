@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { allSchemas } from "../schemas";
+import { opsSchemas } from "../schemas";
 import { AuditController } from "./audit.controller";
 import { AuditService } from "./audit.service";
 
 @Module({
-  imports: [MongooseModule.forFeature([...allSchemas])],
+  imports: [MongooseModule.forFeature([...opsSchemas])],
   controllers: [AuditController],
   providers: [AuditService]
 })

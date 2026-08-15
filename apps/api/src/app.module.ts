@@ -4,17 +4,23 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BusinessesModule } from "./modules/businesses/businesses.module";
 import { CategoriesModule } from "./modules/categories/categories.module";
+import { BrandsModule } from "./modules/brands/brands.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { DevicesModule } from "./modules/devices/devices.module";
 import { ExpensesModule } from "./modules/expenses/expenses.module";
+import { FinanceModule } from "./modules/finance/finance.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { PurchaseOrdersModule } from "./modules/purchase-orders/purchase-orders.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { SalesModule } from "./modules/sales/sales.module";
+import { StockTransfersModule } from "./modules/stock-transfers/stock-transfers.module";
 import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
 import { SyncModule } from "./modules/sync/sync.module";
 import { WebhooksModule } from "./modules/webhooks/webhooks.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { EmployeesModule } from "./modules/employees/employees.module";
+import { AnalyticsModule } from "./modules/analytics/analytics.module";
+import { SuppliersModule } from "./modules/suppliers/suppliers.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { RolesGuard } from "./common/roles.guard";
 import { SupportKeyGuard } from "./common/support-key.guard";
@@ -36,17 +42,23 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     AuthModule,
     BusinessesModule,
     CategoriesModule,
+    BrandsModule,
     CustomersModule,
     DevicesModule,
     ExpensesModule,
+    FinanceModule,
     ProductsModule,
+    PurchaseOrdersModule,
     ReportsModule,
     SalesModule,
+    StockTransfersModule,
     SubscriptionsModule,
     SyncModule,
     WebhooksModule,
     AuditModule,
-    EmployeesModule
+    AnalyticsModule,
+    EmployeesModule,
+    SuppliersModule
   ],
   controllers: [HealthController],
   providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]

@@ -5,33 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Badge, Card, GradientHeader, PrimaryButton, Screen, StatCard } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
-import { ACCESS_PERMISSIONS, ROLE_ACCESS, formatPermissionLabel, getEffectivePermissions, type UserRole } from "@shared";
-
-const roleDetails: Array<{
-  role: UserRole;
-  title: string;
-  subtitle: string;
-  tone: "primary" | "success" | "warning";
-}> = [
-  {
-    role: "owner",
-    title: "Owner",
-    subtitle: "Full administrative control over people, inventory, sales, reporting, and settings.",
-    tone: "success"
-  },
-  {
-    role: "manager",
-    title: "Manager",
-    subtitle: "Operational control for day-to-day business work with limited administration scope.",
-    tone: "primary"
-  },
-  {
-    role: "cashier",
-    title: "Cashier",
-    subtitle: "Focused on selling, customer support, and limited account settings.",
-    tone: "warning"
-  }
-];
+import { ACCESS_PERMISSIONS, ROLE_ACCESS, ROLE_PRESETS, formatPermissionLabel, formatRoleLabel, getEffectivePermissions, type UserRole } from "@shared";
 
 export function TeamAccessScreen() {
   const navigation = useNavigation<any>();
@@ -39,7 +13,13 @@ export function TeamAccessScreen() {
   const user = useAppStore((state) => state.user);
   const role = (user?.role ?? "cashier") as UserRole;
   const currentPermissions = getEffectivePermissions(user);
-  const roleLabel = user?.roleLabel ?? (role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Cashier");
+  const roleLabel = user?.roleLabel ?? formatRoleLabel(role);
+  const roleDetails = ROLE_PRESETS.map((preset) => ({
+    role: preset.role,
+    title: preset.label,
+    subtitle: preset.description,
+    tone: preset.role === "owner" ? ("success" as const) : preset.role === "manager" || preset.role === "supervisor" ? ("primary" as const) : ("warning" as const)
+  }));
 
   return (
     <Screen>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ACCESS_PERMISSIONS, ROLE_ACCESS, formatPermissionLabel, type AccessPermission, type UserRole } from "@vbo/shared";
+import { ACCESS_PERMISSIONS, ROLE_ACCESS, ROLE_PRESETS, formatPermissionLabel, formatRoleLabel, type AccessPermission, type UserRole } from "@vbo/shared";
 import { DashboardCard } from "./DashboardCard";
 import {
   type AdminBusiness,
@@ -61,11 +61,14 @@ export function EmployeeManagementPanel({ business, employees, catalog, auditLog
   const selectedEmployee = employees.find((employee) => employee._id === selectedEmployeeId) ?? null;
   const businessOwner = employees.find((employee) => employee.role === "owner") ?? null;
   const permissionCatalog = catalog?.permissions ?? ACCESS_PERMISSIONS;
-  const roleCatalog = catalog?.roles ?? [
-    { role: "owner" as const, label: "Business Owner", permissions: ROLE_ACCESS.owner },
-    { role: "manager" as const, label: "Manager", permissions: ROLE_ACCESS.manager },
-    { role: "cashier" as const, label: "Cashier", permissions: ROLE_ACCESS.cashier }
-  ];
+  const roleCatalog =
+    catalog?.roles ??
+    ROLE_PRESETS.map((preset) => ({
+      role: preset.role,
+      label: preset.role === "owner" ? "Business Owner" : formatRoleLabel(preset.role),
+      description: preset.description,
+      permissions: [...ROLE_ACCESS[preset.role]]
+    }));
   const filteredEmployees = employees.filter((employee) => {
     const haystack = [employee.fullName, employee.phone ?? "", employee.branchId ?? "", employee.roleLabel ?? employee.role].join(" ").toLowerCase();
     return haystack.includes(search.toLowerCase());
@@ -457,7 +460,7 @@ export function EmployeeManagementPanel({ business, employees, catalog, auditLog
 
             <div style={styles.presetRow}>
               {roleCatalog.map((entry) => (
-                <button key={entry.role} type="button" style={styles.chipButton} onClick={() => applyPreset(entry.role, setDraft)}>
+                <button key={entry.role} type="button" style={styles.chipButton} onClick={() => applyPreset(entry.role, setDraft)} title={entry.description}>
                   {entry.label}
                 </button>
               ))}

@@ -7,6 +7,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "build": "nest build",
+    "test:smoke": "ts-node --transpile-only test/tenant-safety.smoke.ts",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "node -e \"process.exit(0)\""

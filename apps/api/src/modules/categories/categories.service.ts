@@ -11,7 +11,13 @@ export class CategoriesService {
     return this.categoryModel.find({ businessId, deletedAt: null }).sort({ sortOrder: 1 }).lean();
   }
 
-  create(input: Partial<Category> & { businessId: string; name: string }) {
+  async create(input: Partial<Category> & { businessId: string; name: string }) {
+    if (input.externalId) {
+      const existing = await this.categoryModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).lean();
+      if (existing) {
+        return existing;
+      }
+    }
     return this.categoryModel.create({ ...input, deletedAt: null });
   }
 }

@@ -7,11 +7,41 @@ export const BUSINESS_TYPES = [
   "hardware",
   "agrovet",
   "restaurant",
+  "cafe",
+  "bakery",
+  "bar",
+  "salon",
+  "spa",
+  "hotel",
+  "lodge",
+  "clinic",
+  "pharmacy",
+  "dental_clinic",
+  "farm",
+  "feed_store",
+  "garage",
+  "auto_parts",
+  "service_center",
+  "general_service",
+  "consultancy",
+  "agency",
+  "law_firm",
+  "accounting_firm",
 ] as const;
 
 export const PLAN_TIERS = ["lite", "standard", "pro"] as const;
 
-export const USER_ROLES = ["owner", "manager", "cashier"] as const;
+export const USER_ROLES = [
+  "owner",
+  "manager",
+  "supervisor",
+  "cashier",
+  "waiter",
+  "receptionist",
+  "stylist",
+  "mechanic",
+  "pharmacist"
+] as const;
 
 export const PAYMENT_METHODS = ["cash", "mpesa", "bank", "credit"] as const;
 
@@ -31,6 +61,17 @@ export const SYNC_ACTIONS = [
   "delete",
   "upsert",
   "reconcile",
+] as const;
+
+export const INVENTORY_UNITS = [
+  "pcs",
+  "box",
+  "pack",
+  "kg",
+  "g",
+  "litre",
+  "ml",
+  "dozen"
 ] as const;
 
 export const CURRENCY_DEFAULT = "KES";

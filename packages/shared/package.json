@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "postbuild": "node ../../tools/sync-shared-runtime.cjs",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Biz Pro",
-    "owner": "vickinss-team",
-    "slug": "bizpro",
+    "owner": "vickins360s-team",
+    "slug": "biz-pro",
     "scheme": "vickinsbos",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -43,7 +43,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "691dea44-6740-4044-9780-7748566a6b51"
+        "projectId": "c6be096e-f89f-4d50-b827-6f1cba595385"
       }
     },
     "plugins": [

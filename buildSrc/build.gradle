@@ -1,0 +1,12 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        versionCheck {
+            id = 'com.android.internal.version-check'
+            implementationClass = 'com.android.internal.versioncheck.NoOpVersionCheckPlugin'
+        }
+    }
+}

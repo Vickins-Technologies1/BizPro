@@ -1,11 +1,11 @@
 services:
   - type: web
     name: bizpro-api
-    runtime: node
+    runtime: docker
     plan: starter
     region: singapore
-    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @vbo/shared build && pnpm --filter @vbo/api build
-    startCommand: pnpm --filter @vbo/api start:prod
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV

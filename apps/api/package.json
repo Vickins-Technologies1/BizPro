@@ -5,6 +5,7 @@
   "scripts": {
     "start": "nest start",
     "start:dev": "nest start --watch",
+    "prestart:prod": "pnpm -C ../.. --filter @vbo/shared build",
     "start:prod": "node dist/main.js",
     "build": "nest build",
     "test:smoke": "ts-node --transpile-only test/tenant-safety.smoke.ts",

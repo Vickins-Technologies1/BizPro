@@ -224,7 +224,7 @@ export declare const creditNoteCreateSchema: z.ZodObject<{
     creditDate: z.ZodString;
     status: z.ZodDefault<z.ZodEnum<["draft", "issued", "void"]>>;
 }, "strip", z.ZodTypeAny, {
-    status: "void" | "draft" | "issued";
+    status: "draft" | "issued" | "void";
     businessId: string;
     amount: number;
     reference: string;
@@ -239,7 +239,7 @@ export declare const creditNoteCreateSchema: z.ZodObject<{
     reference: string;
     reason: string;
     creditDate: string;
-    status?: "void" | "draft" | "issued" | undefined;
+    status?: "draft" | "issued" | "void" | undefined;
     customerId?: string | null | undefined;
     note?: string | null | undefined;
     relatedSaleId?: string | null | undefined;
@@ -503,7 +503,7 @@ export declare const purchaseOrderCreateSchema: z.ZodObject<{
         expiryDate?: string | null | undefined;
     }>, "many">>;
 }, "strip", z.ZodTypeAny, {
-    status: "received" | "draft" | "ordered" | "partially_received" | "cancelled";
+    status: "draft" | "ordered" | "partially_received" | "received" | "cancelled";
     businessId: string;
     items: {
         productId: string;
@@ -526,7 +526,7 @@ export declare const purchaseOrderCreateSchema: z.ZodObject<{
     businessId: string;
     orderNumber: string;
     orderDate: string;
-    status?: "received" | "draft" | "ordered" | "partially_received" | "cancelled" | undefined;
+    status?: "draft" | "ordered" | "partially_received" | "received" | "cancelled" | undefined;
     items?: {
         productId: string;
         quantity: number;
@@ -591,7 +591,7 @@ export declare const stockTransferCreateSchema: z.ZodObject<{
         serialNumbers?: string[] | undefined;
     }>, "many">>;
 }, "strip", z.ZodTypeAny, {
-    status: "received" | "draft" | "cancelled" | "in_transit";
+    status: "draft" | "received" | "cancelled" | "in_transit";
     businessId: string;
     items: {
         productId: string;
@@ -610,7 +610,7 @@ export declare const stockTransferCreateSchema: z.ZodObject<{
     businessId: string;
     transferNumber: string;
     transferDate: string;
-    status?: "received" | "draft" | "cancelled" | "in_transit" | undefined;
+    status?: "draft" | "received" | "cancelled" | "in_transit" | undefined;
     items?: {
         productId: string;
         quantity: number;

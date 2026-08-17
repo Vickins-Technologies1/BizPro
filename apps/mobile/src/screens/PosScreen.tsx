@@ -54,6 +54,7 @@ export function PosScreen() {
   const [saving, setSaving] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [stkInitiating, setStkInitiating] = React.useState(false);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [receipt, setReceipt] = React.useState<ReceiptArtifacts | null>(null);
   const deferredSearch = React.useDeferredValue(search);
   const deferredProductSearch = React.useDeferredValue(productSearch);
@@ -130,6 +131,7 @@ export function PosScreen() {
   const balanceDue = Math.max(0, total - amountPaid);
   const paymentStatus = amountPaid >= total ? "paid" : amountPaid > 0 ? "partial" : "unpaid";
   const paymentMethod = payments[0]?.method ?? paymentMode;
+  const primaryPayment = payments[0] ?? null;
   const changeDue = Math.max(0, amountPaid - total);
 
   async function refreshSales() {
@@ -145,9 +147,17 @@ export function PosScreen() {
   function addToCart(productId: string) {
     const product = products.find((item) => item.id === productId);
     if (!product) return;
+    const availableStock = Math.max(0, product.stockOnHand);
+    if (availableStock <= 0) {
+      Alert.alert("Out of stock", `${product.name} is currently out of stock.`);
+      return;
+    }
     setCart((current) => {
       const existing = current.find((line) => line.productId === product.id);
       if (existing) {
+        if (existing.quantity >= availableStock) {
+          return current;
+        }
         return current.map((line) => (line.productId === product.id ? { ...line, quantity: line.quantity + 1 } : line));
       }
       return current.concat([
@@ -164,13 +174,24 @@ export function PosScreen() {
   }
 
   function updateLineQuantity(productId: string, quantityText: string) {
-    const nextQuantity = Number(quantityText || 0);
+    setLineQuantity(productId, Number(quantityText || 0));
+  }
+
+  function setLineQuantity(productId: string, quantity: number) {
+    const product = products.find((item) => item.id === productId);
+    const cappedQuantity = product ? Math.min(Math.max(0, Math.floor(quantity)), Math.max(0, product.stockOnHand)) : Math.max(0, Math.floor(quantity));
     setCart((current) => {
-      if (nextQuantity <= 0) {
+      if (cappedQuantity <= 0) {
         return current.filter((line) => line.productId !== productId);
       }
-      return current.map((line) => (line.productId === productId ? { ...line, quantity: nextQuantity } : line));
+      return current.map((line) => (line.productId === productId ? { ...line, quantity: cappedQuantity } : line));
     });
+  }
+
+  function changeLineQuantity(productId: string, delta: number) {
+    const currentLine = cart.find((line) => line.productId === productId);
+    if (!currentLine) return;
+    setLineQuantity(productId, currentLine.quantity + delta);
   }
 
   function removeLine(productId: string) {
@@ -190,6 +211,7 @@ export function PosScreen() {
     setPayments([{ id: createId(), method: "cash", amount: 0, reference: "", note: "" }]);
     setCheckoutNote("");
     setCurrentDraftId(null);
+    setShowAdvanced(false);
   }
 
   function handleLookupSubmit() {
@@ -550,14 +572,11 @@ export function PosScreen() {
       <SimpleModal visible={modalVisible} title="Record sale" onClose={() => setModalVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Choose one or more products, set quantities for each line, then save the sale.
+            Pick the product, tap the quantity, confirm payment, then record the sale.
           </Text>
 
           <Card style={{ gap: 10 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Checkout mode</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Sale mode records normally. Return draft mode prepares a reversal slip for review and hold, without changing existing recorded sales.
-            </Text>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {[
                 { value: "sale" as const, label: "Sale" },
@@ -571,252 +590,104 @@ export function PosScreen() {
           </Card>
 
           <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Payment type</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Cash sales save immediately. Mobile sales reserve a space here for STK push initiation.
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              {[
-                { value: "cash" as const, label: "Cash" },
-                { value: "mpesa" as const, label: "Mobile" }
-              ].map((option) => (
-                <Pressable key={option.value} onPress={() => setPrimaryPaymentMethod(option.value)}>
-                  <Badge label={option.label} tone={paymentMode === option.value ? "success" : "primary"} />
-                </Pressable>
-              ))}
-            </View>
-          </Card>
-
-          {paymentMode === "mpesa" ? (
-            <Card style={{ gap: 10 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Mobile payment</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-                This area is reserved for direct STK push initiation once the payment gateway is connected.
-              </Text>
-              <PrimaryButton
-                title={stkInitiating ? "Initiating..." : "Initiate STK Push"}
-                variant="secondary"
-                loading={stkInitiating}
-                onPress={async () => {
-                  setStkInitiating(true);
-                  try {
-                    Alert.alert("STK Push not connected", "The direct mobile payment flow can be wired into this space next.");
-                  } finally {
-                    setStkInitiating(false);
-                  }
-                }}
-              />
-            </Card>
-          ) : null}
-
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Discounts and taxes</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Apply an order-level discount or tax. Line-level discounts remain editable directly on each item.
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              {[
-                { value: "flat" as const, label: "Flat" },
-                { value: "percent" as const, label: "Percent" }
-              ].map((option) => (
-                <Pressable key={`discount-${option.value}`} onPress={() => setDiscountMode(option.value)}>
-                  <Badge label={`Discount ${option.label}`} tone={discountMode === option.value ? "success" : "primary"} />
-                </Pressable>
-              ))}
-            </View>
-            <InputField
-              label="Order discount"
-              value={discountValue}
-              onChangeText={setDiscountValue}
-              keyboardType="decimal-pad"
-              helperText={discountMode === "percent" ? "Percent off the subtotal after line discounts." : "Flat discount amount."}
-            />
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              {[
-                { value: "flat" as const, label: "Flat" },
-                { value: "percent" as const, label: "Percent" }
-              ].map((option) => (
-                <Pressable key={`tax-${option.value}`} onPress={() => setTaxMode(option.value)}>
-                  <Badge label={`Tax ${option.label}`} tone={taxMode === option.value ? "success" : "primary"} />
-                </Pressable>
-              ))}
-            </View>
-            <InputField
-              label="Tax"
-              value={taxValue}
-              onChangeText={setTaxValue}
-              keyboardType="decimal-pad"
-              helperText={taxMode === "percent" ? "Percentage applied after discount." : "Flat tax amount."}
-            />
-          </Card>
-
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Split payments</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Split the checkout across cash, mobile money, bank, or credit without changing the recorded sales contract.
-            </Text>
-            {payments.map((payment, index) => (
-              <Card key={payment.id} style={{ gap: 10, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                  <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>Payment {index + 1}</Text>
-                  <Pressable onPress={() => removePaymentLine(payment.id)} accessibilityRole="button" accessibilityLabel="Remove payment line">
-                    <Ionicons name="close-circle-outline" size={18} color={tokens.colors.textSecondary} />
-                  </Pressable>
-                </View>
-                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                  {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
-                    <Pressable key={`${payment.id}-${method}`} onPress={() => updatePaymentLine(payment.id, { method })}>
-                      <Badge label={formatPaymentMethodLabel(method)} tone={payment.method === method ? "success" : "primary"} />
-                    </Pressable>
-                  ))}
-                </View>
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <InputField
-                      label="Amount"
-                      value={String(payment.amount)}
-                      onChangeText={(value) => updatePaymentLine(payment.id, { amount: Number(value || 0) })}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <InputField
-                      label="Reference"
-                      value={payment.reference ?? ""}
-                      onChangeText={(value) => updatePaymentLine(payment.id, { reference: value })}
-                      placeholder="Optional"
-                    />
-                  </View>
-                </View>
-                <InputField
-                  label="Payment note"
-                  value={payment.note ?? ""}
-                  onChangeText={(value) => updatePaymentLine(payment.id, { note: value })}
-                  placeholder="Optional note"
-                />
-              </Card>
-            ))}
-            <PrimaryButton title="Add split payment" variant="secondary" onPress={addPaymentLine} />
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
-              Paid {formatMoney(amountPaid, business?.currency ?? "KES")} • Due {formatMoney(balanceDue, business?.currency ?? "KES")} • Change {formatMoney(changeDue, business?.currency ?? "KES")}
-            </Text>
-          </Card>
-
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Receipt preview</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Preview the receipt before posting the sale, or keep the transaction as a draft for later.
-            </Text>
-            <InputField label="Checkout note" value={checkoutNote} onChangeText={setCheckoutNote} multiline numberOfLines={3} placeholder="Optional notes for the receipt" />
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton title="Preview receipt" variant="secondary" onPress={() => void openReceiptPreview()} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton title="Hold sale" variant="secondary" onPress={() => void holdDraft()} />
-              </View>
-            </View>
-          </Card>
-
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Barcode / SKU lookup</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-              Scan a barcode, enter a SKU, or paste a product code to add items faster.
-            </Text>
-            <InputField
-              label="Code"
-              value={lookupCode}
-              onChangeText={setLookupCode}
-              placeholder="Scan or type code"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={handleLookupSubmit}
-            />
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton title="Add to cart" onPress={handleLookupSubmit} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <PrimaryButton
-                  title="Clear"
-                  variant="secondary"
-                  onPress={() => {
-                    setLookupCode("");
-                  }}
-                />
-              </View>
-            </View>
-            {lookupMatch ? (
-              <Card style={{ gap: 4, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
-                <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{lookupMatch.name}</Text>
-                <Text style={{ color: tokens.colors.textSecondary }}>
-                  {lookupMatch.sku ?? "No SKU"} • {lookupMatch.barcode ?? "No barcode"} • Stock {lookupMatch.stockOnHand}
-                </Text>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Press Enter to add immediately</Text>
-              </Card>
-            ) : lookupCode.trim() ? (
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>No exact match yet. Try the full code or barcode.</Text>
-            ) : null}
-          </Card>
-
-          <InputField label="Search products" value={productSearch} onChangeText={setProductSearch} placeholder="Find a product" />
-
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Add products</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Choose products</Text>
+            <InputField label="Search products" value={productSearch} onChangeText={setProductSearch} placeholder="Find a product" />
             {filteredProducts.length ? (
-              filteredProducts.map((product) => (
-                <Pressable
-                  key={product.id}
-                  onPress={() => addToCart(product.id)}
-                  style={{
-                    padding: 14,
-                    borderRadius: 18,
-                    borderWidth: 1,
-                    borderColor: tokens.colors.border,
-                    backgroundColor: tokens.colors.surfaceAlt,
-                    gap: 4
-                  }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800", flex: 1 }}>{product.name}</Text>
-                    <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
-                  </View>
-                  <Text style={{ color: tokens.colors.textSecondary }}>
-                    {product.sku ?? "No SKU"} • Stock {product.stockOnHand}
-                  </Text>
-                  <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Tap to add to sale</Text>
-                </Pressable>
-              ))
+              <View style={{ gap: 8 }}>
+                {filteredProducts.map((product) => (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => addToCart(product.id)}
+                    style={{
+                      padding: 14,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: tokens.colors.border,
+                      backgroundColor: tokens.colors.surfaceAlt,
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                      <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800", flex: 1 }}>{product.name}</Text>
+                      <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
+                    </View>
+                    <Text style={{ color: tokens.colors.textSecondary }}>
+                      {product.sku ?? "No SKU"} • Stock {product.stockOnHand}
+                    </Text>
+                    <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Tap to add</Text>
+                  </Pressable>
+                ))}
+              </View>
             ) : (
               <EmptyState title="No matching products" subtitle="Try a different product name or SKU." icon="cube-outline" />
             )}
           </Card>
 
           <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Sale cart</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Sale summary</Text>
             {cart.length ? (
               cart.map((line) => (
-                <View key={line.productId} style={{ gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
+                <View key={line.productId} style={{ gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{line.name}</Text>
-                      <Text style={{ color: tokens.colors.textSecondary }}>
-                        {formatMoney(line.unitPrice, business?.currency ?? "KES")} each
-                      </Text>
+                      <Text style={{ color: tokens.colors.textSecondary }}>{formatMoney(line.unitPrice, business?.currency ?? "KES")} each</Text>
                     </View>
                     <Pressable onPress={() => removeLine(line.productId)} accessibilityRole="button" accessibilityLabel={`Remove ${line.name}`}>
                       <Ionicons name="trash-outline" size={20} color={tokens.colors.danger} />
                     </Pressable>
                   </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Pressable
+                      onPress={() => changeLineQuantity(line.productId, -1)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Decrease ${line.name}`}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: tokens.colors.surfaceAlt,
+                        borderWidth: 1,
+                        borderColor: tokens.colors.border
+                      }}
+                    >
+                      <Ionicons name="remove" size={18} color={tokens.colors.text} />
+                    </Pressable>
+                    <View style={{ flex: 1, alignItems: "center", gap: 2 }}>
+                      <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Quantity</Text>
+                      <Text style={{ color: tokens.colors.text, fontSize: 24, fontWeight: "900" }}>{line.quantity}</Text>
+                      <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Tap + for more</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => changeLineQuantity(line.productId, 1)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Increase ${line.name}`}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: tokens.colors.surfaceAlt,
+                        borderWidth: 1,
+                        borderColor: tokens.colors.border
+                      }}
+                    >
+                      <Ionicons name="add" size={18} color={tokens.colors.text} />
+                    </Pressable>
+                  </View>
                   <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-end" }}>
                     <View style={{ flex: 1 }}>
                       <InputField
-                        label="Quantity"
-                        value={String(line.quantity)}
-                        onChangeText={(text) => updateLineQuantity(line.productId, text)}
-                        keyboardType="number-pad"
-                        helperText="Set a different quantity for each product."
+                        label="Line discount"
+                        value={String(line.discount)}
+                        onChangeText={(text) =>
+                          setCart((current) => current.map((item) => (item.productId === line.productId ? { ...item, discount: Number(text || 0) } : item)))
+                        }
+                        keyboardType="decimal-pad"
+                        helperText="Optional discount for this item."
                       />
                     </View>
                     <View style={{ flex: 1, paddingBottom: 2 }}>
@@ -828,19 +699,10 @@ export function PosScreen() {
                       </Card>
                     </View>
                   </View>
-                  <InputField
-                    label="Line discount"
-                    value={String(line.discount)}
-                    onChangeText={(text) =>
-                      setCart((current) => current.map((item) => (item.productId === line.productId ? { ...item, discount: Number(text || 0) } : item)))
-                    }
-                    keyboardType="decimal-pad"
-                    helperText="Discount on this line only."
-                  />
                 </View>
               ))
             ) : (
-              <EmptyState title="Cart is empty" subtitle="Tap products above to add multiple items to the sale." icon="cart-outline" />
+              <EmptyState title="Cart is empty" subtitle="Tap products above to add items." icon="cart-outline" />
             )}
 
             <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border, paddingTop: 12, gap: 4 }}>
@@ -852,8 +714,226 @@ export function PosScreen() {
             </View>
           </Card>
 
+          <Card style={{ gap: 10 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Payment</Text>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {[
+                { value: "cash" as const, label: "Cash" },
+                { value: "mpesa" as const, label: "Mobile" }
+              ].map((option) => (
+                <Pressable key={option.value} onPress={() => setPrimaryPaymentMethod(option.value)}>
+                  <Badge label={option.label} tone={paymentMode === option.value ? "success" : "primary"} />
+                </Pressable>
+              ))}
+            </View>
+            {primaryPayment ? (
+              <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <InputField
+                      label="Amount paid"
+                      value={String(primaryPayment.amount)}
+                      onChangeText={(value) => updatePaymentLine(primaryPayment.id, { amount: Number(value || 0) })}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <InputField
+                      label="Reference"
+                      value={primaryPayment.reference ?? ""}
+                      onChangeText={(value) => updatePaymentLine(primaryPayment.id, { reference: value })}
+                      placeholder="Optional"
+                    />
+                  </View>
+                </View>
+                <InputField
+                  label="Payment note"
+                  value={primaryPayment.note ?? ""}
+                  onChangeText={(value) => updatePaymentLine(primaryPayment.id, { note: value })}
+                  placeholder="Optional note"
+                />
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+                  Paid {formatMoney(amountPaid, business?.currency ?? "KES")} • Due {formatMoney(balanceDue, business?.currency ?? "KES")} • Change {formatMoney(changeDue, business?.currency ?? "KES")}
+                </Text>
+              </View>
+            ) : null}
+
+            {paymentMode === "mpesa" ? (
+              <Card style={{ gap: 10, backgroundColor: tokens.colors.surfaceAlt }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Mobile payment</Text>
+                <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
+                  Direct STK push will plug in here when the gateway is connected.
+                </Text>
+                <PrimaryButton
+                  title={stkInitiating ? "Initiating..." : "Initiate STK Push"}
+                  variant="secondary"
+                  loading={stkInitiating}
+                  onPress={async () => {
+                    setStkInitiating(true);
+                    try {
+                      Alert.alert("STK Push not connected", "The direct mobile payment flow can be wired into this space next.");
+                    } finally {
+                      setStkInitiating(false);
+                    }
+                  }}
+                />
+              </Card>
+            ) : null}
+          </Card>
+
+          <PrimaryButton
+            title={showAdvanced ? "Hide advanced options" : "More options"}
+            variant="secondary"
+            onPress={() => setShowAdvanced((current) => !current)}
+          />
+
+          {showAdvanced ? (
+            <>
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Discounts and taxes</Text>
+                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                  {[
+                    { value: "flat" as const, label: "Flat" },
+                    { value: "percent" as const, label: "Percent" }
+                  ].map((option) => (
+                    <Pressable key={`discount-${option.value}`} onPress={() => setDiscountMode(option.value)}>
+                      <Badge label={`Discount ${option.label}`} tone={discountMode === option.value ? "success" : "primary"} />
+                    </Pressable>
+                  ))}
+                </View>
+                <InputField
+                  label="Order discount"
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  keyboardType="decimal-pad"
+                  helperText={discountMode === "percent" ? "Percent off the subtotal after line discounts." : "Flat discount amount."}
+                />
+                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                  {[
+                    { value: "flat" as const, label: "Flat" },
+                    { value: "percent" as const, label: "Percent" }
+                  ].map((option) => (
+                    <Pressable key={`tax-${option.value}`} onPress={() => setTaxMode(option.value)}>
+                      <Badge label={`Tax ${option.label}`} tone={taxMode === option.value ? "success" : "primary"} />
+                    </Pressable>
+                  ))}
+                </View>
+                <InputField
+                  label="Tax"
+                  value={taxValue}
+                  onChangeText={setTaxValue}
+                  keyboardType="decimal-pad"
+                  helperText={taxMode === "percent" ? "Percentage applied after discount." : "Flat tax amount."}
+                />
+              </Card>
+
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Split payments</Text>
+                {payments.slice(1).map((payment, index) => (
+                  <Card key={payment.id} style={{ gap: 10, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                      <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>Split payment {index + 2}</Text>
+                      <Pressable onPress={() => removePaymentLine(payment.id)} accessibilityRole="button" accessibilityLabel="Remove payment line">
+                        <Ionicons name="close-circle-outline" size={18} color={tokens.colors.textSecondary} />
+                      </Pressable>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
+                        <Pressable key={`${payment.id}-${method}`} onPress={() => updatePaymentLine(payment.id, { method })}>
+                          <Badge label={formatPaymentMethodLabel(method)} tone={payment.method === method ? "success" : "primary"} />
+                        </Pressable>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 12 }}>
+                      <View style={{ flex: 1 }}>
+                        <InputField
+                          label="Amount"
+                          value={String(payment.amount)}
+                          onChangeText={(value) => updatePaymentLine(payment.id, { amount: Number(value || 0) })}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <InputField
+                          label="Reference"
+                          value={payment.reference ?? ""}
+                          onChangeText={(value) => updatePaymentLine(payment.id, { reference: value })}
+                          placeholder="Optional"
+                        />
+                      </View>
+                    </View>
+                    <InputField
+                      label="Payment note"
+                      value={payment.note ?? ""}
+                      onChangeText={(value) => updatePaymentLine(payment.id, { note: value })}
+                      placeholder="Optional note"
+                    />
+                  </Card>
+                ))}
+                <PrimaryButton title="Add split payment" variant="secondary" onPress={addPaymentLine} />
+              </Card>
+
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Receipt and lookup</Text>
+                <InputField label="Checkout note" value={checkoutNote} onChangeText={setCheckoutNote} multiline numberOfLines={3} placeholder="Optional notes for the receipt" />
+                <InputField
+                  label="Code"
+                  value={lookupCode}
+                  onChangeText={setLookupCode}
+                  placeholder="Scan or type code"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLookupSubmit}
+                />
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton title="Add to cart" onPress={handleLookupSubmit} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      title="Preview receipt"
+                      variant="secondary"
+                      onPress={() => void openReceiptPreview()}
+                    />
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton title="Hold sale" variant="secondary" onPress={() => void holdDraft()} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      title="Clear lookup"
+                      variant="secondary"
+                      onPress={() => {
+                        setLookupCode("");
+                      }}
+                    />
+                  </View>
+                </View>
+                {lookupMatch ? (
+                  <Card style={{ gap: 4, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
+                    <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{lookupMatch.name}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary }}>
+                      {lookupMatch.sku ?? "No SKU"} • {lookupMatch.barcode ?? "No barcode"} • Stock {lookupMatch.stockOnHand}
+                    </Text>
+                    <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Press Enter to add immediately</Text>
+                  </Card>
+                ) : lookupCode.trim() ? (
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>No exact match yet. Try the full code or barcode.</Text>
+                ) : null}
+              </Card>
+            </>
+          ) : null}
+
           <View style={{ gap: 10 }}>
-            <PrimaryButton title={saving ? "Saving..." : checkoutMode === "return" ? "Save return draft" : "Save sale"} onPress={saveSale} loading={saving} disabled={!cart.length} />
+            <PrimaryButton
+              title={saving ? "Recording..." : checkoutMode === "return" ? "Save return draft" : "Record Sale"}
+              onPress={saveSale}
+              loading={saving}
+              disabled={!cart.length}
+            />
             <PrimaryButton title="Close" variant="secondary" onPress={() => setModalVisible(false)} />
           </View>
         </AppScrollView>

@@ -33,6 +33,7 @@ async function main() {
   await testBusinessesService(BusinessesService);
   await testJwtStrategyBusinessLookup(JwtStrategy);
   await testSalesService(SalesService);
+  await testSalesServiceInvalidProductId(SalesService);
   console.log("Tenant safety smoke checks passed.");
 }
 
@@ -62,15 +63,16 @@ function loadServices() {
 
 async function testProductsService(ProductsService: any) {
   const calls: CallRecord[] = [];
+  const productId = "64b3e9f0d8e4c5a123456789";
   const productDoc = createDoc({
-    _id: "product-1",
+    _id: productId,
     businessId: "business-1",
     stockOnHand: 10,
     deletedAt: null
   });
 
   const updatedProduct = {
-    _id: "product-1",
+    _id: productId,
     businessId: "business-1",
     name: "Updated",
     deletedAt: null
@@ -106,20 +108,28 @@ async function testProductsService(ProductsService: any) {
 
   const service = new ProductsService(productModel as any, movementModel as any, saleModel as any);
 
-  const updated = await service.update("business-1", "product-1", { businessId: "other-business", name: "Updated" });
+  const updated = await service.update("business-1", productId, { businessId: "other-business", name: "Updated" });
   assert.equal(updated.name, "Updated");
   assert.deepEqual(calls[0], {
     method: "findOneAndUpdate",
-    query: { _id: "product-1", businessId: "business-1" },
+    query: {
+      businessId: "business-1",
+      deletedAt: null,
+      $or: [{ _id: productId }, { externalId: productId }]
+    },
     update: { name: "Updated" },
     options: { new: true }
   });
 
   calls.length = 0;
-  const archived = await service.archive("business-1", "product-1");
+  const archived = await service.archive("business-1", productId);
   assert.equal(archived.deletedAt instanceof Date || archived.deletedAt === undefined || archived.deletedAt === null, true);
   assert.equal(calls[0].method, "findOneAndUpdate");
-  assert.deepEqual(calls[0].query, { _id: "product-1", businessId: "business-1" });
+  assert.deepEqual(calls[0].query, {
+    businessId: "business-1",
+    deletedAt: null,
+    $or: [{ _id: productId }, { externalId: productId }]
+  });
   assert.equal((calls[0].update as Record<string, unknown>).isActive, false);
   assert.ok((calls[0].update as Record<string, unknown>).deletedAt instanceof Date);
   assert.deepEqual(calls[0].options, { new: true });
@@ -127,7 +137,7 @@ async function testProductsService(ProductsService: any) {
   calls.length = 0;
   await service.adjustStock({
     businessId: "business-1",
-    productId: "product-1",
+    productId,
     referenceType: "adjustment",
     referenceId: "movement-1",
     quantityDelta: -2,
@@ -137,13 +147,17 @@ async function testProductsService(ProductsService: any) {
 
   assert.deepEqual(calls[0], {
     method: "findOne",
-    query: { _id: "product-1", businessId: "business-1", deletedAt: null }
+    query: {
+      businessId: "business-1",
+      deletedAt: null,
+      $or: [{ _id: productId }, { externalId: productId }]
+    }
   });
   assert.deepEqual(calls[1], {
     method: "movement.findOne",
     query: {
       businessId: "business-1",
-      productId: "product-1",
+      productId: { $in: [productId] },
       referenceType: "adjustment",
       referenceId: "movement-1"
     }
@@ -153,7 +167,7 @@ async function testProductsService(ProductsService: any) {
     input: {
       businessId: "business-1",
       branchId: null,
-      productId: "product-1",
+      productId,
       referenceType: "adjustment",
       referenceId: "movement-1",
       quantityDelta: -2,
@@ -445,7 +459,8 @@ async function testJwtStrategyBusinessLookup(JwtStrategy: any) {
 async function testSalesService(SalesService: any) {
   const calls: CallRecord[] = [];
   const productDoc = createDoc({
-    _id: "product-1",
+    _id: "64b3e9f0d8e4c5a123456789",
+    externalId: "QnV7IFpJ6tXuU_wB",
     businessId: "business-1",
     stockOnHand: 10
   });
@@ -541,7 +556,7 @@ async function testSalesService(SalesService: any) {
     notes: null,
     items: [
       {
-        productId: "product-1",
+        productId: "QnV7IFpJ6tXuU_wB",
         productName: "Tea",
         quantity: 2,
         unitPrice: 50,
@@ -553,6 +568,14 @@ async function testSalesService(SalesService: any) {
   });
 
   assert.deepEqual(calls[0], {
+    method: "product.findOne",
+    query: {
+      businessId: "business-1",
+      deletedAt: null,
+      $or: [{ externalId: "QnV7IFpJ6tXuU_wB" }]
+    }
+  });
+  assert.deepEqual(calls[1], {
     method: "sale.create",
     input: {
       businessId: "business-1",
@@ -570,7 +593,7 @@ async function testSalesService(SalesService: any) {
       notes: null,
       items: [
         {
-          productId: "product-1",
+          productId: "QnV7IFpJ6tXuU_wB",
           productName: "Tea",
           quantity: 2,
           unitPrice: 50,
@@ -582,17 +605,12 @@ async function testSalesService(SalesService: any) {
       deletedAt: null
     }
   });
-
-  assert.deepEqual(calls[1], {
-    method: "product.findOne",
-    query: { _id: "product-1", businessId: "business-1", deletedAt: null }
-  });
   assert.deepEqual(calls[2], {
     method: "movement.create",
     input: {
       businessId: "business-1",
       branchId: null,
-      productId: "product-1",
+      productId: "QnV7IFpJ6tXuU_wB",
       referenceType: "sale",
       referenceId: "sale-1",
       quantityDelta: -2,
@@ -620,6 +638,99 @@ async function testSalesService(SalesService: any) {
       note: null,
       provider: null,
       reconciledAt: null
+    }
+  });
+}
+
+async function testSalesServiceInvalidProductId(SalesService: any) {
+  const calls: CallRecord[] = [];
+  const productModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "product.findOne", query });
+      return {
+        session() {
+          return null;
+        }
+      };
+    }
+  };
+
+  const saleModel = {
+    create() {
+      throw new Error("sale.create should not run for invalid products");
+    }
+  };
+
+  const paymentModel = {
+    create() {
+      throw new Error("payment.create should not run for invalid products");
+    }
+  };
+
+  const movementModel = {
+    create() {
+      throw new Error("movement.create should not run for invalid products");
+    }
+  };
+
+  const customerModel = {
+    findOne() {
+      throw new Error("customer.findOne should not run for invalid products");
+    }
+  };
+
+  const connection = {
+    async startSession() {
+      return {
+        async withTransaction(work: () => Promise<void>) {
+          await work();
+        },
+        async endSession() {
+          return undefined;
+        }
+      };
+    }
+  };
+
+  const service = new SalesService(saleModel as any, paymentModel as any, movementModel as any, productModel as any, customerModel as any, connection as any);
+
+  await assert.rejects(
+    service.create({
+      businessId: "business-1",
+      receiptNumber: "R-002",
+      subtotal: 50,
+      discountTotal: 0,
+      taxTotal: 0,
+      grandTotal: 50,
+      amountPaid: 50,
+      balanceDue: 0,
+      paymentStatus: "paid",
+      paymentMethod: "cash",
+      notes: null,
+      items: [
+        {
+          productId: "missing-product-999",
+          productName: "Unknown",
+          quantity: 1,
+          unitPrice: 50,
+          costPrice: 20,
+          lineDiscount: 0,
+          lineTotal: 50
+        }
+      ]
+    }),
+    (error: any) => {
+      const response = typeof error?.getResponse === "function" ? error.getResponse() : null;
+      return response?.code === "INVALID_PRODUCT_ID" && typeof response?.message === "string";
+    }
+  );
+
+  assert.deepEqual(calls[0], {
+    method: "product.findOne",
+    query: {
+      businessId: "business-1",
+      deletedAt: null,
+      $or: [{ externalId: "missing-product-999" }]
     }
   });
 }

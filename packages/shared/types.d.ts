@@ -60,6 +60,7 @@ export interface Category extends BaseEntity {
     sortOrder: number;
 }
 export interface Product extends BaseEntity {
+    serverId?: string | null;
     branchId?: string | null;
     categoryId?: string | null;
     brandId?: string | null;

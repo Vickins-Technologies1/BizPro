@@ -126,6 +126,29 @@ function withId<T extends RawEntity>(entity: T): T & { id: string } {
   return { ...rest, id } as T & { id: string };
 }
 
+function normalizeProduct(product: RawEntity): Product {
+  const normalized = withId(product);
+  return {
+    ...normalized,
+    serverId: product._id ? String(product._id) : normalized.serverId ?? null,
+    branchId: normalized.branchId ?? null,
+    categoryId: normalized.categoryId ?? null,
+    brandId: normalized.brandId ?? null,
+    supplierId: normalized.supplierId ?? null,
+    sku: normalized.sku ?? null,
+    barcode: normalized.barcode ?? null,
+    batchNumber: normalized.batchNumber ?? null,
+    expiryDate: normalized.expiryDate ?? null,
+    serialNumber: normalized.serialNumber ?? null,
+    unit: normalized.unit ?? "pcs",
+    buyingPrice: Number(normalized.buyingPrice ?? 0),
+    sellingPrice: Number(normalized.sellingPrice ?? 0),
+    stockOnHand: Number(normalized.stockOnHand ?? 0),
+    lowStockThreshold: Number(normalized.lowStockThreshold ?? 5),
+    isActive: normalized.isActive ?? true
+  } as Product;
+}
+
 function withSaleItems<T extends RawEntity>(sale: T): T & { id: string } {
   const normalized = withId(sale);
   const items = Array.isArray(normalized.items)
@@ -302,7 +325,7 @@ export async function archiveBrand(id: string) {
 
 export async function listProducts(branchId?: string | null) {
   const products = await apiRequest<RawEntity[]>(withBranchQuery("/products", branchId));
-  return products.map((product) => withId(product)) as Product[];
+  return products.map((product) => normalizeProduct(product));
 }
 
 export async function createProduct(input: {
@@ -326,17 +349,17 @@ export async function createProduct(input: {
   isActive?: boolean;
 }) {
   const product = await apiRequest<RawEntity>("/products", { method: "POST", body: input });
-  return withId(product) as Product;
+  return normalizeProduct(product);
 }
 
 export async function updateProduct(id: string, patch: Partial<Product> & { branchId?: string | null }) {
   const product = await apiRequest<RawEntity>(`/products/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
-  return withId(product) as Product;
+  return normalizeProduct(product);
 }
 
 export async function archiveProduct(id: string, branchId?: string | null) {
   const product = await apiRequest<RawEntity>(withBranchQuery(`/products/${encodeURIComponent(id)}/archive`, branchId), { method: "POST" });
-  return withId(product) as Product;
+  return normalizeProduct(product);
 }
 
 export async function deleteProduct(id: string, branchId?: string | null) {
@@ -354,7 +377,7 @@ export async function adjustProductStock(input: { productId: string; quantityDel
       referenceId: input.referenceId ?? undefined
     }
   });
-  return withId(product) as Product;
+  return normalizeProduct(product);
 }
 
 export async function getProductHistory(productId: string, branchId?: string | null) {

@@ -958,7 +958,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       items: input.items.map((item) => {
         const product = get().products.find((candidate) => candidate.id === item.productId);
         return {
-          productId: item.productId,
+          productId: product?.serverId ?? item.productId,
           productName: product?.name ?? item.productId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,

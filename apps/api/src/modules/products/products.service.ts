@@ -1,8 +1,15 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Product, ProductDocument, Sale, SaleDocument, StockMovement, StockMovementDocument } from "../schemas";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
+import {
+  buildProductLookupQuery,
+  collectProductIdentifiers,
+  invalidProductIdException,
+  isMongoObjectId,
+  productNotFoundException
+} from "./product-identity";
 
 @Injectable()
 export class ProductsService {
@@ -31,29 +38,30 @@ export class ProductsService {
   async update(businessId: string, id: string, patch: Partial<Product>, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, patch.branchId ?? null);
     const { businessId: _ignoredBusinessId, branchId: _ignoredBranchId, ...safePatch } = patch;
-    const updated = await this.productModel.findOneAndUpdate({ _id: id, businessId, ...buildBranchMatch(branchId) }, safePatch, { new: true }).lean();
-    if (!updated) throw new NotFoundException("Product not found");
+    const updated = await this.productModel.findOneAndUpdate(buildProductLookupQuery({ businessId, identifier: id, branchId }), safePatch, { new: true }).lean();
+    if (!updated) throw isMongoObjectId(id) ? productNotFoundException() : invalidProductIdException();
     return updated;
   }
 
   async archive(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
     const updated = await this.productModel.findOneAndUpdate(
-      { _id: id, businessId, ...buildBranchMatch(branchId) },
+      buildProductLookupQuery({ businessId, identifier: id, branchId }),
       { deletedAt: new Date(), isActive: false },
       { new: true }
     ).lean();
-    if (!updated) throw new NotFoundException("Product not found");
+    if (!updated) throw isMongoObjectId(id) ? productNotFoundException() : invalidProductIdException();
     return updated;
   }
 
   async adjustStock(input: { businessId: string; productId: string; referenceType: StockMovement["referenceType"]; referenceId: string; quantityDelta: number; unitCost: number; note?: string; branchId?: string | null }, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, input.branchId ?? null);
-    const product = await this.productModel.findOne({ _id: input.productId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) });
-    if (!product) throw new NotFoundException("Product not found");
+    const product = await this.productModel.findOne(buildProductLookupQuery({ businessId: input.businessId, identifier: input.productId, branchId }));
+    if (!product) throw isMongoObjectId(input.productId) ? productNotFoundException() : invalidProductIdException();
+    const productKeys = collectProductIdentifiers(product, input.productId);
     const existingMovement = await this.movementModel.findOne({
       businessId: input.businessId,
-      productId: input.productId,
+      productId: { $in: productKeys },
       referenceType: input.referenceType,
       referenceId: input.referenceId,
       ...buildBranchMatch(branchId)
@@ -63,18 +71,26 @@ export class ProductsService {
     }
     product.stockOnHand = Math.max(0, product.stockOnHand + input.quantityDelta);
     await product.save();
-    await this.movementModel.create({ ...input, branchId, externalId: input.referenceId });
+    await this.movementModel.create({
+      ...input,
+      branchId,
+      productId: product.externalId ?? String(product._id),
+      externalId: input.referenceId
+    });
     return product.toObject();
   }
 
   async history(businessId: string, productId: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const product = await this.productModel.findOne(buildProductLookupQuery({ businessId, identifier: productId, branchId })).lean();
+    if (!product) throw isMongoObjectId(productId) ? productNotFoundException() : invalidProductIdException();
+    const productKeys = collectProductIdentifiers(product, productId);
     const [stockMovements, salesHistory] = await Promise.all([
-      this.movementModel.find({ businessId, productId, ...buildBranchMatch(branchId) }).sort({ createdAt: -1 }).limit(24).lean(),
+      this.movementModel.find({ businessId, productId: { $in: productKeys }, ...buildBranchMatch(branchId) }).sort({ createdAt: -1 }).limit(24).lean(),
       this.saleModel.aggregate([
         { $match: { businessId, ...(branchId ? { $or: [{ branchId }, { branchId: null }] } : {}) } },
         { $unwind: "$items" },
-        { $match: { "items.productId": productId } },
+        { $match: { "items.productId": { $in: productKeys } } },
         { $sort: { createdAt: -1 } },
         {
           $project: {

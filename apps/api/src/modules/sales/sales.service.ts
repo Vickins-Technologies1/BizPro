@@ -4,6 +4,12 @@ import { Connection, Model } from "mongoose";
 import { Customer, CustomerDocument, Payment, PaymentDocument, Product, ProductDocument, Sale, SaleDocument, SaleItem, StockMovement, StockMovementDocument } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
+import {
+  buildProductLookupQuery,
+  invalidProductIdException,
+  isMongoObjectId,
+  productNotFoundException
+} from "../products/product-identity";
 
 export interface CreateSaleInput {
   businessId: string;
@@ -49,19 +55,33 @@ export class SalesService {
       }
     }
     return runInTransaction(this.connection, async (session) => {
+      const resolvedItems: Array<{ item: SaleItem; product: ProductDocument; productId: string }> = [];
+      for (const item of input.items) {
+        const product = await this.productModel.findOne(buildProductLookupQuery({ businessId: input.businessId, identifier: item.productId, branchId })).session(session);
+        if (!product) {
+          throw isMongoObjectId(item.productId) ? productNotFoundException() : invalidProductIdException();
+        }
+        resolvedItems.push({
+          item,
+          product,
+          productId: product.externalId ?? String(product._id)
+        });
+      }
       const sale = (await this.saleModel.create(
         [
           {
             ...input,
+            items: resolvedItems.map(({ item, productId }) => ({
+              ...item,
+              productId
+            })),
             branchId,
             deletedAt: null
           }
         ],
         { session }
       ))[0]!;
-      for (const item of input.items) {
-        const product = await this.productModel.findOne({ _id: item.productId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
-        if (!product) continue;
+      for (const { item, product, productId } of resolvedItems) {
         product.stockOnHand = Math.max(0, product.stockOnHand - item.quantity);
         await product.save({ session });
         await this.movementModel.create(
@@ -69,7 +89,7 @@ export class SalesService {
             {
               businessId: input.businessId,
               branchId,
-              productId: item.productId,
+              productId,
               referenceType: "sale",
               referenceId: sale._id.toString(),
               quantityDelta: -item.quantity,
@@ -82,7 +102,7 @@ export class SalesService {
       }
       if (input.customerId && input.balanceDue > 0) {
         const customer = await this.customerModel.findOne({ _id: input.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
-        if (!customer) throw new NotFoundException("Customer not found");
+        if (!customer) throw new NotFoundException({ success: false, code: "CUSTOMER_NOT_FOUND", message: "Customer not found" });
         customer.balance += input.balanceDue;
         await customer.save({ session });
       }

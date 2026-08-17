@@ -407,6 +407,7 @@ export function createProductDraft(input: {
   return {
     id: input.externalId,
     externalId: input.externalId,
+    serverId: null,
     businessId: input.businessId,
     branchId: input.branchId ?? null,
     categoryId: input.categoryId ?? null,

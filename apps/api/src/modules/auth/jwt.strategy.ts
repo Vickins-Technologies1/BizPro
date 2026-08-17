@@ -6,6 +6,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { getEffectivePermissions, type AccessPermission } from "@vbo/shared";
 import { Business, BusinessDocument, User, UserDocument } from "../schemas";
 import { Model } from "mongoose";
+import { findBusinessByIdentifier } from "../../common/business-lookup";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -26,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Session is no longer valid");
     }
-    const business = await this.businessModel.findOne({ $or: [{ externalId: payload.businessId }, { _id: payload.businessId }], deletedAt: null }).lean();
+    const business = await findBusinessByIdentifier(this.businessModel, payload.businessId);
     if (!business) {
       throw new UnauthorizedException("Business is no longer available");
     }

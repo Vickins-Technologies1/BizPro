@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Business, BusinessDocument, Branch, BranchDocument } from "../schemas";
 import { resolveIndustryKey } from "@vbo/shared";
+import { buildBusinessLookup } from "../../common/business-lookup";
 
 @Injectable()
 export class BusinessesService {
@@ -16,9 +17,10 @@ export class BusinessesService {
   }
 
   async get(id: string) {
-    const business = await this.businessModel.findById(id).lean();
+    const business = await this.businessModel.findOne(buildBusinessLookup(id)).lean();
     if (!business) throw new NotFoundException("Business not found");
-    const branches = await this.branchModel.find({ businessId: id, deletedAt: null }).lean();
+    const businessId = String((business as { externalId?: string | null; _id?: unknown }).externalId ?? (business as { _id?: unknown })._id);
+    const branches = await this.branchModel.find({ businessId, deletedAt: null }).lean();
     return { business, branches };
   }
 
@@ -38,7 +40,7 @@ export class BusinessesService {
     if (typeof nextPatch.businessType === "string" && nextPatch.industryKey == null) {
       nextPatch.industryKey = resolveIndustryKey({ businessType: nextPatch.businessType });
     }
-    const updated = await this.businessModel.findByIdAndUpdate(id, nextPatch, { new: true }).lean();
+    const updated = await this.businessModel.findOneAndUpdate(buildBusinessLookup(id), nextPatch, { new: true }).lean();
     if (!updated) throw new NotFoundException("Business not found");
     return updated;
   }

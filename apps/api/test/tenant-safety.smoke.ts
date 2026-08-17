@@ -26,10 +26,12 @@ function createDoc<T extends Record<string, unknown>>(value: T) {
 }
 
 async function main() {
-  const { CustomersService, ProductsService, SalesService } = loadServices();
+  const { BusinessesService, CustomersService, JwtStrategy, ProductsService, SalesService } = loadServices();
   await testProductsService(ProductsService);
   await testCustomersService(CustomersService);
   await testCustomersListWithInvalidAttachmentDate(CustomersService);
+  await testBusinessesService(BusinessesService);
+  await testJwtStrategyBusinessLookup(JwtStrategy);
   await testSalesService(SalesService);
   console.log("Tenant safety smoke checks passed.");
 }
@@ -50,9 +52,11 @@ function loadServices() {
   };
 
   return {
+    BusinessesService: require("../src/modules/businesses/businesses.service").BusinessesService as any,
     ProductsService: require("../src/modules/products/products.service").ProductsService as any,
     CustomersService: require("../src/modules/customers/customers.service").CustomersService as any,
-    SalesService: require("../src/modules/sales/sales.service").SalesService as any
+    SalesService: require("../src/modules/sales/sales.service").SalesService as any,
+    JwtStrategy: require("../src/modules/auth/jwt.strategy").JwtStrategy as any
   };
 }
 
@@ -302,6 +306,140 @@ async function testCustomersListWithInvalidAttachmentDate(CustomersService: any)
   assert.equal(customers[0]?.attachments?.length, 1);
   assert.equal(typeof customers[0]?.attachments?.[0]?.addedAt, "string");
   assert.match(String(customers[0]?.attachments?.[0]?.addedAt), /^\d{4}-\d{2}-\d{2}T/);
+}
+
+async function testBusinessesService(BusinessesService: any) {
+  const calls: CallRecord[] = [];
+  const businessDoc = {
+    _id: "db-business-id",
+    externalId: "JBs-VOAjsYEjB9bb",
+    name: "Biz Pro",
+    slug: "biz-pro",
+    businessType: "retail",
+    currency: "KES",
+    planTier: "lite",
+    billingStatus: "trial"
+  };
+
+  const businessModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "business.findOne", query });
+      return leanResult(businessDoc);
+    },
+    findOneAndUpdate(query: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown>) {
+      calls.push({ method: "business.findOneAndUpdate", query, update, options });
+      return leanResult({ ...businessDoc, ...update });
+    }
+  };
+
+  const branchModel = {
+    find(query: Record<string, unknown>) {
+      calls.push({ method: "branch.find", query });
+      return leanResult([
+        {
+          _id: "branch-1",
+          businessId: "JBs-VOAjsYEjB9bb",
+          deletedAt: null
+        }
+      ]);
+    }
+  };
+
+  const service = new BusinessesService(businessModel as any, branchModel as any);
+
+  const result = await service.get("JBs-VOAjsYEjB9bb");
+  assert.equal(result.business.externalId, "JBs-VOAjsYEjB9bb");
+  assert.deepEqual(calls[0], {
+    method: "business.findOne",
+    query: {
+      deletedAt: null,
+      $or: [{ externalId: "JBs-VOAjsYEjB9bb" }]
+    }
+  });
+  assert.deepEqual(calls[1], {
+    method: "branch.find",
+    query: {
+      businessId: "JBs-VOAjsYEjB9bb",
+      deletedAt: null
+    }
+  });
+
+  calls.length = 0;
+  await service.update("JBs-VOAjsYEjB9bb", { name: "Biz Pro Updated" });
+  assert.deepEqual(calls[0], {
+    method: "business.findOneAndUpdate",
+    query: {
+      deletedAt: null,
+      $or: [{ externalId: "JBs-VOAjsYEjB9bb" }]
+    },
+    update: { name: "Biz Pro Updated" },
+    options: { new: true }
+  });
+}
+
+async function testJwtStrategyBusinessLookup(JwtStrategy: any) {
+  const calls: CallRecord[] = [];
+  const userDoc = {
+    _id: "64b3e9f0d8e4c5a123456789",
+    businessId: "JBs-VOAjsYEjB9bb",
+    isActive: true,
+    role: "owner",
+    fullName: "Owner User",
+    branchId: null,
+    ownerId: null,
+    roleLabel: "Owner",
+    permissions: []
+  };
+  const businessDoc = {
+    _id: "db-business-id",
+    externalId: "JBs-VOAjsYEjB9bb",
+    name: "Biz Pro",
+    slug: "biz-pro",
+    businessType: "retail",
+    currency: "KES",
+    planTier: "lite",
+    billingStatus: "trial"
+  };
+
+  const userModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "user.findOne", query });
+      return leanResult(userDoc);
+    }
+  };
+
+  const businessModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "business.findOne", query });
+      return leanResult(businessDoc);
+    }
+  };
+
+  const strategy = new JwtStrategy({ get: () => "secret" } as any, userModel as any, businessModel as any);
+  const result = await strategy.validate({
+    sub: "64b3e9f0d8e4c5a123456789",
+    businessId: "JBs-VOAjsYEjB9bb",
+    branchId: null,
+    role: "owner",
+    fullName: "Owner User"
+  });
+
+  assert.equal(result.businessId, "JBs-VOAjsYEjB9bb");
+  assert.deepEqual(calls[0], {
+    method: "user.findOne",
+    query: {
+      _id: "64b3e9f0d8e4c5a123456789",
+      businessId: "JBs-VOAjsYEjB9bb",
+      deletedAt: null
+    }
+  });
+  assert.deepEqual(calls[1], {
+    method: "business.findOne",
+    query: {
+      deletedAt: null,
+      $or: [{ externalId: "JBs-VOAjsYEjB9bb" }]
+    }
+  });
 }
 
 async function testSalesService(SalesService: any) {

@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
-import { ClientSession, Connection, Model, Types } from "mongoose";
+import { ClientSession, Connection, Model } from "mongoose";
 import bcrypt from "bcryptjs";
 import { ROLE_ACCESS, getEffectivePermissions, resolveIndustryKey, type AccessPermission } from "@vbo/shared";
 import { AuditLog, AuditLogDocument, Business, BusinessDocument, Branch, BranchDocument, Device, DeviceDocument, Subscription, SubscriptionDocument, SubscriptionPlan, SubscriptionPlanDocument, User, UserDocument } from "../schemas";
 import { RegisterDto, LoginDto } from "./dto";
 import { runInTransaction } from "../../common/mongo-transaction";
+import { findBusinessByIdentifier } from "../../common/business-lookup";
 
 type AuthTokenResponse = {
   accessToken: string;
@@ -356,11 +357,7 @@ export class AuthService {
   }
 
   private async findBusiness(identifier: string) {
-    const candidates: Array<Record<string, unknown>> = [{ externalId: identifier }];
-    if (Types.ObjectId.isValid(identifier)) {
-      candidates.push({ _id: new Types.ObjectId(identifier) });
-    }
-    return this.businessModel.findOne({ deletedAt: null, $or: candidates }).lean();
+    return findBusinessByIdentifier(this.businessModel, identifier);
   }
 
   private slugify(value: string) {

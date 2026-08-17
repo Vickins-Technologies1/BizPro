@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { IsArray, IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { toSafeIsoString } from "../../common/date-normalizer";
 import { CustomersService } from "./customers.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -77,7 +78,7 @@ function normalizeCustomerAttachments(attachments?: CustomerAttachmentDto[] | nu
     label: attachment.label ?? "Attachment",
     url: attachment.url ?? "",
     note: attachment.note ?? null,
-    addedAt: attachment.addedAt ?? new Date().toISOString()
+    addedAt: toSafeIsoString(attachment.addedAt ?? null)
   }));
 }
 

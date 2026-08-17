@@ -234,6 +234,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   bootstrap: async () => {
     set({ loading: true, error: null });
     try {
+      const hydrateWorkspace = async () => {
+        await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
+        await get().rehydrateQueuedState();
+      };
+
       const storedThemeMode = await secureStore.getThemeMode();
       const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : "light";
       if (!storedThemeMode) {
@@ -263,8 +268,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             ready: true,
             authLoading: false
           });
-          await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
-          await get().rehydrateQueuedState();
+          await hydrateWorkspace();
           return;
         } catch (error) {
           if (isOfflineError(error)) {
@@ -279,8 +283,7 @@ export const useAppStore = create<AppState>((set, get) => ({
               ready: true,
               authLoading: false
             });
-            await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
-            await get().rehydrateQueuedState();
+            await hydrateWorkspace();
             return;
           }
           console.warn("[auth] Stored session could not be restored", error);

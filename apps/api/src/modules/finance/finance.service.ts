@@ -16,6 +16,7 @@ import {
   Sale,
   SaleDocument
 } from "../schemas";
+import { toSafeIsoDateString, toSafeIsoString } from "../../common/date-normalizer";
 import type {
   BankAccount as BankAccountView,
   CreditNote as CreditNoteView,
@@ -320,7 +321,7 @@ export class FinanceService {
       note: rest.note ?? null,
       recordedById: rest.recordedById ?? null,
       deletedAt: rest.deletedAt ?? null,
-      entryDate: rest.entryDate ? new Date(rest.entryDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
+      entryDate: toSafeIsoDateString(rest.entryDate ?? null)
     } as PettyCashEntryView;
   }
 
@@ -333,7 +334,7 @@ export class FinanceService {
       customerId: rest.customerId ?? null,
       note: rest.note ?? null,
       deletedAt: rest.deletedAt ?? null,
-      creditDate: rest.creditDate ? new Date(rest.creditDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
+      creditDate: toSafeIsoDateString(rest.creditDate ?? null)
     } as CreditNoteView;
   }
 
@@ -348,7 +349,7 @@ export class FinanceService {
       reference: rest.reference ?? null,
       note: rest.note ?? null,
       provider: rest.provider ?? null,
-      reconciledAt: rest.reconciledAt ? new Date(rest.reconciledAt).toISOString() : null
+      reconciledAt: rest.reconciledAt ? toSafeIsoString(rest.reconciledAt) : null
     } as FinancePayment;
   }
 }

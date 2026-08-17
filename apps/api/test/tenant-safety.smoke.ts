@@ -29,6 +29,7 @@ async function main() {
   const { CustomersService, ProductsService, SalesService } = loadServices();
   await testProductsService(ProductsService);
   await testCustomersService(CustomersService);
+  await testCustomersListWithInvalidAttachmentDate(CustomersService);
   await testSalesService(SalesService);
   console.log("Tenant safety smoke checks passed.");
 }
@@ -251,6 +252,56 @@ async function testCustomersService(CustomersService: any) {
   assert.equal(calls[1]?.method, "payment.create");
   assert.equal((calls[1]?.input as Record<string, unknown> | undefined)?.businessId, "business-1");
   assert.equal((calls[1]?.input as Record<string, unknown> | undefined)?.branchId, null);
+}
+
+async function testCustomersListWithInvalidAttachmentDate(CustomersService: any) {
+  const customerModel = {
+    find() {
+      return {
+        sort() {
+          return this;
+        },
+        lean: async () => [
+          {
+            _id: "customer-1",
+            businessId: "business-1",
+            name: "Faulty attachment",
+            attachments: [
+              {
+                id: "attachment-1",
+                label: "Receipt",
+                url: "https://example.com/receipt.pdf",
+                addedAt: "not-a-real-date"
+              }
+            ]
+          }
+        ]
+      };
+    }
+  };
+
+  const customerGroupModel = {};
+  const paymentModel = {};
+  const connection = {
+    async startSession() {
+      return {
+        async withTransaction(work: () => Promise<void>) {
+          await work();
+        },
+        async endSession() {
+          return undefined;
+        }
+      };
+    }
+  };
+
+  const service = new CustomersService(customerModel as any, customerGroupModel as any, paymentModel as any, connection as any);
+  const customers = await service.list("business-1", {});
+
+  assert.equal(customers.length, 1);
+  assert.equal(customers[0]?.attachments?.length, 1);
+  assert.equal(typeof customers[0]?.attachments?.[0]?.addedAt, "string");
+  assert.match(String(customers[0]?.attachments?.[0]?.addedAt), /^\d{4}-\d{2}-\d{2}T/);
 }
 
 async function testSalesService(SalesService: any) {

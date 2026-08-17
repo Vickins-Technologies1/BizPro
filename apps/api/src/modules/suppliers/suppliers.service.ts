@@ -16,6 +16,7 @@ import {
   SupplierPaymentDocument
 } from "../schemas";
 import type { Supplier as SharedSupplier, SupplierDocument as SharedSupplierDocument, SupplierPerformanceReport, SupplierStatement } from "@vbo/shared";
+import { toSafeIsoString } from "../../common/date-normalizer";
 
 @Injectable()
 export class SuppliersService {
@@ -244,7 +245,7 @@ export class SuppliersService {
     const openingBalance = Number(openingOrders[0]?.total ?? 0) - Number(openingPayments[0]?.total ?? 0);
     const entries = [
       ...activeOrders.map((order) => ({
-        date: new Date(order.orderDate).toISOString(),
+        date: toSafeIsoString(order.orderDate),
         reference: order.orderNumber,
         description: `Purchase order ${String(order.status).replaceAll("_", " ")}`,
         debit: Number(order.total ?? 0),
@@ -252,7 +253,7 @@ export class SuppliersService {
         kind: "bill" as const
       })),
       ...payments.map((payment) => ({
-        date: new Date(payment.paymentDate).toISOString(),
+        date: toSafeIsoString(payment.paymentDate),
         reference: payment.reference ?? payment.externalId ?? "Supplier payment",
         description: `Supplier payment via ${payment.method}`,
         debit: 0,
@@ -311,8 +312,8 @@ export class SuppliersService {
       outstandingBalance: Math.max(0, billedTotal - paidTotal),
       averageOrderValue: activeOrders.length ? billedTotal / activeOrders.length : 0,
       paymentCoveragePercent: billedTotal > 0 ? (paidTotal / billedTotal) * 100 : 0,
-      lastPaymentAt: payments[0]?.paymentDate ? new Date(payments[0].paymentDate).toISOString() : null,
-      lastOrderAt: activeOrders[0]?.orderDate ? new Date(activeOrders[0].orderDate).toISOString() : null
+      lastPaymentAt: payments[0]?.paymentDate ? toSafeIsoString(payments[0].paymentDate) : null,
+      lastOrderAt: activeOrders[0]?.orderDate ? toSafeIsoString(activeOrders[0].orderDate) : null
     };
   }
 }

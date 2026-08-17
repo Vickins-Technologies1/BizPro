@@ -3,24 +3,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator, type BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { ActivityIndicator } from "react-native";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { Badge, Card } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { getEffectivePermissions } from "@shared";
-
-const DashboardScreen = React.lazy(() => import("@/screens/DashboardScreen").then((module) => ({ default: module.DashboardScreen })));
-const PosScreen = React.lazy(() => import("@/screens/PosScreen").then((module) => ({ default: module.PosScreen })));
-const ProductsScreen = React.lazy(() => import("@/screens/ProductsScreen").then((module) => ({ default: module.ProductsScreen })));
-const CustomersScreen = React.lazy(() => import("@/screens/CustomersScreen").then((module) => ({ default: module.CustomersScreen })));
-const EmployeesScreen = React.lazy(() => import("@/screens/EmployeesScreen").then((module) => ({ default: module.EmployeesScreen })));
-const AnalyticsScreen = React.lazy(() => import("@/screens/AnalyticsScreen").then((module) => ({ default: module.AnalyticsScreen })));
-const ReportsScreen = React.lazy(() => import("@/screens/ReportsScreen").then((module) => ({ default: module.ReportsScreen })));
-const ExpensesScreen = React.lazy(() => import("@/screens/ExpensesScreen").then((module) => ({ default: module.ExpensesScreen })));
-const FinanceScreen = React.lazy(() => import("@/screens/FinanceScreen").then((module) => ({ default: module.FinanceScreen })));
-const SettingsScreen = React.lazy(() => import("@/screens/SettingsScreen").then((module) => ({ default: module.SettingsScreen })));
-const RoleLaunchpadScreen = React.lazy(() => import("@/screens/RoleLaunchpadScreen").then((module) => ({ default: module.RoleLaunchpadScreen })));
+import { DashboardScreen } from "@/screens/DashboardScreen";
+import { PosScreen } from "@/screens/PosScreen";
+import { ProductsScreen } from "@/screens/ProductsScreen";
+import { CustomersScreen } from "@/screens/CustomersScreen";
+import { EmployeesScreen } from "@/screens/EmployeesScreen";
+import { AnalyticsScreen } from "@/screens/AnalyticsScreen";
+import { ReportsScreen } from "@/screens/ReportsScreen";
+import { ExpensesScreen } from "@/screens/ExpensesScreen";
+import { FinanceScreen } from "@/screens/FinanceScreen";
+import { SettingsScreen } from "@/screens/SettingsScreen";
+import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
 
 type WorkspaceTabParamList = {
   Dashboard: undefined;
@@ -55,109 +53,107 @@ export function AdaptiveWorkspaceNavigator() {
   const isDesktop = width >= 900;
 
   return (
-    <React.Suspense fallback={<WorkspaceFallback />}>
-      <WorkspaceTabs.Navigator
-        initialRouteName="Dashboard"
-        screenOptions={{
-          headerShown: false,
-          lazy: true,
-          freezeOnBlur: true,
-          tabBarHideOnKeyboard: true,
-          tabBarStyle: {
-            backgroundColor: tokens.colors.surface,
-            borderTopColor: tokens.colors.border
-          },
-          tabBarActiveTintColor: tokens.colors.primaryStrong,
-          tabBarInactiveTintColor: tokens.colors.textMuted
+    <WorkspaceTabs.Navigator
+      initialRouteName="Dashboard"
+      screenOptions={{
+        headerShown: false,
+        lazy: true,
+        freezeOnBlur: true,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          backgroundColor: tokens.colors.surface,
+          borderTopColor: tokens.colors.border
+        },
+        tabBarActiveTintColor: tokens.colors.primaryStrong,
+        tabBarInactiveTintColor: tokens.colors.textMuted
+      }}
+      tabBar={(props) => <AdaptiveTabBar {...props} isDesktop={isDesktop} />}
+      sceneContainerStyle={{
+        backgroundColor: tokens.colors.background,
+        paddingLeft: isDesktop ? 304 : 0
+      }}
+    >
+      <WorkspaceTabs.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: "Dashboard",
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />
         }}
-        tabBar={(props) => <AdaptiveTabBar {...props} isDesktop={isDesktop} />}
-        sceneContainerStyle={{
-          backgroundColor: tokens.colors.background,
-          paddingLeft: isDesktop ? 304 : 0
+      />
+      <WorkspaceTabs.Screen
+        name="POS"
+        component={PosScreen}
+        options={{
+          tabBarLabel: "Sales",
+          tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />
         }}
-      >
-        <WorkspaceTabs.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{
-            tabBarLabel: "Dashboard",
-            tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="POS"
-          component={PosScreen}
-          options={{
-            tabBarLabel: "Sales",
-            tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Catalog"
-          component={ProductsScreen}
-          options={{
-            tabBarLabel: "Inventory",
-            tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Customers"
-          component={CustomersScreen}
-          options={{
-            tabBarLabel: "Customers",
-            tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Employees"
-          component={EmployeesScreen}
-          options={{
-            tabBarLabel: "Employees",
-            tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Reports"
-          component={ReportsScreen}
-          options={{
-            tabBarLabel: "Reports",
-            tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Finance"
-          component={FinanceScreen}
-          options={{
-            tabBarLabel: "Finance",
-            tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Insights"
-          component={AnalyticsScreen}
-          options={{
-            tabBarLabel: "Insights",
-            tabBarIcon: ({ color, size }) => <Ionicons name="analytics-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{
-            tabBarLabel: "Settings",
-            tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />
-          }}
-        />
-        <WorkspaceTabs.Screen
-          name="More"
-          component={RoleLaunchpadScreen}
-          options={{
-            tabBarLabel: "More",
-            tabBarIcon: ({ color, size }) => <Ionicons name="apps-outline" color={color} size={size} />
-          }}
-        />
-      </WorkspaceTabs.Navigator>
-    </React.Suspense>
+      />
+      <WorkspaceTabs.Screen
+        name="Catalog"
+        component={ProductsScreen}
+        options={{
+          tabBarLabel: "Inventory",
+          tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Customers"
+        component={CustomersScreen}
+        options={{
+          tabBarLabel: "Customers",
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Employees"
+        component={EmployeesScreen}
+        options={{
+          tabBarLabel: "Employees",
+          tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Reports"
+        component={ReportsScreen}
+        options={{
+          tabBarLabel: "Reports",
+          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Finance"
+        component={FinanceScreen}
+        options={{
+          tabBarLabel: "Finance",
+          tabBarIcon: ({ color, size }) => <Ionicons name="cash-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Insights"
+        component={AnalyticsScreen}
+        options={{
+          tabBarLabel: "Insights",
+          tabBarIcon: ({ color, size }) => <Ionicons name="analytics-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarLabel: "Settings",
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
+        name="More"
+        component={RoleLaunchpadScreen}
+        options={{
+          tabBarLabel: "More",
+          tabBarIcon: ({ color, size }) => <Ionicons name="apps-outline" color={color} size={size} />
+        }}
+      />
+    </WorkspaceTabs.Navigator>
   );
 }
 
@@ -391,12 +387,4 @@ function routeDescription(routeName: keyof WorkspaceTabParamList) {
     case "More":
       return "Workspace hub";
   }
-}
-
-function WorkspaceFallback() {
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.background }}>
-      <ActivityIndicator color={tokens.colors.primaryStrong} />
-    </View>
-  );
 }

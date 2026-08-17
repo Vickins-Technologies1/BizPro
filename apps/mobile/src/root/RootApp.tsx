@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import { ActivityIndicator, Animated, AppState, Image, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Asset } from "expo-asset";
 import NetInfo from "@react-native-community/netinfo";
+import { ErrorState, PrimaryButton } from "@/components/Primitives";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
@@ -17,6 +19,7 @@ export function RootApp() {
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncNow = useAppStore((state) => state.syncNow);
   const themeMode = useAppStore((state) => state.themeMode);
+  const error = useAppStore((state) => state.error);
 
   useEffect(() => {
     void Asset.fromModule(splashLogo).downloadAsync().catch(() => undefined);
@@ -59,11 +62,33 @@ export function RootApp() {
     return <LoadingSplash themeMode={themeMode} />;
   }
 
+  if (error && !business) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
+          <SafeAreaView style={{ flex: 1, backgroundColor: tokens.colors.background }}>
+            <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+              <ErrorState
+                title="Biz Pro could not start"
+                subtitle={error}
+                action={<PrimaryButton title="Try again" onPress={() => bootstrap().catch(() => undefined)} />}
+                icon="warning-outline"
+              />
+            </View>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
-    <SafeAreaProvider>
-      <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
-      <RootNavigator />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
+        <RootNavigator />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -93,27 +118,29 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
   const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [10, -8] });
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: tokens.colors.background, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20 }}>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
-              <Image
-                source={splashLogo}
-                resizeMode="contain"
-                style={{ width: 260, height: 260, backgroundColor: "transparent" }}
-              />
-              <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 4 }} />
-            </Animated.View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: tokens.colors.background, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20 }}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
+                <Image
+                  source={splashLogo}
+                  resizeMode="contain"
+                  style={{ width: 260, height: 260, backgroundColor: "transparent" }}
+                />
+                <ActivityIndicator size="large" color={tokens.colors.primaryStrong} style={{ marginTop: 4 }} />
+              </Animated.View>
+            </View>
+            <View style={{ alignItems: "center", paddingBottom: 6 }}>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
+                Powered by Vickins Technologies
+              </Text>
+            </View>
           </View>
-          <View style={{ alignItems: "center", paddingBottom: 6 }}>
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
-              Powered by Vickins Technologies
-            </Text>
-          </View>
-        </View>
-      </SafeAreaView>
-      <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
-    </SafeAreaProvider>
+        </SafeAreaView>
+        <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={tokens.colors.background} />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

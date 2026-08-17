@@ -4,6 +4,7 @@ import { ClientSession, Connection, Model } from "mongoose";
 import { Customer, CustomerDocument, CustomerGroup, CustomerGroupDocument, Payment, PaymentDocument } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
+import { toSafeIsoString } from "../../common/date-normalizer";
 
 type CustomerAttachmentInput = {
   id?: string;
@@ -324,7 +325,7 @@ export class CustomersService {
       label: attachment.label ?? "Attachment",
       url: attachment.url ?? "",
       note: attachment.note ?? null,
-      addedAt: attachment.addedAt ? new Date(attachment.addedAt).toISOString() : new Date().toISOString()
+      addedAt: toSafeIsoString(attachment.addedAt ?? null)
     }));
   }
 }

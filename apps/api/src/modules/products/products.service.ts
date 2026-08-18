@@ -10,13 +10,15 @@ import {
   isMongoObjectId,
   productNotFoundException
 } from "./product-identity";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
     @InjectModel(StockMovement.name) private readonly movementModel: Model<StockMovementDocument>,
-    @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>
+    @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
+    private readonly notifications: NotificationsService
   ) {}
 
   list(businessId: string, scope: BranchScope = {}) {
@@ -77,7 +79,20 @@ export class ProductsService {
       productId: product.externalId ?? String(product._id),
       externalId: input.referenceId
     });
-    return product.toObject();
+    const updated = product.toObject();
+    if (updated.stockOnHand <= updated.lowStockThreshold) {
+      void this.notifications
+        .createLowStockNotification({
+          businessId: input.businessId,
+          productId: String(product._id),
+          productName: updated.name,
+          stockOnHand: updated.stockOnHand,
+          threshold: updated.lowStockThreshold,
+          routeParams: { productId: String(product._id) }
+        })
+        .catch(() => undefined);
+    }
+    return updated;
   }
 
   async history(businessId: string, productId: string, scope: BranchScope = {}) {

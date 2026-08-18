@@ -26,6 +26,7 @@ import {
   markActionFailed,
   removeAction
 } from "@/services/offlineQueue";
+import { recordLocalNotification } from "@/services/notifications";
 import { setAuthFailureHandler } from "@/services/apiClient";
 
 export interface DashboardSummary extends DailySummary {
@@ -1017,6 +1018,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const queuedActions = await listQueuedActions(business.id);
     if (!queuedActions.length) {
       set({ syncMessage: "Nothing is waiting to sync", syncProgress: null });
+      void recordLocalNotification({
+        businessId: business.id,
+        title: "Sync complete",
+        body: "There were no queued actions to send.",
+        category: "sync",
+        priority: "low"
+      }).catch(() => undefined);
       await get().refreshPendingSync();
       return;
     }
@@ -1134,11 +1142,25 @@ export const useAppStore = create<AppState>((set, get) => ({
               : "Refresh failed"
             : "Cloud data refreshed"
         });
+        void recordLocalNotification({
+          businessId: business.id,
+          title: refreshFailure ? "Sync completed with refresh warning" : "Sync completed",
+          body: refreshFailure ? "Queued actions were sent, but the latest dashboard refresh needs attention." : "Queued actions were sent successfully.",
+          category: "sync",
+          priority: refreshFailure ? "normal" : "low"
+        }).catch(() => undefined);
       } else if (!paused && remaining > 0) {
         set({ syncMessage: "Cloud data refreshed, but some queued items remain" });
       }
     } catch (error) {
       set({ syncMessage: error instanceof Error ? error.message : "Refresh failed" });
+      void recordLocalNotification({
+        businessId: business.id,
+        title: "Sync failed",
+        body: error instanceof Error ? error.message : "Biz Pro could not complete the sync.",
+        category: "sync",
+        priority: "high"
+      }).catch(() => undefined);
     } finally {
       set({ syncing: false, syncProgress: null });
       await get().refreshPendingSync();

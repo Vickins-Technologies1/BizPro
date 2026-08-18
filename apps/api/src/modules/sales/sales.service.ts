@@ -10,6 +10,7 @@ import {
   isMongoObjectId,
   productNotFoundException
 } from "../products/product-identity";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export interface CreateSaleInput {
   businessId: string;
@@ -38,7 +39,8 @@ export class SalesService {
     @InjectModel(StockMovement.name) private readonly movementModel: Model<StockMovementDocument>,
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>,
-    @InjectConnection() private readonly connection: Connection
+    @InjectConnection() private readonly connection: Connection,
+    private readonly notifications: NotificationsService
   ) {}
 
   list(businessId: string, scope: BranchScope = {}) {
@@ -48,13 +50,14 @@ export class SalesService {
 
   async create(input: CreateSaleInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
+    const lowStockAlerts = new Map<string, { productId: string; productName: string; stockOnHand: number; threshold: number }>();
     if (input.externalId) {
       const existing = await this.saleModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).lean();
       if (existing) {
         return existing;
       }
     }
-    return runInTransaction(this.connection, async (session) => {
+    const sale = await runInTransaction(this.connection, async (session) => {
       const resolvedItems: Array<{ item: SaleItem; product: ProductDocument; productId: string }> = [];
       for (const item of input.items) {
         const product = await this.productModel.findOne(buildProductLookupQuery({ businessId: input.businessId, identifier: item.productId, branchId })).session(session);
@@ -84,6 +87,15 @@ export class SalesService {
       for (const { item, product, productId } of resolvedItems) {
         product.stockOnHand = Math.max(0, product.stockOnHand - item.quantity);
         await product.save({ session });
+        const freshStock = product.stockOnHand;
+        if (freshStock <= product.lowStockThreshold) {
+          lowStockAlerts.set(String(productId), {
+            productId: String(productId),
+            productName: product.name,
+            stockOnHand: freshStock,
+            threshold: product.lowStockThreshold
+          });
+        }
         await this.movementModel.create(
           [
             {
@@ -128,5 +140,18 @@ export class SalesService {
       );
       return sale.toObject();
     });
+    for (const alert of lowStockAlerts.values()) {
+      void this.notifications
+        .createLowStockNotification({
+          businessId: input.businessId,
+          productId: alert.productId,
+          productName: alert.productName,
+          stockOnHand: alert.stockOnHand,
+          threshold: alert.threshold,
+          routeParams: { productId: alert.productId }
+        })
+        .catch(() => undefined);
+    }
+    return sale;
   }
 }

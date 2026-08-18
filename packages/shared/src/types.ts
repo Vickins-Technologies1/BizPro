@@ -56,10 +56,28 @@ export interface User extends BaseEntity {
 }
 
 export interface Device extends BaseEntity {
+  deviceKey?: string | null;
   deviceName: string;
   platform: "android" | "ios" | "web";
   lastSeenAt?: string | null;
   trusted: boolean;
+  userId?: string | null;
+  pushToken?: string | null;
+  pushTokenUpdatedAt?: string | null;
+}
+
+export interface BusinessNotification extends BaseEntity {
+  audienceUserId?: string | null;
+  title: string;
+  body: string;
+  category: string;
+  priority: "low" | "normal" | "high" | "critical";
+  routeName?: string | null;
+  routeParams?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  dedupeKey?: string | null;
+  readAt?: string | null;
+  sentAt: string;
 }
 
 export interface Category extends BaseEntity {

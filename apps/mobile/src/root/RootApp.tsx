@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { ActivityIndicator, Animated, AppState, Image, Text, View } from "react-native";
+import { ActivityIndicator, Animated, AppState, Image, Platform, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Asset } from "expo-asset";
+import * as Device from "expo-device";
 import NetInfo from "@react-native-community/netinfo";
 import { ErrorState, PrimaryButton } from "@/components/Primitives";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
+import { configureNotificationListeners, loadNotificationInbox, registerPushNotifications } from "@/services/notifications";
 
 const splashLogo = require("../../assets/brand/biz-pro-logo-transparent.png");
 
@@ -16,6 +18,8 @@ export function RootApp() {
   const bootstrap = useAppStore((state) => state.bootstrap);
   const loading = useAppStore((state) => state.loading);
   const business = useAppStore((state) => state.business);
+  const user = useAppStore((state) => state.user);
+  const deviceId = useAppStore((state) => state.deviceId);
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncNow = useAppStore((state) => state.syncNow);
   const themeMode = useAppStore((state) => state.themeMode);
@@ -35,6 +39,23 @@ export function RootApp() {
       syncNow().catch(() => undefined);
     }
   }, [business, pendingSync, syncNow]);
+
+  useEffect(() => {
+    const cleanup = configureNotificationListeners();
+    return cleanup;
+  }, []);
+
+  useEffect(() => {
+    if (!business || !user || !deviceId) return;
+    void registerPushNotifications({
+      businessId: business.id,
+      userId: user.id,
+      deviceId,
+      deviceName: Device.deviceName ?? Device.modelName ?? "Biz Pro device",
+      platform: Platform.OS as "android" | "ios" | "web"
+    }).catch(() => undefined);
+    void loadNotificationInbox().catch(() => undefined);
+  }, [business, deviceId, user]);
 
   useEffect(() => {
     if (!business) return;

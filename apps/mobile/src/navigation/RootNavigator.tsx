@@ -3,6 +3,7 @@ import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
+import { navigationRef, flushPendingNotificationNavigation } from "@/navigation/navigationRef";
 import { ProductDetailScreen } from "@/screens/ProductDetailScreen";
 import { BrandsScreen } from "@/screens/BrandsScreen";
 import { ExpensesScreen } from "@/screens/ExpensesScreen";
@@ -74,7 +75,13 @@ export function RootNavigator() {
   );
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        flushPendingNotificationNavigation();
+      }}
+      theme={navigationTheme}
+    >
       {business && user ? (
         <RootStack.Navigator
           initialRouteName="Launchpad"

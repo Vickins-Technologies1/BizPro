@@ -29,7 +29,7 @@ export function LoginScreen() {
   return (
     <Screen hideFooter>
       <GradientHeader title="Welcome back" subtitle="Sign in with the owner password or a cashier PIN" />
-      <AppScrollView contentContainerStyle={{ gap: 16, flexGrow: 1, justifyContent: "center" }}>
+      <AppScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Biz Pro login</Text>
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>

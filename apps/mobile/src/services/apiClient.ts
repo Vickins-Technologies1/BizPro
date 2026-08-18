@@ -57,6 +57,23 @@ export type ApiSession = {
   accessToken?: string | null;
 };
 
+export type NotificationRecord = {
+  id: string;
+  businessId: string;
+  audienceUserId?: string | null;
+  title: string;
+  body: string;
+  category: string;
+  priority: "low" | "normal" | "high" | "critical";
+  routeName?: string | null;
+  routeParams?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  sentAt: string;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AuthResponse = {
   accessToken: string;
   user: ApiSession["user"];
@@ -929,4 +946,25 @@ export async function resetEmployeeCredentials(
 export async function deleteEmployee(id: string) {
   const employee = await apiRequest<RawEntity>(`/employees/${encodeURIComponent(id)}`, { method: "DELETE" });
   return withId(employee) as EmployeeRecord;
+}
+
+export async function registerDevicePushToken(input: {
+  businessId: string;
+  userId: string;
+  deviceId: string;
+  deviceName: string;
+  platform: "android" | "ios" | "web";
+  pushToken: string;
+}) {
+  return apiRequest<RawEntity>("/notifications/devices", { method: "POST", body: input });
+}
+
+export async function listNotifications() {
+  const notifications = await apiRequest<RawEntity[]>("/notifications");
+  return notifications.map((notification) => withId(notification)) as NotificationRecord[];
+}
+
+export async function markNotificationRead(id: string) {
+  const notification = await apiRequest<RawEntity>(`/notifications/${encodeURIComponent(id)}/read`, { method: "PATCH" });
+  return withId(notification) as NotificationRecord;
 }

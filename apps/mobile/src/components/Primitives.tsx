@@ -89,7 +89,7 @@ export function Screen({ children, hideFooter = true }: { children: React.ReactN
   useAppStore((state) => state.themeMode);
   const motion = useAppearMotion();
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
         <View pointerEvents="none" style={styles.screenBackdrop}>
           <LinearGradient colors={tokens.gradients.surface} style={StyleSheet.absoluteFillObject} />
@@ -735,19 +735,29 @@ export function Dialog({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalCard, { padding: 18 }]}>
-          <View style={styles.modalHeader}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.modalTitle}>{title}</Text>
-              {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+        <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <View style={[styles.modalCard, { padding: 18 }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.modalTitle}>{title}</Text>
+                {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+              </View>
+              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog">
+                <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
+              </Pressable>
             </View>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog">
-              <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
-            </Pressable>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              automaticallyAdjustKeyboardInsets
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+            >
+              {children}
+              {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
+            </ScrollView>
           </View>
-          {children}
-          {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -773,35 +783,45 @@ export function BottomSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
-        <View
-          style={[
-            styles.modalCard,
-            {
-              alignSelf: "stretch",
-              marginTop: "auto",
-              maxHeight: "88%",
-              borderTopLeftRadius: 30,
-              borderTopRightRadius: 30,
-              borderBottomLeftRadius: 18,
-              borderBottomRightRadius: 18
-            }
-          ]}
-        >
-          <View style={{ alignItems: "center", marginBottom: 12 }}>
-            <View style={{ width: 44, height: 4, borderRadius: 99, backgroundColor: withAlpha(tokens.colors.textMuted, 0.28) }} />
-          </View>
-          <View style={styles.modalHeader}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.modalTitle}>{title}</Text>
-              {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+        <KeyboardAvoidingView style={{ width: "100%", marginTop: "auto" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                alignSelf: "stretch",
+                marginTop: "auto",
+                maxHeight: "88%",
+                borderTopLeftRadius: 30,
+                borderTopRightRadius: 30,
+                borderBottomLeftRadius: 18,
+                borderBottomRightRadius: 18
+              }
+            ]}
+          >
+            <View style={{ alignItems: "center", marginBottom: 12 }}>
+              <View style={{ width: 44, height: 4, borderRadius: 99, backgroundColor: withAlpha(tokens.colors.textMuted, 0.28) }} />
             </View>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet">
-              <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
-            </Pressable>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.modalTitle}>{title}</Text>
+                {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+              </View>
+              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet">
+                <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              automaticallyAdjustKeyboardInsets
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+            >
+              {children}
+              {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
+            </ScrollView>
           </View>
-          {children}
-          {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

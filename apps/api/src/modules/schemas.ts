@@ -117,11 +117,23 @@ export class Device {
   @Prop({ required: true, index: true })
   businessId!: string;
 
+  @Prop({ type: String, default: null, index: true })
+  deviceKey?: string | null;
+
   @Prop({ required: true })
   deviceName!: string;
 
   @Prop({ required: true, enum: ["android", "ios", "web"] })
   platform!: "android" | "ios" | "web";
+
+  @Prop({ type: String, default: null })
+  userId?: string | null;
+
+  @Prop({ type: String, default: null })
+  pushToken?: string | null;
+
+  @Prop({ type: Date, default: null })
+  pushTokenUpdatedAt?: Date | null;
 
   @Prop({ default: false })
   trusted!: boolean;
@@ -134,6 +146,8 @@ export class Device {
 }
 export type DeviceDocument = HydratedDocument<Device>;
 export const DeviceSchema = SchemaFactory.createForClass(Device);
+DeviceSchema.index({ businessId: 1, deviceKey: 1 }, { unique: true, sparse: true });
+DeviceSchema.index({ businessId: 1, pushToken: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "categories" })
 export class Category {
@@ -1080,6 +1094,49 @@ export class AuditLog {
 export type AuditLogDocument = HydratedDocument<AuditLog>;
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
 
+@Schema({ timestamps: true, collection: "notifications" })
+export class BusinessNotification {
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String, default: null, index: true })
+  audienceUserId?: string | null;
+
+  @Prop({ required: true })
+  title!: string;
+
+  @Prop({ required: true })
+  body!: string;
+
+  @Prop({ required: true })
+  category!: string;
+
+  @Prop({ required: true, enum: ["low", "normal", "high", "critical"], default: "normal" })
+  priority!: "low" | "normal" | "high" | "critical";
+
+  @Prop({ type: String, default: null })
+  routeName?: string | null;
+
+  @Prop({ type: Object, default: null })
+  routeParams?: Record<string, unknown> | null;
+
+  @Prop({ type: Object, default: null })
+  metadata?: Record<string, unknown> | null;
+
+  @Prop({ type: String, default: null, index: true })
+  dedupeKey?: string | null;
+
+  @Prop({ type: Date, default: null })
+  readAt?: Date | null;
+
+  @Prop({ required: true })
+  sentAt!: Date;
+}
+export type BusinessNotificationDocument = HydratedDocument<BusinessNotification>;
+export const BusinessNotificationSchema = SchemaFactory.createForClass(BusinessNotification);
+BusinessNotificationSchema.index({ businessId: 1, createdAt: -1 });
+BusinessNotificationSchema.index({ businessId: 1, dedupeKey: 1 }, { unique: true, sparse: true });
+
 export const businessSchemas = buildBusinessSchemas({
   Business: { name: Business.name, schema: BusinessSchema },
   Branch: { name: Branch.name, schema: BranchSchema },
@@ -1129,7 +1186,8 @@ export const subscriptionSchemas = buildSubscriptionSchemas({
 export const opsSchemas = buildOpsSchemas({
   WebhookLog: { name: WebhookLog.name, schema: WebhookLogSchema },
   PaymentReconciliationLog: { name: PaymentReconciliationLog.name, schema: PaymentReconciliationLogSchema },
-  AuditLog: { name: AuditLog.name, schema: AuditLogSchema }
+  AuditLog: { name: AuditLog.name, schema: AuditLogSchema },
+  BusinessNotification: { name: BusinessNotification.name, schema: BusinessNotificationSchema }
 });
 
 export const allSchemas = [...businessSchemas, ...catalogSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas] as const;

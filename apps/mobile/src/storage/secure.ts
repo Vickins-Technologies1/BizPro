@@ -5,6 +5,7 @@ const DEVICE_KEY = "vbo.device";
 const THEME_KEY = "vbo.themeMode";
 const OFFLINE_QUEUE_KEY = "vbo.offlineQueue";
 const POS_DRAFTS_KEY = "vbo.posDrafts";
+const NOTIFICATIONS_KEY = "vbo.notifications";
 
 export const secureStore = {
   getSession: async () => SecureStore.getItemAsync(SESSION_KEY),
@@ -19,5 +20,8 @@ export const secureStore = {
   clearOfflineQueue: async () => SecureStore.deleteItemAsync(OFFLINE_QUEUE_KEY),
   getPosDrafts: async () => SecureStore.getItemAsync(POS_DRAFTS_KEY),
   setPosDrafts: async (value: string) => SecureStore.setItemAsync(POS_DRAFTS_KEY, value),
-  clearPosDrafts: async () => SecureStore.deleteItemAsync(POS_DRAFTS_KEY)
+  clearPosDrafts: async () => SecureStore.deleteItemAsync(POS_DRAFTS_KEY),
+  getNotifications: async () => SecureStore.getItemAsync(NOTIFICATIONS_KEY),
+  setNotifications: async (value: string) => SecureStore.setItemAsync(NOTIFICATIONS_KEY, value),
+  clearNotifications: async () => SecureStore.deleteItemAsync(NOTIFICATIONS_KEY)
 };

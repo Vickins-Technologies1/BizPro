@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { AppScrollView, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge } from "@/components/Primitives";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatDate } from "@/utils/date";
@@ -54,6 +55,7 @@ export function ProductDetailScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [lookupCode, setLookupCode] = React.useState("");
+  const [scannerVisible, setScannerVisible] = React.useState(false);
   const canManageInventory = hasPermission(user, "manageInventory");
 
   React.useEffect(() => {
@@ -117,6 +119,16 @@ export function ProductDetailScreen() {
     }
   }
 
+  async function handleScannedBarcode(barcode: string) {
+    setLookupCode(barcode);
+    const match = findProductByCode(products, barcode);
+    if (!match) {
+      throw new Error("No product matches this barcode.");
+    }
+    navigation.push("ProductDetail", { productId: match.id });
+    setLookupCode("");
+  }
+
   if (!product) {
     return (
       <Screen>
@@ -167,6 +179,11 @@ export function ProductDetailScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="done"
+            rightAccessory={
+              <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner">
+                <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
+              </Pressable>
+            }
             onSubmitEditing={() => {
               if (!lookupMatch) {
                 Alert.alert("No match", "Try the full SKU or barcode.");
@@ -292,6 +309,19 @@ export function ProductDetailScreen() {
           )}
         </Card>
       </AppScrollView>
+
+      <BarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onBarcodeScanned={async (barcode) => {
+          try {
+            await handleScannedBarcode(barcode);
+          } catch (error) {
+            Alert.alert("Product not found", error instanceof Error ? error.message : "No product matches this barcode.");
+            throw error instanceof Error ? error : new Error("No product matches this barcode.");
+          }
+        }}
+      />
 
       <SimpleModal visible={restockVisible} title="Quick restock" onClose={() => setRestockVisible(false)}>
         <View style={{ gap: 12 }}>

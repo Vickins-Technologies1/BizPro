@@ -1,9 +1,10 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Badge, Card, GradientHeader, PrimaryButton, Screen, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { listQueuedActions, type OfflineQueueEntry } from "@/services/offlineQueue";
+import { loadNotificationInbox, markNotificationRead, type AppInboxNotification } from "@/services/notifications";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPermissionLabel, formatRoleLabel, getEffectivePermissions, hasPermission, resolveIndustryModule } from "@shared";
@@ -22,6 +23,8 @@ export function SettingsScreen() {
   const setSelectedBranchId = useAppStore((state) => state.setSelectedBranchId);
   const logout = useAppStore((state) => state.logout);
   const [queuedActions, setQueuedActions] = React.useState<OfflineQueueEntry[]>([]);
+  const [notifications, setNotifications] = React.useState<AppInboxNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [savingTheme, setSavingTheme] = React.useState<"light" | "dark" | null>(null);
@@ -47,6 +50,43 @@ export function SettingsScreen() {
       cancelled = true;
     };
   }, [business?.id, pendingSync]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadNotifications() {
+      if (!business?.id || !user?.id) {
+        setNotifications([]);
+        return;
+      }
+      setNotificationsLoading(true);
+      try {
+        const inbox = await loadNotificationInbox();
+        if (!cancelled) {
+          setNotifications(inbox);
+        }
+      } finally {
+        if (!cancelled) {
+          setNotificationsLoading(false);
+        }
+      }
+    }
+    loadNotifications().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [business?.id, user?.id, pendingSync]);
+
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt);
+
+  async function handleNotificationPress(notification: AppInboxNotification) {
+    await markNotificationRead(notification.id).catch(() => undefined);
+    setNotifications((current) =>
+      current.map((entry) => (entry.id === notification.id ? { ...entry, readAt: entry.readAt ?? new Date().toISOString() } : entry))
+    );
+    if (notification.routeName) {
+      navigation.navigate(notification.routeName as never, notification.routeParams as never);
+    }
+  }
 
   return (
     <Screen>
@@ -75,6 +115,64 @@ export function SettingsScreen() {
           <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
             Signed in as {user?.fullName ?? "Unknown"}. Use this page to check the device, change the theme, or open employee management.
           </Text>
+        </Card>
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Notifications</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+                View recent alerts, sync updates, and inventory warnings delivered to this device.
+              </Text>
+            </View>
+            <Badge label={`${unreadNotifications.length} unread`} tone={unreadNotifications.length ? "warning" : "success"} />
+          </View>
+          {notificationsLoading ? (
+            <View style={{ alignItems: "center", gap: 10, paddingVertical: 16 }}>
+              <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />
+              <Text style={{ color: tokens.colors.textSecondary }}>Loading notification inbox...</Text>
+            </View>
+          ) : notifications.length ? (
+            <View style={{ gap: 10 }}>
+              {notifications.slice(0, 5).map((notification) => {
+                const unread = !notification.readAt;
+                return (
+                  <Pressable key={notification.id} onPress={() => void handleNotificationPress(notification)}>
+                    <View
+                      style={{
+                        padding: 12,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: unread ? tokens.colors.primaryStrong : tokens.colors.border,
+                        backgroundColor: unread ? tokens.colors.surfaceAlt : tokens.colors.surface,
+                        gap: 8
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{notification.title}</Text>
+                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{notification.body}</Text>
+                        </View>
+                        <Badge label={notification.priority} tone={notification.priority === "critical" ? "danger" : unread ? "warning" : "primary"} />
+                      </View>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                        <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+                          {formatNotificationTime(notification.sentAt)}
+                        </Text>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {notification.routeName ? <Badge label="Open" tone="primary" /> : null}
+                          {unread ? <Badge label="Unread" tone="warning" /> : <Badge label="Read" tone="success" />}
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+              No notifications yet. Inventory alerts and sync updates will appear here.
+            </Text>
+          )}
         </Card>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Branch scope</Text>
@@ -331,4 +429,12 @@ function formatQueueBranch(action: OfflineQueueEntry, branches: Array<{ id: stri
     return "Business-wide";
   }
   return branches.find((branch) => branch.id === branchId)?.name ?? `Branch ${branchId}`;
+}
+
+function formatNotificationTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Just now";
+  }
+  return date.toLocaleString();
 }

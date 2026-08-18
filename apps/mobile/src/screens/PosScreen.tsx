@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppStore } from "@/store/useAppStore";
 import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { formatDate } from "@/utils/date";
@@ -56,6 +57,7 @@ export function PosScreen() {
   const [stkInitiating, setStkInitiating] = React.useState(false);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [receipt, setReceipt] = React.useState<ReceiptArtifacts | null>(null);
+  const [scannerVisible, setScannerVisible] = React.useState(false);
   const deferredSearch = React.useDeferredValue(search);
   const deferredProductSearch = React.useDeferredValue(productSearch);
 
@@ -220,6 +222,16 @@ export function PosScreen() {
       return;
     }
     addToCart(lookupMatch.id);
+    setLookupCode("");
+  }
+
+  async function handleScannedBarcode(barcode: string) {
+    setLookupCode(barcode);
+    const match = findProductByCode(products, barcode);
+    if (!match) {
+      throw new Error("No product matches this barcode.");
+    }
+    addToCart(match.id);
     setLookupCode("");
   }
 
@@ -885,6 +897,11 @@ export function PosScreen() {
                   autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleLookupSubmit}
+                  rightAccessory={
+                    <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner">
+                      <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
+                    </Pressable>
+                  }
                 />
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <View style={{ flex: 1 }}>
@@ -892,16 +909,25 @@ export function PosScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <PrimaryButton
-                      title="Preview receipt"
+                      title="Scan barcode"
                       variant="secondary"
-                      onPress={() => void openReceiptPreview()}
+                      onPress={() => setScannerVisible(true)}
                     />
                   </View>
                 </View>
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <View style={{ flex: 1 }}>
+                    <PrimaryButton
+                      title="Preview receipt"
+                      variant="secondary"
+                      onPress={() => void openReceiptPreview()}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
                     <PrimaryButton title="Hold sale" variant="secondary" onPress={() => void holdDraft()} />
                   </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <PrimaryButton
                       title="Clear lookup"
@@ -911,6 +937,7 @@ export function PosScreen() {
                       }}
                     />
                   </View>
+                  <View style={{ flex: 1 }} />
                 </View>
                 {lookupMatch ? (
                   <Card style={{ gap: 4, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
@@ -938,6 +965,19 @@ export function PosScreen() {
           </View>
         </AppScrollView>
       </SimpleModal>
+
+      <BarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onBarcodeScanned={async (barcode) => {
+          try {
+            await handleScannedBarcode(barcode);
+          } catch (error) {
+            Alert.alert("Product not found", error instanceof Error ? error.message : "No product matches this barcode.");
+            throw error instanceof Error ? error : new Error("No product matches this barcode.");
+          }
+        }}
+      />
 
       <SimpleModal visible={previewVisible} title="Receipt preview" onClose={() => setPreviewVisible(false)}>
         <View style={{ gap: 12 }}>

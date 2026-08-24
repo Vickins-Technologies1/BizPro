@@ -12,7 +12,7 @@ class CreateBusinessDto {
   industryKey?: IndustryKey;
   @IsIn(BUSINESS_TYPES) businessType!: BusinessType;
   @IsString() @IsOptional() currency?: string;
-  @IsIn(["lite", "standard", "pro"]) planTier!: any;
+  @IsIn(["command", "pro", "elite", "enterprise"]) planTier!: any;
 }
 
 @Controller("businesses")

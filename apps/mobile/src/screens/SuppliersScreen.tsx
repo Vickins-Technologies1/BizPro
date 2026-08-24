@@ -637,8 +637,8 @@ export function SuppliersScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Selected supplier</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>{selectedSupplier.name}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{selectedSupplier.contactName ?? "No primary contact"}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>{selectedSupplier.name}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{selectedSupplier.contactName ?? "No primary contact"}</Text>
                 </View>
                 <Badge label={selectedCategoryLabel} tone="success" />
               </View>

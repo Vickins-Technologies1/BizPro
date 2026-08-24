@@ -35,7 +35,7 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>("MONGODB_URI") ?? "mongodb://127.0.0.1:27017/vickins_business_os",
+        uri: config.getOrThrow<string>("MONGODB_URI"),
         dbName: config.get<string>("MONGODB_DB_NAME") ?? "vickins_business_os"
       })
     }),

@@ -1,22 +1,29 @@
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
-import { PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveIndustryModule } from "@shared";
+import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveIndustryModule } from "@shared";
 import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
+import { getCountries, getCountryCallingCode, isValidPhoneNumber, parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 
 type FormValues = z.infer<typeof businessSetupSchema>;
 type SetupStepKey = "business" | "industry" | "type" | "plan" | "security" | "finish";
+type CountryOption = { code: CountryCode; name: string; callingCode: string; flag: string };
 
 const industryModules = listIndustryModules();
 const defaultIndustry = industryModules[0]!;
 const defaultIndustryKey = defaultIndustry?.key ?? "retail";
 const defaultBusinessType = defaultIndustry?.businessTypes[0]?.value ?? "retail_shop";
 const planOptions = PLAN_TIERS;
+const countryNames = typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(["en"], { type: "region" }) : null;
+const countryOptions: CountryOption[] = getCountries()
+  .map((code) => ({ code, name: countryNames?.of(code) ?? code, callingCode: `+${getCountryCallingCode(code)}`, flag: countryFlag(code) }))
+  .sort((left, right) => left.name.localeCompare(right.name));
+const defaultCountry = countryOptions.find((country) => country.code === "KE") ?? countryOptions[0]!;
 
 const steps: Array<{ key: SetupStepKey; title: string; subtitle: string }> = [
   { key: "business", title: "Business Information", subtitle: "Owner details and the core business profile." },
@@ -42,6 +49,9 @@ export function OnboardingScreen() {
   const completeOnboarding = useAppStore((state) => state.completeOnboarding);
   const [submitting, setSubmitting] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
+  const [countryPickerVisible, setCountryPickerVisible] = React.useState(false);
+  const [countrySearch, setCountrySearch] = React.useState("");
+  const [country, setCountry] = React.useState<CountryOption>(defaultCountry);
   const {
     control,
     handleSubmit,
@@ -59,7 +69,7 @@ export function OnboardingScreen() {
       businessName: "",
       industryKey: defaultIndustryKey,
       businessType: defaultBusinessType,
-      planTier: "lite",
+      planTier: "command",
       currency: "KES",
       branchName: "Main Shop",
       cashierPin: "",
@@ -92,9 +102,15 @@ export function OnboardingScreen() {
   }
 
   async function submit(values: FormValues) {
+    const parsedPhone = parsePhoneNumberFromString(values.phone, country.code);
+    if (!parsedPhone || !isValidPhoneNumber(values.phone, country.code)) {
+      Alert.alert("Check your phone number", "Enter a valid phone number for the selected country.");
+      setStepIndex(0);
+      return;
+    }
     setSubmitting(true);
     try {
-      const result = await completeOnboarding(values);
+      const result = await completeOnboarding({ ...values, phone: parsedPhone.number });
       Alert.alert("Setup complete", "Your owner account and business were saved successfully. Tap Continue to open the app.", [
         {
           text: "Continue",
@@ -126,12 +142,12 @@ export function OnboardingScreen() {
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{activeStep.title}</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{activeStep.subtitle}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{activeStep.title}</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{activeStep.subtitle}</Text>
             </View>
             <Badge label={`Step ${stepIndex + 1} of ${steps.length}`} tone="primary" />
           </View>
-          <View style={{ height: 8, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
+          <View style={{ height: 6, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
             <View style={{ width: `${progress}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.success }} />
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -174,15 +190,25 @@ export function OnboardingScreen() {
               control={control}
               name="phone"
               render={({ field: { value, onChange } }) => (
-                <InputField
-                  label="Phone"
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="07..."
-                  keyboardType="phone-pad"
-                  error={errors.phone?.message}
-                  helperText="Use the owner phone number."
-                />
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "800", letterSpacing: 0.55, textTransform: "uppercase" }}>Phone number</Text>
+                  <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                    <Pressable onPress={() => setCountryPickerVisible(true)} style={{ minHeight: 50, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, justifyContent: "center" }}>
+                      <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{country.flag} {country.callingCode}</Text>
+                    </Pressable>
+                    <View style={{ flex: 1 }}>
+                      <InputField
+                        label=""
+                        value={value}
+                        onChangeText={(next) => onChange(next.replace(/[^\d\s()-]/g, ""))}
+                        placeholder="712 345 678"
+                        keyboardType="phone-pad"
+                        error={errors.phone?.message}
+                        helperText="Used for account security and important business updates."
+                      />
+                    </View>
+                  </View>
+                </View>
               )}
             />
             <Controller
@@ -253,7 +279,7 @@ export function OnboardingScreen() {
                         gap: 10,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.success : tokens.colors.border,
-                        backgroundColor: selected ? "rgba(34, 197, 94, 0.10)" : tokens.colors.surfaceAlt,
+                        backgroundColor: selected ? `${tokens.colors.success}18` : tokens.colors.surfaceAlt,
                       }}
                     >
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
@@ -301,7 +327,7 @@ export function OnboardingScreen() {
                         gap: 8,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.primaryStrong : tokens.colors.border,
-                        backgroundColor: selected ? "rgba(37, 99, 235, 0.12)" : tokens.colors.surfaceAlt,
+                        backgroundColor: selected ? `${tokens.colors.primary}18` : tokens.colors.surfaceAlt,
                       }}
                     >
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
@@ -322,9 +348,10 @@ export function OnboardingScreen() {
         {stepIndex === 3 ? (
           <Card style={{ gap: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Subscription plan</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              Start small, then upgrade when the business needs more capacity.
-            </Text>
+            <View style={{ padding: 12, borderRadius: 16, backgroundColor: `${tokens.colors.success}18`, borderWidth: 1, borderColor: tokens.colors.success, gap: 4 }}>
+              <Text style={{ color: tokens.colors.success, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>30 DAYS FREE - NO CARD REQUIRED</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Use BizPro normally during your trial. Your selected plan only starts billing after the trial ends.</Text>
+            </View>
             <View style={{ gap: 10 }}>
               {planOptions.map((plan) => {
                 const selected = selectedPlan === plan;
@@ -339,13 +366,14 @@ export function OnboardingScreen() {
                         gap: 8,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.success : tokens.colors.border,
-                        backgroundColor: selected ? "rgba(34, 197, 94, 0.10)" : tokens.colors.surfaceAlt,
+                        backgroundColor: selected ? `${tokens.colors.success}18` : tokens.colors.surfaceAlt,
                       }}
                     >
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                         <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{formatPlanLabel(plan)}</Text>
-                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{planDescription(plan)}</Text>
+                          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{PLAN_NAMES[plan]}</Text>
+                          <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>KSh {PLAN_PRICING[plan].toLocaleString()}/month</Text>
+                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{plan === "enterprise" ? "10+ employees" : `Up to ${PLAN_EMPLOYEE_LIMITS[plan]} employees`}</Text>
                         </View>
                         <Badge label={selected ? "Selected" : "Choose"} tone={selected ? "success" : "primary"} />
                       </View>
@@ -447,8 +475,34 @@ export function OnboardingScreen() {
           <PrimaryButton title="I already have an account" variant="secondary" onPress={() => navigation.navigate("Login")} />
         </Card>
       </AppScrollView>
+      <Modal visible={countryPickerVisible} transparent animationType="slide" onRequestClose={() => setCountryPickerVisible(false)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: tokens.colors.overlay }}>
+          <View style={{ maxHeight: "82%", backgroundColor: tokens.colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 18, gap: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 19, fontWeight: "900" }}>Choose your country</Text>
+              <Pressable onPress={() => setCountryPickerVisible(false)}><Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>Close</Text></Pressable>
+            </View>
+            <InputField label="Search countries" value={countrySearch} onChangeText={setCountrySearch} placeholder="Kenya, United States..." />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
+              {countryOptions
+                .filter((option) => `${option.name} ${option.callingCode}`.toLowerCase().includes(countrySearch.toLowerCase()))
+                .map((option) => (
+                  <Pressable key={option.code} onPress={() => { setCountry(option); setCountryPickerVisible(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 13, borderRadius: 16, borderWidth: 1, borderColor: option.code === country.code ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: option.code === country.code ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
+                    <Text style={{ fontSize: 19 }}>{option.flag}</Text>
+                    <Text style={{ flex: 1, color: tokens.colors.text, fontWeight: "800" }}>{option.name}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary }}>{option.callingCode}</Text>
+                  </Pressable>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
+}
+
+function countryFlag(code: string) {
+  return code.toUpperCase().replace(/[A-Z]/g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
 }
 
 function SummaryBlock({ label, value, helper }: { label: string; value: string; helper: string }) {
@@ -466,8 +520,9 @@ function formatPlanLabel(value: string) {
 }
 
 function planDescription(plan: string) {
-  if (plan === "lite") return "A simple starting point for small teams.";
-  if (plan === "standard") return "Balanced features for growing businesses.";
-  if (plan === "pro") return "Best for businesses that want the full toolkit.";
+  if (plan === "command") return "A focused starting point for small teams.";
+  if (plan === "pro") return "Balanced capacity for growing businesses.";
+  if (plan === "elite") return "More room for established teams.";
+  if (plan === "enterprise") return "Built for larger operations.";
   return "Choose the plan that fits your current needs.";
 }

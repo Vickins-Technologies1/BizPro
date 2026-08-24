@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 
-const UPSTREAM_API_BASE = "https://bizpro-k625.onrender.com/api";
+const UPSTREAM_API_BASE = "https://bizpro-server-u6vceulhlq-ww.a.run.app/api";
 
 export function buildUpstreamUrl(pathParts: string[], requestUrl: string) {
   const path = pathParts.length ? pathParts.join("/") : "";
@@ -28,7 +28,7 @@ export function buildProxyHeaders(request: NextRequest) {
   return headers;
 }
 
-export async function proxyToRender(request: NextRequest, pathParts: string[]) {
+export async function proxyToCloudRun(request: NextRequest, pathParts: string[]) {
   const upstreamUrl = buildUpstreamUrl(pathParts, request.url);
   const method = request.method.toUpperCase();
   const init: RequestInit = {

@@ -16,26 +16,26 @@ export declare const theme: {
         readonly overlay: "rgba(3, 7, 18, 0.72)";
     };
     readonly radii: {
-        readonly xs: 8;
-        readonly sm: 12;
-        readonly md: 16;
-        readonly lg: 20;
-        readonly xl: 28;
+        readonly xs: 6;
+        readonly sm: 8;
+        readonly md: 12;
+        readonly lg: 14;
+        readonly xl: 18;
     };
     readonly spacing: {
         readonly xxs: 4;
-        readonly xs: 8;
-        readonly sm: 12;
-        readonly md: 16;
-        readonly lg: 20;
-        readonly xl: 24;
-        readonly xxl: 32;
+        readonly xs: 6;
+        readonly sm: 10;
+        readonly md: 12;
+        readonly lg: 16;
+        readonly xl: 20;
+        readonly xxl: 24;
     };
     readonly typography: {
-        readonly title: 28;
-        readonly subtitle: 20;
-        readonly body: 16;
-        readonly small: 14;
-        readonly micro: 12;
+        readonly title: 22;
+        readonly subtitle: 16;
+        readonly body: 14;
+        readonly small: 12;
+        readonly micro: 11;
     };
 };

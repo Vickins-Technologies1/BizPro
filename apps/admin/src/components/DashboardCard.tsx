@@ -17,13 +17,13 @@ export function DashboardCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: "linear-gradient(180deg, rgba(17,24,39,0.96), rgba(15,23,42,0.94))",
+        background: "linear-gradient(180deg, rgba(17,24,39,0.94), rgba(15,23,42,0.92))",
         border: "1px solid var(--border)",
-        borderRadius: "24px",
-        boxShadow: hovered ? "0 24px 60px rgba(0,0,0,0.42)" : "var(--shadow)",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        borderRadius: "20px",
+        boxShadow: hovered ? "0 18px 44px rgba(0,0,0,0.34)" : "var(--shadow)",
+        transform: hovered ? "translateY(-1px)" : "translateY(0)",
         transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
-        padding: 22,
+        padding: 18,
         position: "relative",
         overflow: "hidden"
       }}
@@ -43,7 +43,7 @@ export function DashboardCard({
           }}
         />
       ) : null}
-      <h3 style={{ margin: 0, fontSize: 18, marginBottom: 14, fontFamily: "var(--font-grotesk)", letterSpacing: -0.2 }}>{title}</h3>
+      <h3 style={{ margin: 0, fontSize: 16, marginBottom: 12, fontFamily: "var(--font-grotesk)", letterSpacing: -0.2 }}>{title}</h3>
       {children}
     </section>
   );

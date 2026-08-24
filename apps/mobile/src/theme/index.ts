@@ -1,6 +1,6 @@
 import React from "react";
 import { useAppStore } from "@/store/useAppStore";
-import { setThemeTokens, tokens, type ThemeMode } from "./tokens";
+import { getThemeTokens, tokens, type ThemeMode } from "./tokens";
 
 export const appTheme = {
   get tokens() {
@@ -32,10 +32,7 @@ export function useThemeMode() {
 
 export function useThemeTokens() {
   const themeMode = useThemeMode();
-  React.useEffect(() => {
-    setThemeTokens(themeMode);
-  }, [themeMode]);
-  return tokens;
+  return React.useMemo(() => getThemeTokens(themeMode), [themeMode]);
 }
 
 export type { ThemeMode };

@@ -3,7 +3,7 @@ import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { ClientSession, Connection, Model } from "mongoose";
 import bcrypt from "bcryptjs";
-import { ROLE_ACCESS, getEffectivePermissions, resolveIndustryKey, type AccessPermission } from "@vbo/shared";
+import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, ROLE_ACCESS, TRIAL_DAYS, getEffectivePermissions, resolveIndustryKey, type AccessPermission, type PlanTier } from "@vbo/shared";
 import { AuditLog, AuditLogDocument, Business, BusinessDocument, Branch, BranchDocument, Device, DeviceDocument, Subscription, SubscriptionDocument, SubscriptionPlan, SubscriptionPlanDocument, User, UserDocument } from "../schemas";
 import { RegisterDto, LoginDto } from "./dto";
 import { runInTransaction } from "../../common/mongo-transaction";
@@ -155,15 +155,23 @@ export class AuthService {
           ],
           { session }
         ))[0]!;
-        await this.ensureSubscriptionPlan(dto.planTier, session);
+        await this.ensureSubscriptionPlans(session);
         const createdSubscription = (await this.subscriptionModel.create(
           [
             {
               businessId: effectiveBusinessId,
               planCode: dto.planTier,
-              status: "trial",
-              trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+              status: "TRIAL",
+              planName: PLAN_NAMES[dto.planTier],
+              monthlyPrice: PLAN_PRICING[dto.planTier],
+              employeeLimit: PLAN_EMPLOYEE_LIMITS[dto.planTier],
+              trialStartedAt: new Date(),
+              trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
               expiresAt: null,
+              startedAt: null,
+              paymentStatus: "unpaid",
+              paymentProvider: null,
+              paymentReference: null,
               graceEndsAt: null
             }
           ],
@@ -364,7 +372,13 @@ export class AuthService {
     return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   }
 
-  private async ensureSubscriptionPlan(planCode: string, session?: ClientSession | null) {
+  private async ensureSubscriptionPlans(session?: ClientSession | null) {
+    for (const planCode of ["command", "pro", "elite", "enterprise"] as PlanTier[]) {
+      await this.ensureSubscriptionPlan(planCode, session);
+    }
+  }
+
+  private async ensureSubscriptionPlan(planCode: PlanTier, session?: ClientSession | null) {
     const planQuery = this.planModel.findOne({ code: planCode });
     if (session) {
       planQuery.session(session);
@@ -375,8 +389,9 @@ export class AuthService {
       [
         {
           code: planCode,
-          name: planCode.toUpperCase(),
-          monthlyPrice: planCode === "lite" ? 300 : planCode === "standard" ? 600 : 1000,
+          name: PLAN_NAMES[planCode],
+          monthlyPrice: PLAN_PRICING[planCode],
+          employeeLimit: PLAN_EMPLOYEE_LIMITS[planCode],
           active: true
         }
       ],

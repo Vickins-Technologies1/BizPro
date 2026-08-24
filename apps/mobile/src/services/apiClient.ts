@@ -74,6 +74,15 @@ export type NotificationRecord = {
   updatedAt: string;
 };
 
+export type NotificationPage = {
+  items: NotificationRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  unreadCount: number;
+};
+
 type AuthResponse = {
   accessToken: string;
   user: ApiSession["user"];
@@ -170,8 +179,13 @@ function withSaleItems<T extends RawEntity>(sale: T): T & { id: string } {
   const normalized = withId(sale);
   const items = Array.isArray(normalized.items)
     ? normalized.items.map((item: RawEntity) => withId({ ...item, saleId: item.saleId ?? normalized.id }))
-    : normalized.items;
-  return { ...normalized, items } as T & { id: string };
+    : [];
+  return {
+    ...normalized,
+    createdAt: normalizeIsoDate(normalized.createdAt),
+    updatedAt: normalizeIsoDate(normalized.updatedAt),
+    items
+  } as T & { id: string };
 }
 
 function normalizeCustomer(customer: RawEntity): Customer {
@@ -343,6 +357,33 @@ export async function archiveBrand(id: string) {
 export async function listProducts(branchId?: string | null) {
   const products = await apiRequest<RawEntity[]>(withBranchQuery("/products", branchId));
   return products.map((product) => normalizeProduct(product));
+}
+
+export type ProductPage = {
+  items: Product[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export async function listProductsPage(input: {
+  branchId?: string | null;
+  page: number;
+  pageSize?: number;
+  search?: string;
+  categoryId?: string | null;
+  brandId?: string | null;
+  supplierId?: string | null;
+}) {
+  const query = new URLSearchParams({ page: String(input.page), pageSize: String(input.pageSize ?? 6) });
+  if (input.branchId) query.set("branchId", input.branchId);
+  if (input.search?.trim()) query.set("search", input.search.trim());
+  if (input.categoryId) query.set("categoryId", input.categoryId);
+  if (input.brandId) query.set("brandId", input.brandId);
+  if (input.supplierId) query.set("supplierId", input.supplierId);
+  const response = await apiRequest<{ items: RawEntity[]; page: number; pageSize: number; total: number; totalPages: number }>(`/products/page?${query.toString()}`);
+  return { ...response, items: response.items.map((product) => normalizeProduct(product)) } satisfies ProductPage;
 }
 
 export async function createProduct(input: {
@@ -962,6 +1003,20 @@ export async function registerDevicePushToken(input: {
 export async function listNotifications() {
   const notifications = await apiRequest<RawEntity[]>("/notifications");
   return notifications.map((notification) => withId(notification)) as NotificationRecord[];
+}
+
+export async function listNotificationsPage(input: { page: number; pageSize?: number; search?: string }) {
+  const query = new URLSearchParams({ page: String(input.page), pageSize: String(input.pageSize ?? 20) });
+  if (input.search?.trim()) query.set("search", input.search.trim());
+  const response = await apiRequest<{ items: RawEntity[]; page: number; pageSize: number; total: number; totalPages: number; unreadCount: number }>(`/notifications/page?${query.toString()}`);
+  return {
+    ...response,
+    items: response.items.map((notification) => withId(notification)) as NotificationRecord[]
+  } satisfies NotificationPage;
+}
+
+export async function markAllNotificationsRead() {
+  return apiRequest<{ updatedCount: number }>("/notifications/read-all", { method: "PATCH" });
 }
 
 export async function markNotificationRead(id: string) {

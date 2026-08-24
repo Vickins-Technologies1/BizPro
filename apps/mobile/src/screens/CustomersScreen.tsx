@@ -411,30 +411,30 @@ export function CustomersScreen() {
           <View style={{ gap: 16 }}>
             <Card style={{ gap: 12 }}>
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Customer analytics</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Track value, not just debt</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Track value, not just debt</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
                 Search by name, phone, email, notes, or group. Customer groups and loyalty data stay optional so existing customers remain unaffected.
               </Text>
               {analyticsLoading ? <Loader label="Refreshing analytics..." /> : null}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                 <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Customers</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "800" }}>{activeAnalytics.totalCustomers}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{activeAnalytics.totalCustomers}</Text>
                   <Text style={{ color: tokens.colors.textSecondary }}>Total customer records</Text>
                 </Card>
                 <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Outstanding</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")}</Text>
                   <Text style={{ color: tokens.colors.textSecondary }}>{activeAnalytics.owingCustomers} customers owe money</Text>
                 </Card>
                 <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Credit limit</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")}</Text>
                   <Text style={{ color: tokens.colors.textSecondary }}>Assigned across customers</Text>
                 </Card>
                 <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Loyalty</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "800" }}>{activeAnalytics.totalLoyaltyPoints}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{activeAnalytics.totalLoyaltyPoints}</Text>
                   <Text style={{ color: tokens.colors.textSecondary }}>Total reward points</Text>
                 </Card>
               </View>

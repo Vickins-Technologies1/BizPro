@@ -26,11 +26,16 @@ RUN pnpm --filter @vbo/shared build && pnpm --filter @vbo/api build
 FROM base AS runtime
 
 ENV NODE_ENV=production
+ENV PORT=8080
 
 WORKDIR /app
 
-COPY --from=build /app /app
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 
-EXPOSE 3000
+COPY --from=build --chown=nodejs:nodejs /app /app
 
-CMD ["pnpm", "--filter", "@vbo/api", "start:prod"]
+USER nodejs
+
+EXPOSE 8080
+
+CMD ["node", "tools/start-api-prod.cjs"]

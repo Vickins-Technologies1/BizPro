@@ -8,7 +8,7 @@ export class SupportKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const provided = String(request.headers["x-support-key"] ?? "");
-    const expected = this.config.get<string>("SUPPORT_API_KEY") ?? "";
+    const expected = this.config.getOrThrow<string>("SUPPORT_API_KEY");
     if (!expected || provided !== expected) {
       throw new UnauthorizedException("Invalid support key");
     }

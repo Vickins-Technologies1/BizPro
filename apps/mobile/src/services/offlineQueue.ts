@@ -568,6 +568,7 @@ export function createQueuedSaleDraft(input: {
   balanceDue: number;
   items: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; costPrice: number; lineDiscount: number; lineTotal: number }>;
 }): Sale {
+  const now = new Date().toISOString();
   return {
     id: input.externalId,
     externalId: input.externalId,
@@ -586,6 +587,8 @@ export function createQueuedSaleDraft(input: {
     paymentMethod: input.paymentMethod,
     notes: input.notes ?? null,
     items: input.items,
+    createdAt: now,
+    updatedAt: now,
     deletedAt: null
   } as unknown as Sale;
 }

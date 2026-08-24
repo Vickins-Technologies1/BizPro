@@ -9,6 +9,18 @@ const PACKAGE_BUILD_GRADLE = path.join(
   "android",
   "build.gradle",
 );
+const REACT_NATIVE_SCREENS_STACK = path.join(
+  "node_modules",
+  "react-native-screens",
+  "android",
+  "src",
+  "main",
+  "java",
+  "com",
+  "swmansion",
+  "rnscreens",
+  "ScreenStack.kt",
+);
 
 function patchBluetoothEscposGradle(contents) {
   return contents
@@ -34,6 +46,13 @@ function patchExpoModulesCorePermissionsService(contents) {
   );
 }
 
+function patchReactNativeScreens(contents) {
+  return contents.replace(
+    /drawingOpPool\.removeLast\(\)/g,
+    "drawingOpPool.removeAt(drawingOpPool.lastIndex)"
+  );
+}
+
 module.exports = function withPatchedBluetoothEscpos(config) {
   return withDangerousMod(config, [
     "android",
@@ -49,6 +68,16 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
       if (patched !== current) {
         fs.writeFileSync(buildGradlePath, patched);
+      }
+
+      const screensPath = path.join(config.modRequest.projectRoot, REACT_NATIVE_SCREENS_STACK);
+      if (fs.existsSync(screensPath)) {
+        const screensCurrent = fs.readFileSync(screensPath, "utf8");
+        const screensPatched = patchReactNativeScreens(screensCurrent);
+
+        if (screensPatched !== screensCurrent) {
+          fs.writeFileSync(screensPath, screensPatched);
+        }
       }
 
       const expoModulesCorePackageJson = require.resolve("expo-modules-core/package.json", {

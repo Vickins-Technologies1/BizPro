@@ -1,0 +1,17 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - apps/api/Dockerfile
+      - --tag
+      - $_IMAGE_URI
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - $_IMAGE_URI
+
+images:
+  - $_IMAGE_URI

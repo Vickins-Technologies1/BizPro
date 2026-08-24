@@ -37,6 +37,30 @@ export class NotificationsService {
       .lean();
   }
 
+  async listInboxPage(businessId: string, userId: string, input: { page: number; pageSize: number; search?: string }) {
+    const searchPattern = input.search ? escapeRegex(input.search) : null;
+    const filter = {
+      businessId,
+      $or: [{ audienceUserId: null }, { audienceUserId: userId }],
+      ...(searchPattern
+        ? { $and: [{ $or: [{ title: { $regex: searchPattern, $options: "i" } }, { body: { $regex: searchPattern, $options: "i" } }, { category: { $regex: searchPattern, $options: "i" } }] }] }
+        : {})
+    };
+    const [items, total, unreadCount] = await Promise.all([
+      this.notificationModel.find(filter).sort({ createdAt: -1 }).skip((input.page - 1) * input.pageSize).limit(input.pageSize).lean(),
+      this.notificationModel.countDocuments(filter),
+      this.notificationModel.countDocuments({ ...filter, readAt: null })
+    ]);
+    return {
+      items,
+      page: input.page,
+      pageSize: input.pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / input.pageSize)),
+      unreadCount
+    };
+  }
+
   async registerDevice(input: { businessId: string; deviceKey: string; deviceName: string; platform: "android" | "ios" | "web"; pushToken: string; userId: string }) {
     const now = new Date();
     return this.deviceModel
@@ -67,6 +91,14 @@ export class NotificationsService {
         { new: true }
       )
       .lean();
+  }
+
+  async markAllRead(businessId: string, userId: string) {
+    const result = await this.notificationModel.updateMany(
+      { businessId, readAt: null, $or: [{ audienceUserId: null }, { audienceUserId: userId }] },
+      { readAt: new Date() }
+    );
+    return { updatedCount: result.modifiedCount };
   }
 
   async createNotification(input: CreateNotificationInput) {
@@ -192,4 +224,8 @@ export class NotificationsService {
       throw new Error(message || `Expo push request failed with status ${response.status}`);
     }
   }
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

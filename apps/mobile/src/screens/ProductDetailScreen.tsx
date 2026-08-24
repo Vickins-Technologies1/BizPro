@@ -126,6 +126,7 @@ export function ProductDetailScreen() {
       throw new Error("No product matches this barcode.");
     }
     navigation.push("ProductDetail", { productId: match.id });
+    setScannerVisible(false);
     setLookupCode("");
   }
 

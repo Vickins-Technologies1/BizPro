@@ -75,6 +75,9 @@ importers:
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
+      date-fns:
+        specifier: ^3.6.0
+        version: 3.6.0
       mongoose:
         specifier: ^8.5.4
         version: 8.24.1
@@ -202,6 +205,9 @@ importers:
       expo-system-ui:
         specifier: ~3.0.7
         version: 3.0.7(expo@51.0.39(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0))
+      libphonenumber-js:
+        specifier: 1.13.7
+        version: 1.13.7
       nanoid:
         specifier: ^5.0.7
         version: 5.1.15

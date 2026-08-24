@@ -29,7 +29,7 @@ export const BUSINESS_TYPES = [
   "accounting_firm",
 ] as const;
 
-export const PLAN_TIERS = ["lite", "standard", "pro"] as const;
+export const PLAN_TIERS = ["command", "pro", "elite", "enterprise"] as const;
 
 export const USER_ROLES = [
   "owner",
@@ -76,9 +76,26 @@ export const INVENTORY_UNITS = [
 
 export const CURRENCY_DEFAULT = "KES";
 export const PLAN_PRICING = {
-  lite: 300,
-  standard: 600,
-  pro: 1000,
+  command: 700,
+  pro: 1200,
+  elite: 1800,
+  enterprise: 2500,
 } as const;
+
+export const PLAN_EMPLOYEE_LIMITS = {
+  command: 2,
+  pro: 5,
+  elite: 8,
+  enterprise: 10,
+} as const;
+
+export const PLAN_NAMES = {
+  command: "Command",
+  pro: "Pro",
+  elite: "Elite",
+  enterprise: "Enterprise",
+} as const;
+
+export const TRIAL_DAYS = 30;
 
 export const LOCAL_DATE_FORMAT = "yyyy-MM-dd";

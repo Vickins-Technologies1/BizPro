@@ -34,7 +34,9 @@ function main() {
   }
 
   buildSharedIfNeeded();
-  syncSharedRuntime();
+  if (process.env.SYNC_SHARED_RUNTIME === "true") {
+    syncSharedRuntime();
+  }
 
   const result = spawnSync(process.execPath, ["dist/main.js"], {
     cwd: apiRoot,

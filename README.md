@@ -157,7 +157,7 @@ http://192.168.1.20:3000/api
 Recommended hosting split:
 
 - `apps/admin` on Vercel
-- `apps/api` on Render, Fly.io, Railway, or another Docker-capable host
+- `apps/api` on Google Cloud Run or another Docker-capable host
 - MongoDB on Atlas
 - `apps/mobile` through Expo EAS Build
 

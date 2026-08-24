@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
+import { useThemeTokens } from "@/theme";
 import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isSameDay, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import type { FlatListProps, ImageSourcePropType, StyleProp, TextStyle, ViewStyle } from "react-native";
 
@@ -210,7 +211,7 @@ export function GradientHeader({ title, subtitle, right }: { title: string; subt
   return (
     <LinearGradient colors={tokens.gradients.surface} style={styles.header}>
       <View style={styles.headerPill}>
-        <Ionicons name="sparkles-outline" size={12} color={tokens.colors.primaryStrong} />
+        <Ionicons name="sparkles-outline" size={11} color={tokens.colors.primaryStrong} />
         <Text style={styles.headerPillText}>Biz Pro</Text>
       </View>
       <View style={{ flex: 1, gap: 4 }}>
@@ -257,7 +258,7 @@ export function DateRangePickerModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalCard, { padding: 16 }]}>
+      <View style={[styles.modalCard, { padding: 16, backgroundColor: tokens.colors.surfaceElevated }]}>
           <View style={styles.modalHeader}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={styles.modalTitle}>{title}</Text>
@@ -398,15 +399,25 @@ export function PrimaryButton({
   onPress,
   loading,
   variant = "primary",
-  disabled = false
+  disabled = false,
+  iconLeft,
+  iconRight,
+  fullWidth = false,
+  style,
+  textStyle
 }: {
   title: string;
   onPress?: () => void;
   loading?: boolean;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
+  iconLeft?: keyof typeof Ionicons.glyphMap;
+  iconRight?: keyof typeof Ionicons.glyphMap;
+  fullWidth?: boolean;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }) {
-  return <Button title={title} onPress={onPress} loading={loading} variant={variant} disabled={disabled} />;
+  return <Button title={title} onPress={onPress} loading={loading} variant={variant} disabled={disabled} iconLeft={iconLeft} iconRight={iconRight} fullWidth={fullWidth} style={style} textStyle={textStyle} />;
 }
 
 export function InputField({
@@ -426,7 +437,8 @@ export function InputField({
   autoCorrect = false,
   onSubmitEditing,
   returnKeyType,
-  autoFocus = false
+  autoFocus = false,
+  disabled = false
 }: {
   label: string;
   value: string;
@@ -445,6 +457,7 @@ export function InputField({
   onSubmitEditing?: React.ComponentProps<typeof TextInput>["onSubmitEditing"];
   returnKeyType?: React.ComponentProps<typeof TextInput>["returnKeyType"];
   autoFocus?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Input
@@ -465,6 +478,7 @@ export function InputField({
       onSubmitEditing={onSubmitEditing}
       returnKeyType={returnKeyType}
       autoFocus={autoFocus}
+      disabled={disabled}
     />
   );
 }
@@ -474,6 +488,96 @@ export function Badge({ label, tone = "primary" }: { label: string; tone?: "prim
   return (
     <View style={[styles.badge, { backgroundColor: toneColor(tone, 0.16) }]}>
       <Text style={[styles.badgeText, { color: toneColor(tone, 1) }]}>{label}</Text>
+    </View>
+  );
+}
+
+export function InfoIcon({
+  message,
+  label = "More information",
+  size = 16
+}: {
+  message: string;
+  label?: string;
+  size?: number;
+}) {
+  const styles = usePrimitiveStyles();
+  const [visible, setVisible] = React.useState(false);
+  return (
+    <View style={styles.infoIconAnchor}>
+      <Pressable
+        onPress={() => setVisible((current) => !current)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ expanded: visible }}
+        hitSlop={8}
+      >
+        <Ionicons name="information-circle-outline" size={size} color={tokens.colors.textMuted} />
+      </Pressable>
+      {visible ? (
+        <View style={styles.infoTooltip} accessibilityRole="text">
+          <Text style={styles.infoTooltipText}>{message}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  loading = false,
+  compact = false
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  loading?: boolean;
+  compact?: boolean;
+}) {
+  const styles = usePrimitiveStyles();
+  const pages = paginationPages(currentPage, totalPages);
+  if (totalPages <= 1) return null;
+  return (
+    <View style={[styles.paginationContainer, compact && styles.paginationCompact]} accessibilityRole="adjustable" accessibilityLabel={`Page ${currentPage} of ${totalPages}`}>
+      <Pressable
+        onPress={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={loading || currentPage <= 1}
+        accessibilityRole="button"
+        accessibilityLabel="Previous page"
+        style={({ pressed }) => [styles.paginationControl, (loading || currentPage <= 1) && styles.paginationDisabled, pressed && styles.paginationPressed]}
+      >
+        <Ionicons name="chevron-back" size={16} color={currentPage <= 1 ? tokens.colors.disabled : tokens.colors.textSecondary} />
+      </Pressable>
+      {compact ? (
+        <Text style={styles.paginationEllipsis}>{currentPage} / {totalPages}</Text>
+      ) : null}
+      {!compact ? pages.map((page, index) =>
+        page === "ellipsis" ? (
+          <Text key={`ellipsis-${index}`} style={styles.paginationEllipsis}>...</Text>
+        ) : (
+          <Pressable
+            key={page}
+            onPress={() => onPageChange(page)}
+            disabled={loading || page === currentPage}
+            accessibilityRole="button"
+            accessibilityState={{ selected: page === currentPage, disabled: loading || page === currentPage }}
+            style={({ pressed }) => [styles.paginationPage, page === currentPage && styles.paginationPageActive, pressed && styles.paginationPressed]}
+          >
+            <Text style={[styles.paginationPageText, page === currentPage && styles.paginationPageTextActive]}>{page}</Text>
+          </Pressable>
+        )
+      ) : null}
+      <Pressable
+        onPress={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={loading || currentPage >= totalPages}
+        accessibilityRole="button"
+        accessibilityLabel="Next page"
+        style={({ pressed }) => [styles.paginationControl, (loading || currentPage >= totalPages) && styles.paginationDisabled, pressed && styles.paginationPressed]}
+      >
+        <Ionicons name="chevron-forward" size={16} color={currentPage >= totalPages ? tokens.colors.disabled : tokens.colors.textSecondary} />
+      </Pressable>
     </View>
   );
 }
@@ -494,7 +598,7 @@ export function EmptyState({
     <Card style={styles.empty}>
       {icon ? (
         <View style={styles.emptyIcon}>
-          <Ionicons name={icon} size={28} color={tokens.colors.primaryStrong} />
+          <Ionicons name={icon} size={26} color={tokens.colors.primaryStrong} />
         </View>
       ) : null}
       <View style={styles.emptyBadge}>
@@ -502,7 +606,7 @@ export function EmptyState({
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
-      {action ? <View style={{ marginTop: 12 }}>{action}</View> : null}
+      {action ? <View style={{ marginTop: 10 }}>{action}</View> : null}
     </Card>
   );
 }
@@ -520,12 +624,12 @@ export function SuccessState({
 }) {
   const styles = usePrimitiveStyles();
   return (
-    <Card style={{ alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 20 }}>
+    <Card style={{ alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18 }}>
       <View
         style={{
-          width: 58,
-          height: 58,
-          borderRadius: 20,
+          width: 54,
+          height: 54,
+          borderRadius: 18,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: withAlpha(tokens.colors.success, 0.14),
@@ -540,7 +644,7 @@ export function SuccessState({
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
-      {action ? <View style={{ marginTop: 12 }}>{action}</View> : null}
+      {action ? <View style={{ marginTop: 10 }}>{action}</View> : null}
     </Card>
   );
 }
@@ -637,7 +741,8 @@ export function Input({
   autoCorrect = false,
   onSubmitEditing,
   returnKeyType,
-  autoFocus = false
+  autoFocus = false,
+  disabled = false
 }: {
   label: string;
   value: string;
@@ -656,6 +761,7 @@ export function Input({
   onSubmitEditing?: React.ComponentProps<typeof TextInput>["onSubmitEditing"] | undefined;
   returnKeyType?: React.ComponentProps<typeof TextInput>["returnKeyType"] | undefined;
   autoFocus?: boolean | undefined;
+  disabled?: boolean | undefined;
 }) {
   const inputRef = React.useRef<React.ElementRef<typeof TextInput>>(null);
   const [passwordVisible, setPasswordVisible] = React.useState(false);
@@ -684,7 +790,7 @@ export function Input({
           ) : null}
         </View>
       </View>
-      <View style={[styles.inputShell, focused ? styles.inputShellFocused : null]}>
+      <View style={[styles.inputShell, focused ? styles.inputShellFocused : null, disabled ? styles.inputShellDisabled : null]}>
         {leftAccessory}
         <TextInput
           ref={inputRef}
@@ -701,6 +807,8 @@ export function Input({
           onSubmitEditing={onSubmitEditing}
           returnKeyType={returnKeyType}
           autoFocus={autoFocus}
+          editable={!disabled}
+          accessibilityState={{ disabled }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={[
@@ -736,7 +844,7 @@ export function Dialog({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View style={[styles.modalCard, { padding: 18 }]}>
+          <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={styles.modalTitle}>{title}</Text>
@@ -751,10 +859,10 @@ export function Dialog({
               keyboardDismissMode="interactive"
               automaticallyAdjustKeyboardInsets
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+              contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
             >
               {children}
-              {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
+              {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -790,15 +898,15 @@ export function BottomSheet({
               {
                 alignSelf: "stretch",
                 marginTop: "auto",
-                maxHeight: "88%",
-                borderTopLeftRadius: 30,
-                borderTopRightRadius: 30,
-                borderBottomLeftRadius: 18,
-                borderBottomRightRadius: 18
+                maxHeight: "86%",
+                borderTopLeftRadius: 22,
+                borderTopRightRadius: 22,
+                borderBottomLeftRadius: 16,
+                borderBottomRightRadius: 16
               }
             ]}
           >
-            <View style={{ alignItems: "center", marginBottom: 12 }}>
+            <View style={{ alignItems: "center", marginBottom: 10 }}>
               <View style={{ width: 44, height: 4, borderRadius: 99, backgroundColor: withAlpha(tokens.colors.textMuted, 0.28) }} />
             </View>
             <View style={styles.modalHeader}>
@@ -815,10 +923,10 @@ export function BottomSheet({
               keyboardDismissMode="interactive"
               automaticallyAdjustKeyboardInsets
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+              contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
             >
               {children}
-              {footer ? <View style={{ marginTop: 12 }}>{footer}</View> : null}
+              {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -834,6 +942,16 @@ export function Loader({ label }: { label?: string }) {
       <ActivityIndicator color={tokens.colors.primaryStrong} />
       {label ? <Text style={styles.helperText}>{label}</Text> : null}
     </View>
+  );
+}
+
+export function LoadingState({ label = "Loading" }: { label?: string }) {
+  const styles = usePrimitiveStyles();
+  return (
+    <Card style={styles.loadingState}>
+      <ActivityIndicator color={tokens.colors.primaryStrong} />
+      <Text style={styles.loadingStateText}>{label}</Text>
+    </Card>
   );
 }
 
@@ -878,7 +996,7 @@ export function ErrorState({
 }) {
   const styles = usePrimitiveStyles();
   return (
-    <Card style={{ alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18 }}>
+    <Card style={{ alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 }}>
       <View style={styles.errorIconWrap}>
         <Ionicons name={icon} size={28} color={tokens.colors.danger} />
       </View>
@@ -1028,7 +1146,8 @@ export function Dropdown({
   placeholder = "Select an option",
   onChange,
   helperText,
-  error
+  error,
+  disabled = false
 }: {
   label: string;
   value: string | null | undefined;
@@ -1037,6 +1156,7 @@ export function Dropdown({
   onChange: (value: string) => void;
   helperText?: string;
   error?: string | null | undefined;
+  disabled?: boolean;
 }) {
   const styles = usePrimitiveStyles();
   const [visible, setVisible] = React.useState(false);
@@ -1044,24 +1164,25 @@ export function Dropdown({
 
   return (
     <>
-      <Pressable onPress={() => setVisible(true)} accessibilityRole="button">
+      <Pressable onPress={() => setVisible(true)} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled, expanded: visible }}>
         <View style={{ gap: 8 }}>
           <Text style={styles.fieldLabel}>{label}</Text>
           <View
             style={{
-              minHeight: 50,
-              borderRadius: 18,
-              backgroundColor: tokens.colors.surface,
+              minHeight: 42,
+              borderRadius: 12,
+              backgroundColor: tokens.colors.surfaceAlt,
               borderWidth: 1,
               borderColor: error ? tokens.colors.danger : tokens.colors.border,
-              paddingHorizontal: 14,
+              paddingHorizontal: 12,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 12
+              gap: 12,
+              opacity: disabled ? 0.58 : 1
             }}
           >
-            <Text style={{ color: selected ? tokens.colors.text : tokens.colors.textMuted, flex: 1, fontWeight: selected ? "700" : "500" }}>{selected?.label ?? placeholder}</Text>
+            <Text style={{ color: selected ? tokens.colors.text : tokens.colors.textMuted, flex: 1, fontWeight: selected ? "700" : "500", fontSize: 13 }}>{selected?.label ?? placeholder}</Text>
             <Ionicons name="chevron-down-outline" size={18} color={tokens.colors.textSecondary} />
           </View>
         </View>
@@ -1124,18 +1245,18 @@ export function Typography({
     <Text
       style={[
         variant === "display"
-          ? { fontSize: 28, fontWeight: fontWeight as any, letterSpacing: -0.45, lineHeight: 34 }
+          ? { fontSize: 24, fontWeight: fontWeight as any, letterSpacing: -0.35, lineHeight: 29 }
           : variant === "title"
-            ? { fontSize: 22, fontWeight: fontWeight as any, letterSpacing: -0.25, lineHeight: 28 }
+            ? { fontSize: 20, fontWeight: fontWeight as any, letterSpacing: -0.2, lineHeight: 25 }
             : variant === "subtitle"
-              ? { fontSize: 18, fontWeight: fontWeight as any, lineHeight: 24 }
+              ? { fontSize: 16, fontWeight: fontWeight as any, lineHeight: 21 }
               : variant === "small"
-                ? { fontSize: 14, fontWeight: fontWeight as any, lineHeight: 20 }
+                ? { fontSize: 12, fontWeight: fontWeight as any, lineHeight: 18 }
                 : variant === "micro"
-                  ? { fontSize: 12, fontWeight: fontWeight as any, lineHeight: 17 }
+                  ? { fontSize: 11, fontWeight: fontWeight as any, lineHeight: 16 }
                   : variant === "label"
                     ? { fontSize: 11, fontWeight: fontWeight as any, textTransform: "uppercase", letterSpacing: 0.7 }
-                    : { fontSize: 16, fontWeight: fontWeight as any, lineHeight: 22 },
+                  : { fontSize: 14, fontWeight: fontWeight as any, lineHeight: 20 },
         { color, textAlign: align ?? "left" },
         variant === "label" ? styles.fieldLabel : null
       ]}
@@ -1190,12 +1311,12 @@ export function Snackbar({
       <View style={{ flex: 1, justifyContent: "flex-end", padding: 16, backgroundColor: tokens.colors.overlay }}>
         <View
           style={{
-            borderRadius: 22,
+            borderRadius: 14,
             borderWidth: 1,
             borderColor: withAlpha(accentColor, 0.35),
             backgroundColor,
             paddingHorizontal: 16,
-            paddingVertical: 14,
+            paddingVertical: 11,
             flexDirection: "row",
             alignItems: "center",
             gap: 12,
@@ -1396,6 +1517,20 @@ export function SwipeableActionRow({
 
 export const DatePicker = DateRangePickerModal;
 
+function paginationPages(currentPage: number, totalPages: number): Array<number | "ellipsis"> {
+  const safeCurrent = Math.max(1, Math.min(currentPage, totalPages));
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+  if (safeCurrent <= 3) {
+    return [1, 2, 3, 4, "ellipsis", totalPages];
+  }
+  if (safeCurrent >= totalPages - 2) {
+    return [1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, "ellipsis", safeCurrent - 1, safeCurrent, safeCurrent + 1, "ellipsis", totalPages];
+}
+
 function toneColor(tone: "primary" | "success" | "warning" | "danger", alpha = 1) {
   const base =
     tone === "success"
@@ -1429,14 +1564,15 @@ function prefetchImage(uri: string) {
 }
 
 function buttonStyle(variant: ButtonVariant) {
-  if (variant === "secondary") return { backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border };
+  if (variant === "secondary") return { backgroundColor: tokens.colors.surfaceElevated, borderWidth: 1, borderColor: tokens.colors.border };
   if (variant === "danger") return { backgroundColor: tokens.colors.danger, ...tokens.shadow.card };
   if (variant === "ghost") return { backgroundColor: "transparent", borderWidth: 1, borderColor: tokens.colors.border };
   return { backgroundColor: tokens.colors.primary, ...tokens.shadow.card };
 }
 
 function usePrimitiveStyles() {
-  return React.useMemo(() => createStyles(), [tokens]);
+  const theme = useThemeTokens();
+  return React.useMemo(() => createStyles(theme), [theme]);
 }
 
 function parsePickerDate(value: string | null) {
@@ -1472,7 +1608,7 @@ function isCalendarSelected(day: Date, selection: { start: Date | null; end: Dat
   return (isSameDay(day, selection.start) || isSameDay(day, selection.end) || (isAfter(day, selection.start) && isBefore(day, selection.end)));
 }
 
-function createStyles() {
+function createStyles(theme: ReturnType<typeof useThemeTokens>) {
   return StyleSheet.create({
     screen: {
       flex: 1,
@@ -1485,42 +1621,42 @@ function createStyles() {
     screenGlowPrimary: {
       position: "absolute",
       top: -120,
-      right: -80,
-      width: 260,
-      height: 260,
+      right: -90,
+      width: 220,
+      height: 220,
       borderRadius: 999,
-      opacity: 0.18
+      opacity: 0.08
     },
     screenGlowSecondary: {
       position: "absolute",
-      bottom: -120,
-      left: -100,
-      width: 280,
-      height: 280,
+      bottom: -130,
+      left: -110,
+      width: 220,
+      height: 220,
       borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.success, 0.08)
+      backgroundColor: withAlpha(tokens.colors.success, 0.035)
     },
     screenContent: {
       flex: 1
     },
     header: {
-      marginHorizontal: 16,
-      paddingHorizontal: 16,
-      paddingVertical: 18,
-      borderRadius: 26,
+      marginHorizontal: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
+      gap: 10,
       overflow: "hidden"
     },
     headerPill: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
       borderRadius: 999,
       backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.08),
       borderWidth: 1,
@@ -1533,42 +1669,42 @@ function createStyles() {
       letterSpacing: 0.5,
       textTransform: "uppercase"
     },
-    title: { color: tokens.colors.text, fontSize: 25, fontWeight: "900", letterSpacing: -0.4, lineHeight: 30 },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 },
+    title: { color: tokens.colors.text, fontSize: 19, fontWeight: "900", letterSpacing: -0.25, lineHeight: 23 },
+    subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 11, lineHeight: 16 },
     card: {
       backgroundColor: tokens.colors.surface,
-      borderRadius: 22,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 16,
+      padding: 14,
       overflow: "hidden",
       ...tokens.shadow.card
     },
-    statCard: { gap: 8, minHeight: 124, paddingTop: 18 },
+    statCard: { gap: 6, minHeight: 96, paddingTop: 12 },
     statAccentBar: {
       height: 3,
-      width: 42,
+      width: 40,
       borderRadius: 99
     },
     iconWrap: {
-      width: 38,
-      height: 38,
-      borderRadius: 14,
+      width: 30,
+      height: 30,
+      borderRadius: 10,
       alignItems: "center",
       justifyContent: "center"
     },
-    statLabel: { color: tokens.colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.8 },
-    statValue: { color: tokens.colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.2 },
-    statHint: { color: tokens.colors.textSecondary, fontSize: 12 },
+    statLabel: { color: tokens.colors.textMuted, fontSize: 9, textTransform: "uppercase", letterSpacing: 0.7 },
+    statValue: { color: tokens.colors.text, fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
+    statHint: { color: tokens.colors.textSecondary, fontSize: 11 },
     button: {
-      minHeight: 50,
-      borderRadius: 18,
+      minHeight: 42,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 16
+      paddingHorizontal: 14
     },
-    buttonText: { color: tokens.colors.text, fontSize: 14, fontWeight: "800", letterSpacing: 0.2 },
-    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.55 },
+    buttonText: { color: tokens.colors.text, fontSize: 12, fontWeight: "800", letterSpacing: 0.1 },
+    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
     fieldLabelRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1590,20 +1726,20 @@ function createStyles() {
       letterSpacing: 0.4
     },
     input: {
-      minHeight: 24,
-      paddingVertical: 14,
+      minHeight: 20,
+      paddingVertical: 8,
       paddingHorizontal: 0,
       backgroundColor: "transparent",
       color: tokens.colors.text,
-      fontSize: 14
+      fontSize: 13
     },
     inputShell: {
-      minHeight: 50,
-      borderRadius: 18,
-      backgroundColor: withAlpha(tokens.colors.surface, 0.98),
+      minHeight: 42,
+      borderRadius: 12,
+      backgroundColor: tokens.colors.surfaceAlt,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       flexDirection: "row",
       alignItems: "center",
       gap: 8
@@ -1611,10 +1747,14 @@ function createStyles() {
     inputShellFocused: {
       borderColor: withAlpha(tokens.colors.primaryStrong, 0.7),
       shadowColor: tokens.colors.primaryStrong,
-      shadowOpacity: 0.12,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.1,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 6 },
       elevation: 3
+    },
+    inputShellDisabled: {
+      opacity: 0.58,
+      backgroundColor: tokens.colors.surfaceAlt
     },
     inputError: {
       borderColor: tokens.colors.danger,
@@ -1622,16 +1762,16 @@ function createStyles() {
     },
     badge: {
       borderRadius: 999,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
       alignSelf: "flex-start"
     },
-    badgeText: { fontSize: 10.5, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.45 },
-    empty: { alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 18 },
+    badgeText: { fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.4 },
+    empty: { alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12 },
     emptyIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+      borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: withAlpha(tokens.colors.primary, 0.1),
@@ -1649,19 +1789,19 @@ function createStyles() {
     },
     emptyBadgeText: {
       color: tokens.colors.primaryStrong,
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: "800",
       letterSpacing: 0.7,
       textTransform: "uppercase"
     },
-    emptyTitle: { color: tokens.colors.text, fontSize: 19, fontWeight: "900", textAlign: "center", letterSpacing: -0.2 },
-    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 21, maxWidth: 360 },
-    helperText: { color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 },
-    helperError: { color: tokens.colors.danger, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+    emptyTitle: { color: tokens.colors.text, fontSize: 15, fontWeight: "900", textAlign: "center", letterSpacing: -0.1 },
+    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 17, maxWidth: 360, fontSize: 11 },
+    helperText: { color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 },
+    helperError: { color: tokens.colors.danger, fontSize: 11, lineHeight: 16, fontWeight: "700" },
     successBadge: {
       alignSelf: "center",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
       borderRadius: 999,
       backgroundColor: withAlpha(tokens.colors.success, 0.1),
       borderWidth: 1,
@@ -1669,15 +1809,15 @@ function createStyles() {
     },
     successBadgeText: {
       color: tokens.colors.success,
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: "800",
       letterSpacing: 0.7,
       textTransform: "uppercase"
     },
     errorIconWrap: {
-      width: 56,
-      height: 56,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: withAlpha(tokens.colors.danger, 0.1),
@@ -1689,37 +1829,121 @@ function createStyles() {
       alignItems: "center",
       gap: 10
     },
+    loadingState: {
+      minHeight: 64,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 10
+    },
+    loadingStateText: {
+      color: tokens.colors.textSecondary,
+      fontSize: 11,
+      fontWeight: "700"
+    },
+    infoIconAnchor: {
+      position: "relative",
+      zIndex: 2
+    },
+    infoTooltip: {
+      position: "absolute",
+      right: 0,
+      top: 24,
+      width: 220,
+      padding: 10,
+      borderRadius: 10,
+      backgroundColor: tokens.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      ...tokens.shadow.modal
+    },
+    infoTooltipText: {
+      color: tokens.colors.textSecondary,
+      fontSize: 11,
+      lineHeight: 16
+    },
+    paginationContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      paddingVertical: 4
+    },
+    paginationCompact: {
+      justifyContent: "space-between"
+    },
+    paginationControl: {
+      width: 30,
+      height: 30,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      backgroundColor: tokens.colors.surface
+    },
+    paginationPage: {
+      minWidth: 30,
+      height: 30,
+      paddingHorizontal: 8,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    paginationPageActive: {
+      backgroundColor: tokens.colors.primaryStrong
+    },
+    paginationPageText: {
+      color: tokens.colors.textSecondary,
+      fontSize: 11,
+      fontWeight: "800"
+    },
+    paginationPageTextActive: {
+      color: "#FFFFFF"
+    },
+    paginationEllipsis: {
+      width: 24,
+      textAlign: "center",
+      color: tokens.colors.textMuted,
+      fontSize: 12
+    },
+    paginationDisabled: {
+      opacity: 0.45
+    },
+    paginationPressed: {
+      opacity: 0.78
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: tokens.colors.overlay,
       alignItems: "center",
       justifyContent: "center",
-      padding: 16
+      padding: 12
     },
     modalCard: {
       width: "100%",
-      maxHeight: "92%",
-      backgroundColor: tokens.colors.surface,
-      borderRadius: 30,
+      maxHeight: "90%",
+      backgroundColor: tokens.colors.surfaceElevated,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 18,
+      padding: 14,
       ...tokens.shadow.modal
     },
     modalHeader: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 14
+      marginBottom: 12
     },
-    modalTitle: { color: tokens.colors.text, fontSize: 16, fontWeight: "800" },
+    modalTitle: { color: tokens.colors.text, fontSize: 14, fontWeight: "900" },
     calendarShell: {
       backgroundColor: tokens.colors.surfaceAlt,
-      borderRadius: 24,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 12,
-      gap: 12
+      padding: 10,
+      gap: 10
     },
     calendarTopRow: {
       flexDirection: "row",
@@ -1728,9 +1952,9 @@ function createStyles() {
       gap: 10
     },
     calendarNavButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
+      width: 34,
+      height: 34,
+      borderRadius: 11,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: tokens.colors.surface,
@@ -1739,7 +1963,7 @@ function createStyles() {
     },
     calendarMonth: {
       color: tokens.colors.text,
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: "800"
     },
     calendarWeekRow: {
@@ -1760,9 +1984,9 @@ function createStyles() {
       columnGap: 8
     },
     calendarDayButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 13,
+      width: 34,
+      height: 34,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: tokens.colors.surface
@@ -1785,8 +2009,8 @@ function createStyles() {
       color: tokens.colors.textMuted
     },
     calendarDaySpacer: {
-      width: 36,
-      height: 36
+      width: 34,
+      height: 34
     },
     calendarSummary: {
       flexDirection: "row",
@@ -1799,10 +2023,10 @@ function createStyles() {
       lineHeight: 18
     },
     scrollContent: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      gap: 16,
-      paddingBottom: 28
+      paddingHorizontal: 14,
+      paddingTop: 10,
+      gap: 10,
+      paddingBottom: 18
     },
     skeleton: {
       backgroundColor: withAlpha(tokens.colors.textMuted, 0.12),
@@ -1811,9 +2035,9 @@ function createStyles() {
     },
     footer: {
       alignItems: "center",
-      paddingHorizontal: 16,
-      paddingTop: 18,
-      paddingBottom: 10,
+      paddingHorizontal: 14,
+      paddingTop: 14,
+      paddingBottom: 8,
       backgroundColor: "transparent"
     },
     footerDivider: {
@@ -1824,7 +2048,7 @@ function createStyles() {
     },
     footerText: {
       color: tokens.colors.textMuted,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: "700",
       letterSpacing: 0.5,
       textAlign: "center"

@@ -29,10 +29,24 @@ type RegisterPushInput = {
   deviceId: string;
   deviceName: string;
   platform: "android" | "ios" | "web";
+  requestPermission?: boolean;
+};
+
+type StoredPushRegistration = {
+  businessId: string;
+  userId: string;
+  deviceId: string;
+  pushToken: string;
 };
 
 const DEFAULT_CACHE: NotificationCache = { version: 1, entries: [] };
 let listenersInstalled = false;
+let registrationInFlight: Promise<PushRegistrationResult> | null = null;
+let activeRegistration: RegisterPushInput | null = null;
+
+type PushRegistrationResult =
+  | { status: "registered"; token: string }
+  | { status: "unavailable" | "not-requested" | "denied" | "error"; message: string };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -167,6 +181,22 @@ export async function recordLocalNotification(input: {
 }
 
 export async function registerPushNotifications(input: RegisterPushInput) {
+  if (registrationInFlight) {
+    return registrationInFlight;
+  }
+
+  registrationInFlight = registerPushNotificationsInternal(input);
+  try {
+    return await registrationInFlight;
+  } catch (error) {
+    console.warn("[notifications] Notification setup failed", error);
+    return { status: "error", message: "Notifications could not be enabled on this device. Please try again." };
+  } finally {
+    registrationInFlight = null;
+  }
+}
+
+async function registerPushNotificationsInternal(input: RegisterPushInput): Promise<PushRegistrationResult> {
   if (Platform.OS === "web") {
     return { status: "unavailable" as const, message: "Push notifications are not available on web." };
   }
@@ -177,12 +207,17 @@ export async function registerPushNotifications(input: RegisterPushInput) {
 
   const permission = await Notifications.getPermissionsAsync();
   let finalPermission = permission;
-  if (permission.status !== "granted") {
+  if (permission.status !== "granted" && input.requestPermission) {
     finalPermission = await Notifications.requestPermissionsAsync();
+  }
+  if (finalPermission.status !== "granted" && !input.requestPermission) {
+    return { status: "not-requested" as const, message: "Notification permission has not been requested." };
   }
   if (finalPermission.status !== "granted") {
     return { status: "denied" as const, message: "Notifications are disabled. You can enable them in Settings." };
   }
+
+  activeRegistration = input;
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("biz-pro", {
@@ -194,14 +229,35 @@ export async function registerPushNotifications(input: RegisterPushInput) {
   }
 
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? null;
-  const token = projectId
-    ? (await Notifications.getExpoPushTokenAsync({ projectId })).data
-    : (await Notifications.getExpoPushTokenAsync()).data;
-  await apiRegisterDevicePushToken({
-    ...input,
-    pushToken: token
-  });
-  return { status: "registered" as const, token };
+  if (!projectId) {
+    return { status: "error", message: "Push notifications are not configured for this app build." };
+  }
+
+  try {
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    const previousRaw = await secureStore.getPushRegistration();
+    let previous: StoredPushRegistration | null = null;
+    try {
+      previous = previousRaw ? (JSON.parse(previousRaw) as StoredPushRegistration) : null;
+    } catch {
+      previous = null;
+    }
+
+    const unchanged = previous?.businessId === input.businessId && previous.userId === input.userId && previous.deviceId === input.deviceId && previous.pushToken === token;
+    if (!unchanged) {
+      await apiRegisterDevicePushToken({ ...input, pushToken: token });
+      await secureStore.setPushRegistration(JSON.stringify({
+        businessId: input.businessId,
+        userId: input.userId,
+        deviceId: input.deviceId,
+        pushToken: token
+      } satisfies StoredPushRegistration));
+    }
+    return { status: "registered", token };
+  } catch (error) {
+    console.warn("[notifications] Push registration failed", error);
+    return { status: "error", message: "Notifications could not be enabled on this device. Check your connection and try again." };
+  }
 }
 
 export function configureNotificationListeners() {
@@ -245,6 +301,19 @@ export function configureNotificationListeners() {
     }
   });
 
+  const pushTokenSubscription = Notifications.addPushTokenListener((token) => {
+    const registration = activeRegistration;
+    if (!registration || !token.data) return;
+    void apiRegisterDevicePushToken({ ...registration, pushToken: token.data })
+      .then(() => secureStore.setPushRegistration(JSON.stringify({
+        businessId: registration.businessId,
+        userId: registration.userId,
+        deviceId: registration.deviceId,
+        pushToken: token.data
+      } satisfies StoredPushRegistration)))
+      .catch((error) => console.warn("[notifications] Push token refresh registration failed", error));
+  });
+
   void Notifications.getLastNotificationResponseAsync().then((response) => {
     if (!response) return;
     const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
@@ -259,6 +328,7 @@ export function configureNotificationListeners() {
   return () => {
     receivedSubscription.remove();
     responseSubscription.remove();
+    pushTokenSubscription.remove();
     listenersInstalled = false;
   };
 }

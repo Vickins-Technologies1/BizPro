@@ -8,6 +8,7 @@ import * as Sharing from "expo-sharing";
 import { useNavigation } from "@react-navigation/native";
 import {
   Badge,
+  AppScrollView,
   Card,
   DateRangePickerModal,
   EmptyState,
@@ -237,15 +238,15 @@ export function FinanceScreen() {
           <Pressable onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back-outline" size={26} color={tokens.colors.text} />
           </Pressable>
-        }
-      />
+          }
+        />
 
-      <View style={{ paddingHorizontal: 16, paddingTop: 10, gap: 12 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 24 }}>
         <Card style={{ gap: 12 }}>
           <View style={{ gap: 4 }}>
             <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Finance snapshot</Text>
-            <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>Track money in, money out, and the positions that matter.</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Track money in, money out, and the positions that matter.</Text>
+            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
               Expenses, income, invoices, credit notes, payments, bank accounts, and petty cash all live here. Sales reports stay in the Reports area.
             </Text>
           </View>
@@ -307,6 +308,25 @@ export function FinanceScreen() {
           />
         ) : (
           <>
+            <Card style={{ gap: 12, padding: 18 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Position overview</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>{formatMoney(overview?.profitLossTotal ?? 0, business?.currency)}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary }}>Net result for {rangeLabel.toLowerCase()}.</Text>
+                </View>
+                <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.success + "18" }}>
+                  <Ionicons name="analytics-outline" size={23} color={tokens.colors.success} />
+                </View>
+              </View>
+              <View style={{ height: 8, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
+                <View style={{ width: `${Math.max(8, Math.min(100, Math.round(((overview?.incomeTotal ?? 0) / Math.max(overview?.incomeTotal ?? 0, overview?.expensesTotal ?? 0, 1)) * 100)))}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.success }} />
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Income {formatMoney(overview?.incomeTotal ?? 0, business?.currency)}</Text>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Outflow {formatMoney(overview?.expensesTotal ?? 0, business?.currency)}</Text>
+              </View>
+            </Card>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <StatCard label="Income" value={formatMoney(overview?.incomeTotal ?? 0, business?.currency)} icon="trending-up-outline" tone="success" />
@@ -488,7 +508,7 @@ export function FinanceScreen() {
             </Card>
           </>
         )}
-      </View>
+      </AppScrollView>
 
       <DateRangePickerModal
         visible={pickerVisible}

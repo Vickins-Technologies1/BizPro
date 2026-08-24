@@ -7,7 +7,7 @@ import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receipt
 import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
-import { setThemeTokens, type ThemeMode } from "@/theme/tokens";
+import { initialThemeMode, setThemeTokens, type ThemeMode } from "@/theme/tokens";
 import type { AccessPermission } from "@shared";
 import {
   countQueuedActions,
@@ -73,7 +73,7 @@ interface AppState {
   logout: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   loadDashboard: () => Promise<void>;
-  loadCatalog: () => Promise<void>;
+  loadCatalog: (options?: { skipProducts?: boolean }) => Promise<void>;
   setSelectedBranchId: (branchId: string | null) => Promise<void>;
   rehydrateQueuedState: () => Promise<void>;
   addCategory: (input: Omit<Category, "id" | "createdAt" | "updatedAt" | "deletedAt">) => Promise<Category>;
@@ -213,7 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loading: false,
   authLoading: true,
   syncing: false,
-  themeMode: "light",
+  themeMode: initialThemeMode,
   business: null,
   user: null,
   branches: [],
@@ -241,11 +241,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
 
       const storedThemeMode = await secureStore.getThemeMode();
-      const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : "light";
+      const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : storedThemeMode === "light" ? "light" : initialThemeMode;
       if (!storedThemeMode) {
         await secureStore.setThemeMode(themeMode);
       }
       setThemeTokens(themeMode);
+      set({ themeMode });
 
       let deviceId = await secureStore.getDeviceId();
       if (!deviceId) {
@@ -426,14 +427,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     });
   },
-  loadCatalog: async () => {
+  loadCatalog: async (options) => {
     const business = get().business;
     if (!business) return;
     const branchId = resolveReadBranchId(get());
     const [categories, brands, products, customers, customerGroups, suppliers, sales, expenses] = await Promise.all([
       listCategories(),
       listBrands(),
-      listProducts(branchId),
+      options?.skipProducts ? Promise.resolve(get().products) : listProducts(branchId),
       listCustomers(branchId),
       listCustomerGroups(branchId),
       listSuppliers(),

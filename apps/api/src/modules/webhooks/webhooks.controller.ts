@@ -12,7 +12,7 @@ export class WebhooksController {
 
   @Post("tuma")
   tuma(@Body() payload: Record<string, unknown>, @Headers("x-webhook-secret") secret?: string) {
-    const expected = this.config.get<string>("TUMA_WEBHOOK_SECRET") ?? "";
+    const expected = this.config.get<string>("TUMA_WEBHOOK_SECRET");
     if (!expected || secret !== expected) {
       throw new UnauthorizedException("Invalid webhook secret");
     }

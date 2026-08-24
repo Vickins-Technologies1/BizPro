@@ -1,10 +1,9 @@
 import React from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { Badge, Card, GradientHeader, PrimaryButton, Screen, Tag } from "@/components/Primitives";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { AppScrollView, Badge, Card, GradientHeader, PrimaryButton, Screen, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { listQueuedActions, type OfflineQueueEntry } from "@/services/offlineQueue";
-import { loadNotificationInbox, markNotificationRead, type AppInboxNotification } from "@/services/notifications";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPermissionLabel, formatRoleLabel, getEffectivePermissions, hasPermission, resolveIndustryModule } from "@shared";
@@ -17,17 +16,12 @@ export function SettingsScreen() {
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncProgress = useAppStore((state) => state.syncProgress);
-  const themeMode = useAppStore((state) => state.themeMode);
   const syncNow = useAppStore((state) => state.syncNow);
-  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const setSelectedBranchId = useAppStore((state) => state.setSelectedBranchId);
   const logout = useAppStore((state) => state.logout);
   const [queuedActions, setQueuedActions] = React.useState<OfflineQueueEntry[]>([]);
-  const [notifications, setNotifications] = React.useState<AppInboxNotification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = React.useState(false);
   const [syncing, setSyncing] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
-  const [savingTheme, setSavingTheme] = React.useState<"light" | "dark" | null>(null);
   const permissions = getEffectivePermissions(user);
   const canManageEmployees = hasPermission(user, "manageEmployees");
   const roleLabel = user?.roleLabel ?? formatRoleLabel(user?.role);
@@ -51,60 +45,30 @@ export function SettingsScreen() {
     };
   }, [business?.id, pendingSync]);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    async function loadNotifications() {
-      if (!business?.id || !user?.id) {
-        setNotifications([]);
-        return;
-      }
-      setNotificationsLoading(true);
-      try {
-        const inbox = await loadNotificationInbox();
-        if (!cancelled) {
-          setNotifications(inbox);
-        }
-      } finally {
-        if (!cancelled) {
-          setNotificationsLoading(false);
-        }
-      }
-    }
-    loadNotifications().catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [business?.id, user?.id, pendingSync]);
-
-  const unreadNotifications = notifications.filter((notification) => !notification.readAt);
-
-  async function handleNotificationPress(notification: AppInboxNotification) {
-    await markNotificationRead(notification.id).catch(() => undefined);
-    setNotifications((current) =>
-      current.map((entry) => (entry.id === notification.id ? { ...entry, readAt: entry.readAt ?? new Date().toISOString() } : entry))
-    );
-    if (notification.routeName) {
-      navigation.navigate(notification.routeName as never, notification.routeParams as never);
-    }
-  }
-
   return (
     <Screen>
       <GradientHeader
         title="Settings"
-        subtitle="Business profile, sync status, and device security"
+        subtitle="Profile, sync, and security"
         right={
           <Pressable onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back-outline" size={26} color={tokens.colors.text} />
           </Pressable>
         }
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <AppScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }}>
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Business snapshot</Text>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{business?.name}</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{industry.label}</Text>
-          <Text style={{ color: tokens.colors.textMuted, lineHeight: 18, fontSize: 12 }}>{industry.description}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ width: 50, height: 50, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primaryStrong }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>{(business?.name ?? "B").slice(0, 1).toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11, fontWeight: "800" }}>Business snapshot</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 19, fontWeight: "900" }}>{business?.name}</Text>
+            </View>
+            <Badge label={roleLabel} tone="primary" />
+          </View>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{industry.label}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Badge label={industry.label} tone="success" />
             <Badge label={`Plan ${business?.planTier?.toUpperCase()}`} tone="primary" />
@@ -112,73 +76,11 @@ export function SettingsScreen() {
             <Badge label={`Sync ${pendingSync}`} tone={pendingSync ? "warning" : "success"} />
             <Badge label={roleLabel} tone="primary" />
           </View>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Signed in as {user?.fullName ?? "Unknown"}. Use this page to check the device, change the theme, or open employee management.
-          </Text>
-        </Card>
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Notifications</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-                View recent alerts, sync updates, and inventory warnings delivered to this device.
-              </Text>
-            </View>
-            <Badge label={`${unreadNotifications.length} unread`} tone={unreadNotifications.length ? "warning" : "success"} />
-          </View>
-          {notificationsLoading ? (
-            <View style={{ alignItems: "center", gap: 10, paddingVertical: 16 }}>
-              <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />
-              <Text style={{ color: tokens.colors.textSecondary }}>Loading notification inbox...</Text>
-            </View>
-          ) : notifications.length ? (
-            <View style={{ gap: 10 }}>
-              {notifications.slice(0, 5).map((notification) => {
-                const unread = !notification.readAt;
-                return (
-                  <Pressable key={notification.id} onPress={() => void handleNotificationPress(notification)}>
-                    <View
-                      style={{
-                        padding: 12,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: unread ? tokens.colors.primaryStrong : tokens.colors.border,
-                        backgroundColor: unread ? tokens.colors.surfaceAlt : tokens.colors.surface,
-                        gap: 8
-                      }}
-                    >
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                        <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{notification.title}</Text>
-                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{notification.body}</Text>
-                        </View>
-                        <Badge label={notification.priority} tone={notification.priority === "critical" ? "danger" : unread ? "warning" : "primary"} />
-                      </View>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                        <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
-                          {formatNotificationTime(notification.sentAt)}
-                        </Text>
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          {notification.routeName ? <Badge label="Open" tone="primary" /> : null}
-                          {unread ? <Badge label="Unread" tone="warning" /> : <Badge label="Read" tone="success" />}
-                        </View>
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              No notifications yet. Inventory alerts and sync updates will appear here.
-            </Text>
-          )}
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Signed in as {user?.fullName ?? "Unknown"}.</Text>
         </Card>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Branch scope</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Owners can switch between a consolidated view and any branch. Other roles stay on their assigned branch so the workspace remains scoped correctly.
-          </Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Choose the branch scope used across the workspace.</Text>
           {user?.role === "owner" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {branches.length > 1 ? (
@@ -200,7 +102,7 @@ export function SettingsScreen() {
         </Card>
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Account access</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
             {user?.role === "owner"
               ? "Owner accounts have full business control."
               : user?.role === "manager"
@@ -217,40 +119,8 @@ export function SettingsScreen() {
           ) : null}
         </Card>
         <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Theme</Text>
-          <Text style={{ color: tokens.colors.textSecondary }}>Light mode is the default. Dark mode stays off unless you turn it on here.</Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            {[
-              { label: "Light", value: "light" as const },
-              { label: "Dark", value: "dark" as const }
-            ].map((option) => {
-              const selected = themeMode === option.value;
-              return (
-                <View key={option.value} style={{ flex: 1 }}>
-                  <Tag
-                    label={savingTheme === option.value ? "Saving..." : option.label}
-                    tone="primary"
-                    selected={selected}
-                    fullWidth
-                    onPress={() => {
-                      setSavingTheme(option.value);
-                      setThemeMode(option.value)
-                        .catch((error) => {
-                          Alert.alert("Theme update failed", error instanceof Error ? error.message : "Unable to save theme preference");
-                        })
-                        .finally(() => setSavingTheme(null));
-                    }}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        </Card>
-        <Card style={{ gap: 12 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Inventory administration</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Open the master records and logistics screens for brands, suppliers, purchase orders, and stock transfers.
-          </Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Manage inventory records and logistics.</Text>
           <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
             <View style={{ flex: 1, minWidth: "45%" }}>
               <PrimaryButton title="Brands" variant="secondary" onPress={() => navigation.navigate("Brands")} />
@@ -270,9 +140,7 @@ export function SettingsScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Queued offline actions</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-                These actions were saved on the device and will replay automatically when sync runs.
-              </Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Saved locally and replayed when sync resumes.</Text>
             </View>
             <Badge label={`${queuedActions.length} queued`} tone={queuedActions.length ? "warning" : "success"} />
           </View>
@@ -343,11 +211,16 @@ export function SettingsScreen() {
             </Text>
           )}
         </Card>
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Device actions</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Keep the device in sync or sign out when you are done. These actions are always available here.
-          </Text>
+        <Card style={{ gap: 12, borderColor: tokens.colors.primary + "30" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 38, height: 38, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={tokens.colors.primaryStrong} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Device actions</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Keep this workspace current and secure.</Text>
+            </View>
+          </View>
           <View style={{ gap: 10 }}>
             <PrimaryButton
               title={syncing ? "Syncing..." : "Sync now"}
@@ -372,7 +245,7 @@ export function SettingsScreen() {
             />
           </View>
         </Card>
-      </ScrollView>
+      </AppScrollView>
     </Screen>
   );
 }
@@ -429,12 +302,4 @@ function formatQueueBranch(action: OfflineQueueEntry, branches: Array<{ id: stri
     return "Business-wide";
   }
   return branches.find((branch) => branch.id === branchId)?.name ?? `Branch ${branchId}`;
-}
-
-function formatNotificationTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Just now";
-  }
-  return date.toLocaleString();
 }

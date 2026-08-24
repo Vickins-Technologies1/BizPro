@@ -5,7 +5,7 @@ import { SupportKeyGuard } from "../../common/support-key.guard";
 
 class SetPlanDto {
   @IsString() businessId!: string;
-  @IsIn(["lite", "standard", "pro"]) planCode!: any;
+  @IsIn(["command", "pro", "elite", "enterprise"]) planCode!: any;
 }
 
 @Controller("subscriptions")

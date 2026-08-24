@@ -7,6 +7,7 @@ import { loginSchema } from "@shared";
 import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
+import { BrandLogo } from "@/components/BrandLogo";
 import { z } from "zod";
 
 type FormValues = z.infer<typeof loginSchema>;
@@ -28,21 +29,18 @@ export function LoginScreen() {
 
   return (
     <Screen hideFooter>
-      <GradientHeader title="Welcome back" subtitle="Sign in with the owner password or a cashier PIN" />
-      <AppScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Biz Pro login</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Enter the phone number or owner name tied to the business, then use the password or PIN your team was given.
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <Badge label="Simple access" tone="success" />
+      <GradientHeader title="Welcome back" subtitle="Your business, ready when you are" />
+      <AppScrollView contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
+        <Card style={{ alignItems: "center", gap: 10, paddingVertical: 18 }}>
+          <BrandLogo style={{ width: 118, height: 40 }} />
+          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Sign in to BizPro</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, textAlign: "center", fontSize: 12 }}>Use your owner password or team PIN to continue.</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
             <Badge label="Offline ready" tone="primary" />
-            <Badge label="Secure sign in" tone="warning" />
+            <Badge label="Secure access" tone="success" />
           </View>
         </Card>
         <Card style={{ gap: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>Sign in</Text>
           <Controller
             control={control}
             name="identifier"
@@ -88,12 +86,7 @@ export function LoginScreen() {
           />
           <PrimaryButton title="Create owner account" variant="secondary" onPress={() => navigation.navigate("Onboarding")} />
         </Card>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Need access?</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            New businesses should create the owner account first. Team members can sign in only after the owner adds their employee profile.
-          </Text>
-        </Card>
+        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20, textAlign: "center", paddingHorizontal: 20 }}>New to BizPro? Create an owner account and get 30 days free with no card required.</Text>
       </AppScrollView>
     </Screen>
   );

@@ -9,18 +9,21 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "android": {
-      "package": "com.vickins.businessos",
+      "package": "com.bizpro.vickins",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
       "permissions": [
+        "CAMERA",
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
         "BLUETOOTH_CONNECT",
         "BLUETOOTH_SCAN",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
       ]
     },
     "ios": {
@@ -29,13 +32,14 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
+        "NSCameraUsageDescription": "Allows the app to scan product barcodes.",
         "NSBluetoothAlwaysUsageDescription": "Allows the app to connect to Bluetooth receipt printers.",
         "NSBluetoothPeripheralUsageDescription": "Allows the app to connect to Bluetooth receipt printers."
       }
     },
     "splash": {
-      "image": "./assets/brand/biz-pro-logo.png",
-      "backgroundColor": "#0B1220",
+      "image": "./assets/brand/biz-pro-mark-light.png",
+      "backgroundColor": "#F5F8FC",
       "resizeMode": "contain"
     },
     "assetBundlePatterns": [
@@ -47,14 +51,20 @@
       }
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#2563EB"
+        }
+      ],
       "expo-secure-store",
       [
         "expo-build-properties",
         {
           "android": {
             "buildToolsVersion": "35.0.0",
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ],

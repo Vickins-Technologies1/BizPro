@@ -1,14 +1,85 @@
+import { Appearance } from "react-native";
 import { theme as sharedTheme } from "@shared";
 
 export type ThemeMode = "light" | "dark";
+
+type ThemeColors = {
+  background: string;
+  backgroundAlt: string;
+  surface: string;
+  surfaceAlt: string;
+  surfaceElevated: string;
+  input: string;
+  border: string;
+  divider: string;
+  primary: string;
+  primaryStrong: string;
+  success: string;
+  warning: string;
+  danger: string;
+  text: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  icon: string;
+  disabled: string;
+  overlay: string;
+};
+
+type ThemeGradients = {
+  primary: readonly [string, string];
+  surface: readonly [string, string];
+  premium: readonly [string, string];
+};
+
+type ThemeShadow = {
+  card: {
+    shadowColor: string;
+    shadowOpacity: number;
+    shadowRadius: number;
+    shadowOffset: { width: number; height: number };
+    elevation: number;
+  };
+  modal: {
+    shadowColor: string;
+    shadowOpacity: number;
+    shadowRadius: number;
+    shadowOffset: { width: number; height: number };
+    elevation: number;
+  };
+};
+
+export type ThemeTokens = {
+  colors: ThemeColors;
+  gradients: ThemeGradients;
+  shadow: ThemeShadow;
+  radii: typeof sharedTheme.radii;
+  spacing: typeof sharedTheme.spacing;
+  typography: typeof sharedTheme.typography;
+  motion: {
+    fast: number;
+    standard: number;
+    slow: number;
+    spring: {
+      damping: number;
+      stiffness: number;
+      mass: number;
+    };
+  };
+  font: {
+    display: string;
+    body: string;
+    mono: string;
+  };
+};
 
 const baseTheme = {
   radii: sharedTheme.radii,
   spacing: sharedTheme.spacing,
   typography: sharedTheme.typography,
   motion: {
-    fast: 140,
-    standard: 220,
+    fast: 120,
+    standard: 240,
     slow: 320,
     spring: {
       damping: 18,
@@ -23,95 +94,119 @@ const baseTheme = {
   }
 } as const;
 
-const lightTheme = {
+const lightTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#F8FAFC",
-    backgroundAlt: "#E2E8F0",
+    background: "#F5F8FC",
+    backgroundAlt: "#E9EFF7",
     surface: "#FFFFFF",
-    surfaceAlt: "#F1F5F9",
-    border: "#CBD5E1",
+    surfaceAlt: "#F1F5FA",
+    surfaceElevated: "#FFFFFF",
+    input: "#FFFFFF",
+    border: "#D8E1EC",
+    divider: "#D8E1EC",
     primary: "#2563EB",
     primaryStrong: "#1D4ED8",
-    success: "#059669",
+    success: "#16A34A",
     warning: "#D97706",
-    danger: "#DC2626",
-    text: "#0F172A",
-    textSecondary: "#334155",
-    textMuted: "#64748B",
-    overlay: "rgba(15, 23, 42, 0.52)"
+    danger: "#EF4444",
+    text: "#0E1726",
+    textPrimary: "#0E1726",
+    textSecondary: "#415066",
+    textMuted: "#6D7A8B",
+    icon: "#5E6B7B",
+    disabled: "#94A3B8",
+    overlay: "rgba(15, 23, 42, 0.50)"
   },
   gradients: {
-    primary: ["#EFF6FF", "#DBEAFE"] as const,
-    surface: ["#FFFFFF", "#EEF2FF"] as const,
-    premium: ["rgba(37,99,235,0.16)", "rgba(16,185,129,0.10)"] as const
+    primary: ["#EFF6FF", "#DBEAFE"],
+    surface: ["#FFFFFF", "#F4F7FC"],
+    premium: ["rgba(37,99,235,0.14)", "rgba(14,165,233,0.08)"]
   },
   shadow: {
     card: {
       shadowColor: "#0F172A",
-      shadowOpacity: 0.12,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 6
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 2
     },
     modal: {
       shadowColor: "#0F172A",
-      shadowOpacity: 0.18,
-      shadowRadius: 28,
-      shadowOffset: { width: 0, height: 16 },
-      elevation: 10
+      shadowOpacity: 0.14,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 5
     }
   }
-} as const;
+};
 
-const darkTheme = {
+const darkTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#0B1220",
-    backgroundAlt: "#0F172A",
-    surface: "#111827",
-    surfaceAlt: "#1A2436",
-    border: "#243041",
-    primary: "#2563EB",
-    primaryStrong: "#3B82F6",
-    success: "#10B981",
+    background: "#050B16",
+    backgroundAlt: "#0A1324",
+    surface: "#0E1727",
+    surfaceAlt: "#132033",
+    surfaceElevated: "#18263B",
+    input: "#101A2B",
+    border: "#24344D",
+    divider: "#24344D",
+    primary: "#2E7BFF",
+    primaryStrong: "#46B3FF",
+    success: "#22C55E",
     warning: "#F59E0B",
-    danger: "#EF4444",
+    danger: "#F87171",
     text: "#F8FAFC",
+    textPrimary: "#F8FAFC",
     textSecondary: "#CBD5E1",
     textMuted: "#94A3B8",
-    overlay: "rgba(3, 7, 18, 0.72)"
+    icon: "#B6C4D6",
+    disabled: "#64748B",
+    overlay: "rgba(3, 7, 18, 0.74)"
   },
   gradients: {
-    primary: ["#2563EB", "#1E40AF"] as const,
-    surface: ["#111827", "#0B1220"] as const,
-    premium: ["rgba(37,99,235,0.35)", "rgba(16,185,129,0.15)"] as const
+    primary: ["#2E7BFF", "#1048A5"],
+    surface: ["#0E1727", "#050B16"],
+    premium: ["rgba(46,123,255,0.24)", "rgba(70,179,255,0.08)"]
   },
   shadow: {
     card: {
       shadowColor: "#000",
-      shadowOpacity: 0.35,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 12 },
-      elevation: 10
+      shadowOpacity: 0.22,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 5
     },
     modal: {
       shadowColor: "#000",
-      shadowOpacity: 0.42,
-      shadowRadius: 30,
-      shadowOffset: { width: 0, height: 16 },
-      elevation: 14
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 9 },
+      elevation: 8
     }
   }
+};
+
+const themeByMode = {
+  light: lightTheme,
+  dark: darkTheme
 } as const;
 
+export function resolvePreferredThemeMode(): ThemeMode {
+  return Appearance.getColorScheme() === "dark" ? "dark" : "light";
+}
+
+export const initialThemeMode = resolvePreferredThemeMode();
 export const lightTokens = lightTheme;
 export const darkTokens = darkTheme;
 
-export type ThemeTokens = typeof lightTheme | typeof darkTheme;
+export let tokens: ThemeTokens = themeByMode[initialThemeMode];
 
-export let tokens: ThemeTokens = lightTokens;
+export function getThemeTokens(mode: ThemeMode) {
+  return themeByMode[mode];
+}
 
 export function setThemeTokens(mode: ThemeMode) {
-  tokens = mode === "dark" ? darkTokens : lightTokens;
+  tokens = themeByMode[mode];
 }

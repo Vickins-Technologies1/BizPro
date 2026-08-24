@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
 import type { BusinessType, IndustryKey, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
-import { BUSINESS_TYPES, INDUSTRY_KEYS, USER_ROLES } from "@vbo/shared";
+import { BUSINESS_TYPES, INDUSTRY_KEYS, PLAN_TIERS, USER_ROLES } from "@vbo/shared";
 import { buildBusinessSchemas } from "./business.schemas";
 import { buildCatalogSchemas } from "./catalog.schemas";
 import { buildFinanceSchemas } from "./finance.schemas";
@@ -30,7 +30,7 @@ export class Business {
   @Prop({ required: true, default: "KES" })
   currency!: string;
 
-  @Prop({ required: true, enum: ["lite", "standard", "pro"] satisfies PlanTier[] })
+  @Prop({ required: true, enum: [...PLAN_TIERS] satisfies PlanTier[] })
   planTier!: PlanTier;
 
   @Prop({ required: true, default: "trial" })
@@ -993,7 +993,7 @@ export const SyncCheckpointSchema = SchemaFactory.createForClass(SyncCheckpoint)
 
 @Schema({ timestamps: true, collection: "subscription_plans" })
 export class SubscriptionPlan {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true, unique: true, enum: [...PLAN_TIERS] })
   code!: PlanTier;
 
   @Prop({ required: true })
@@ -1001,6 +1001,9 @@ export class SubscriptionPlan {
 
   @Prop({ required: true })
   monthlyPrice!: number;
+
+  @Prop({ required: true, default: 1 })
+  employeeLimit!: number;
 
   @Prop({ default: true })
   active!: boolean;
@@ -1016,14 +1019,38 @@ export class Subscription {
   @Prop({ required: true, ref: "SubscriptionPlan" })
   planCode!: PlanTier;
 
+  @Prop({ required: true, enum: ["TRIAL", "ACTIVE", "EXPIRED", "PAST_DUE", "CANCELLED"] })
+  status!: "TRIAL" | "ACTIVE" | "EXPIRED" | "PAST_DUE" | "CANCELLED";
+
   @Prop({ required: true })
-  status!: "trial" | "active" | "past_due" | "suspended";
+  planName!: string;
+
+  @Prop({ required: true, default: 0 })
+  monthlyPrice!: number;
+
+  @Prop({ required: true, default: 1 })
+  employeeLimit!: number;
+
+  @Prop({ type: Date, default: null })
+  trialStartedAt?: Date | null;
 
   @Prop({ type: Date })
   trialEndsAt?: Date | null;
 
   @Prop({ type: Date })
   expiresAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  startedAt?: Date | null;
+
+  @Prop({ type: String, default: "unpaid" })
+  paymentStatus!: "unpaid" | "pending" | "paid" | "failed";
+
+  @Prop({ type: String, default: null })
+  paymentProvider?: string | null;
+
+  @Prop({ type: String, default: null })
+  paymentReference?: string | null;
 
   @Prop({ type: Date })
   graceEndsAt?: Date | null;

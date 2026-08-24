@@ -1,7 +1,7 @@
 import React from "react";
 import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { tokens } from "@/theme/tokens";
+import { getThemeTokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { navigationRef, flushPendingNotificationNavigation } from "@/navigation/navigationRef";
 import { ProductDetailScreen } from "@/screens/ProductDetailScreen";
@@ -18,6 +18,7 @@ import { EmployeesScreen } from "@/screens/EmployeesScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { OnboardingScreen } from "@/screens/OnboardingScreen";
 import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
+import { NotificationsScreen } from "@/screens/NotificationsScreen";
 import { AdaptiveWorkspaceNavigator } from "@/navigation/WorkspaceNavigator";
 
 type RootStackParamList = {
@@ -27,6 +28,7 @@ type RootStackParamList = {
   Finance: undefined;
   Reports: undefined;
   Settings: undefined;
+  Notifications: undefined;
   Brands: undefined;
   Suppliers: undefined;
   PurchaseOrders: undefined;
@@ -58,20 +60,21 @@ export function RootNavigator() {
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
   const themeMode = useAppStore((state) => state.themeMode);
+  const theme = React.useMemo(() => getThemeTokens(themeMode), [themeMode]);
   const navigationTheme = React.useMemo(
     () => ({
       ...(themeMode === "dark" ? DarkTheme : DefaultTheme),
       colors: {
         ...(themeMode === "dark" ? DarkTheme.colors : DefaultTheme.colors),
-        background: tokens.colors.background,
-        card: tokens.colors.surface,
-        border: tokens.colors.border,
-        text: tokens.colors.text,
-        primary: tokens.colors.primaryStrong,
-        notification: tokens.colors.warning
+        background: theme.colors.background,
+        card: theme.colors.surface,
+        border: theme.colors.border,
+        text: theme.colors.text,
+        primary: theme.colors.primaryStrong,
+        notification: theme.colors.warning
       }
     }),
-    [themeMode]
+    [theme, themeMode]
   );
 
   return (
@@ -101,6 +104,7 @@ export function RootNavigator() {
           <RootStack.Screen name="Finance" component={FinanceScreen} />
           <RootStack.Screen name="Reports" component={ReportsScreen} />
           <RootStack.Screen name="Settings" component={SettingsScreen} />
+          <RootStack.Screen name="Notifications" component={NotificationsScreen} />
           <RootStack.Screen name="TeamAccess" component={TeamAccessScreen} />
           <RootStack.Screen name="Employees" component={EmployeesScreen} />
         </RootStack.Navigator>

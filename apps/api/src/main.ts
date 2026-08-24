@@ -1,10 +1,18 @@
 import "reflect-metadata";
-import { ValidationPipe } from "@nestjs/common";
+import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
+const HOST = "0.0.0.0";
+const DEFAULT_PORT = 8080;
+const bootstrapLogger = new Logger("Bootstrap");
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
+  const express = app.getHttpAdapter().getInstance();
+
+  express.set("trust proxy", 1);
+  app.enableCors(buildCorsOptions());
   app.setGlobalPrefix("api");
   app.useGlobalPipes(
     new ValidationPipe({
@@ -13,7 +21,47 @@ async function bootstrap() {
       transform: true
     })
   );
-  await app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
+  express.get("/health", (_request: unknown, response: { status: (statusCode: number) => { json: (body: { status: string }) => void } }) => {
+    response.status(200).json({ status: "ok" });
+  });
+
+  const port = resolvePort();
+  await app.listen(port, HOST);
+  bootstrapLogger.log(`BizPro API running on ${HOST}:${port}`);
+
+  const shutdown = async (signal: NodeJS.Signals) => {
+    bootstrapLogger.log(`${signal} received. Shutting down BizPro API...`);
+    await app.close();
+  };
+
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  process.once("SIGINT", () => void shutdown("SIGINT"));
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  bootstrapLogger.error(
+    `Failed to start BizPro API: ${error instanceof Error ? error.message : String(error)}`,
+    error instanceof Error ? error.stack : undefined
+  );
+  process.exit(1);
+});
+
+function resolvePort() {
+  const rawPort = Number(process.env.PORT ?? DEFAULT_PORT);
+  return Number.isInteger(rawPort) && rawPort > 0 ? rawPort : DEFAULT_PORT;
+}
+
+function buildCorsOptions() {
+  const configuredOrigins = process.env.CORS_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? [];
+  if (!configuredOrigins.length) {
+    return {
+      origin: true,
+      credentials: true
+    };
+  }
+
+  return {
+    origin: configuredOrigins,
+    credentials: true
+  };
+}

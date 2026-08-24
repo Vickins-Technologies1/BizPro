@@ -1,5 +1,5 @@
 import type { Sale, SaleItem } from "@shared";
-import { format } from "date-fns";
+import { formatDate } from "@/utils/date";
 import { formatMoney } from "@/utils/money";
 
 export type ReceiptArtifacts = {
@@ -14,8 +14,7 @@ export function buildReceiptText(sale: Sale, items: SaleItem[], currency = "KES"
 }
 
 export function buildReceiptArtifacts(sale: Sale, items: SaleItem[], currency = "KES", servedBy = "Staff", businessName = "Biz Pro"): ReceiptArtifacts {
-  const saleDate = new Date(sale.createdAt);
-  const formattedDate = format(saleDate, "MMM d, yyyy h:mm a");
+  const formattedDate = formatDate(sale.createdAt, "MMM d, yyyy h:mm a");
   const servedByLabel = servedBy.trim() || "Staff";
   const receiptTitle = `Receipt #${sale.receiptNumber}`;
   const lines = [

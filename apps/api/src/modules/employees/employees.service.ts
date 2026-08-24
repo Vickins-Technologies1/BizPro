@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { Model } from "mongoose";
 import { ACCESS_PERMISSIONS, ROLE_ACCESS, ROLE_PRESETS, formatRoleLabel, type AccessPermission, type UserRole } from "@vbo/shared";
-import { AuditLog, AuditLogDocument, User, UserDocument } from "../schemas";
+import { AuditLog, AuditLogDocument, Subscription, SubscriptionDocument, User, UserDocument } from "../schemas";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 
 type EmployeeInput = {
@@ -34,7 +34,8 @@ type EmployeePatch = {
 export class EmployeesService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-    @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>
+    @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
+    @InjectModel(Subscription.name) private readonly subscriptionModel: Model<SubscriptionDocument>
   ) {}
 
   async list(businessId: string, scope: BranchScope = {}) {
@@ -48,6 +49,7 @@ export class EmployeesService {
   }
 
   async create(actor: { sub: string; businessId: string; role?: string }, input: EmployeeInput) {
+    await this.assertEmployeeCapacity(input.businessId);
     const branchId = resolveWriteBranchId({ role: actor.role ?? null, branchId: input.branchId ?? null }, input.branchId ?? null);
     const ownerId = await this.resolveBusinessOwnerId(input.businessId);
     const permissions = this.normalizePermissions(input.role, input.permissions);
@@ -79,6 +81,19 @@ export class EmployeesService {
       isActive: employee.isActive
     });
     return this.sanitizeEmployee(employee.toObject());
+  }
+
+  private async assertEmployeeCapacity(businessId: string) {
+    const subscription = await this.subscriptionModel.findOne({ businessId }).sort({ createdAt: -1 }).lean();
+    if (!subscription) throw new BadRequestException("No subscription is configured for this business.");
+    const now = new Date();
+    if (subscription.status === "EXPIRED" || (subscription.status === "TRIAL" && subscription.trialEndsAt && subscription.trialEndsAt <= now)) {
+      throw new BadRequestException("Your free trial has ended. Choose a paid plan to add employees.");
+    }
+    const employeeCount = await this.userModel.countDocuments({ businessId, role: { $ne: "owner" }, deletedAt: null });
+    if (employeeCount >= subscription.employeeLimit) {
+      throw new BadRequestException(`You have reached the ${subscription.planName} employee limit of ${subscription.employeeLimit}. Upgrade your plan to add another employee.`);
+    }
   }
 
   async update(actor: { sub: string; businessId: string; role?: string; branchId?: string | null }, id: string, input: EmployeePatch) {

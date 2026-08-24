@@ -26,6 +26,44 @@ export class ProductsService {
     return this.productModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).sort({ createdAt: -1 }).lean();
   }
 
+  async listPage(
+    businessId: string,
+    input: { page: number; pageSize: number; search?: string; categoryId?: string; brandId?: string; supplierId?: string },
+    scope: BranchScope = {}
+  ) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const searchPattern = input.search ? escapeRegex(input.search) : null;
+    const filter = {
+      businessId,
+      deletedAt: null,
+      ...buildBranchMatch(branchId),
+      ...(input.categoryId ? { categoryId: input.categoryId } : {}),
+      ...(input.brandId ? { brandId: input.brandId } : {}),
+      ...(input.supplierId ? { supplierId: input.supplierId } : {}),
+      ...(searchPattern
+        ? {
+            $or: [
+              { name: { $regex: searchPattern, $options: "i" } },
+              { sku: { $regex: searchPattern, $options: "i" } },
+              { barcode: { $regex: searchPattern, $options: "i" } },
+              { batchNumber: { $regex: searchPattern, $options: "i" } },
+              { serialNumber: { $regex: searchPattern, $options: "i" } }
+            ]
+          }
+        : {})
+    };
+    const total = await this.productModel.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / input.pageSize));
+    const page = Math.min(input.page, totalPages);
+    const items = await this.productModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * input.pageSize)
+      .limit(input.pageSize)
+      .lean();
+    return { items, page, pageSize: input.pageSize, total, totalPages };
+  }
+
   async create(input: Partial<Product> & { businessId: string; name: string; unit: string; buyingPrice: number; sellingPrice: number }, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
     if (input.externalId) {
@@ -124,4 +162,8 @@ export class ProductsService {
 
     return { stockMovements, salesHistory };
   }
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

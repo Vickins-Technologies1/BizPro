@@ -72,6 +72,12 @@ export function PosScreen() {
   }, []);
 
   React.useEffect(() => {
+    if (!modalVisible) {
+      setScannerVisible(false);
+    }
+  }, [modalVisible]);
+
+  React.useEffect(() => {
     if (Platform.OS !== "web") return;
     const globalWindow = globalThis as typeof globalThis & { addEventListener?: (type: string, listener: (event: any) => void) => void; removeEventListener?: (type: string, listener: (event: any) => void) => void };
     if (!globalWindow.addEventListener || !globalWindow.removeEventListener) return;
@@ -204,6 +210,7 @@ export function PosScreen() {
     setCart([]);
     setProductSearch("");
     setLookupCode("");
+    setScannerVisible(false);
     setPaymentMode("cash");
     setCheckoutMode("sale");
     setDiscountMode("flat");
@@ -232,6 +239,7 @@ export function PosScreen() {
       throw new Error("No product matches this barcode.");
     }
     addToCart(match.id);
+    setScannerVisible(false);
     setLookupCode("");
   }
 
@@ -401,6 +409,7 @@ export function PosScreen() {
         }))
       });
       setReceipt(result.receipt);
+      setScannerVisible(false);
       setModalVisible(false);
       clearSaleForm();
       await refreshDrafts();
@@ -427,8 +436,8 @@ export function PosScreen() {
       <AppScrollView refreshing={refreshing} onRefresh={refreshSales}>
         <Card style={{ gap: 10 }}>
           <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Sales history</Text>
-          <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>Keep the page focused on recent sales.</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Keep the page focused on recent sales.</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
             Tap Record Sale to open the cart flow. The history below updates automatically after each save.
           </Text>
           <PrimaryButton title="Record Sale" onPress={() => setModalVisible(true)} />
@@ -669,7 +678,7 @@ export function PosScreen() {
                     </Pressable>
                     <View style={{ flex: 1, alignItems: "center", gap: 2 }}>
                       <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Quantity</Text>
-                      <Text style={{ color: tokens.colors.text, fontSize: 24, fontWeight: "900" }}>{line.quantity}</Text>
+                      <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>{line.quantity}</Text>
                       <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Tap + for more</Text>
                     </View>
                     <Pressable

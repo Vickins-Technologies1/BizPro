@@ -62,6 +62,32 @@ export class ProductsController {
     return this.products.list(user.businessId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
+  @Get("page")
+  @Roles("owner", "manager", "cashier")
+  page(
+    @CurrentUser() user: { businessId: string; role?: string; branchId?: string | null },
+    @Query("branchId") branchId?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("search") search?: string,
+    @Query("categoryId") categoryId?: string,
+    @Query("brandId") brandId?: string,
+    @Query("supplierId") supplierId?: string
+  ) {
+    return this.products.listPage(
+      user.businessId,
+      {
+        page: parsePositiveInt(page, 1),
+        pageSize: Math.min(parsePositiveInt(pageSize, 6), 50),
+        ...(search?.trim() ? { search: search.trim() } : {}),
+        ...(categoryId ? { categoryId } : {}),
+        ...(brandId ? { brandId } : {}),
+        ...(supplierId ? { supplierId } : {})
+      },
+      { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null }
+    );
+  }
+
   @Post()
   @Roles("owner", "manager")
   create(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Body() dto: CreateProductDto) {
@@ -113,4 +139,9 @@ export class ProductsController {
   history(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Query("branchId") branchId?: string) {
     return this.products.history(user.businessId, id, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }

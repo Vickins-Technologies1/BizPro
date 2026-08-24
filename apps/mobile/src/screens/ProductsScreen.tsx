@@ -2,8 +2,9 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { INVENTORY_UNITS, productCreateSchema, resolveIndustryModule } from "@shared";
-import { AppScrollView, Card, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
+import { INVENTORY_UNITS, productCreateSchema, resolveIndustryModule, type Product } from "@shared";
+import { AppScrollView, Card, GradientHeader, InputField, Pagination, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -12,7 +13,7 @@ import { z } from "zod";
 import { useNavigation } from "@react-navigation/native";
 import { EmptyState } from "@/components/Primitives";
 import { hasPermission } from "@shared";
-import { deleteProduct } from "@/services/apiClient";
+import { deleteProduct, listProductsPage } from "@/services/apiClient";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -40,6 +41,7 @@ export function ProductsScreen() {
   const [brandVisible, setBrandVisible] = useState(false);
   const [supplierVisible, setSupplierVisible] = useState(false);
   const [importVisible, setImportVisible] = useState(false);
+  const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
   const [restockVisible, setRestockVisible] = useState(false);
   const [restockProductId, setRestockProductId] = useState<string | null>(null);
   const [restockQty, setRestockQty] = useState("0");
@@ -66,6 +68,11 @@ export function ProductsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageProducts, setPageProducts] = useState<Product[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
   const pageSize = 6;
   const deferredSearch = React.useDeferredValue(search);
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
@@ -104,46 +111,57 @@ export function ProductsScreen() {
   const brandMap = useMemo(() => new Map(brands.map((brand) => [brand.id, brand])), [brands]);
   const supplierMap = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier])), [suppliers]);
 
-  const filtered = useMemo(
-    () =>
-      products.filter(
-        (product) => {
-          const brandName = brandMap.get(product.brandId ?? "")?.name ?? "";
-          const supplierName = supplierMap.get(product.supplierId ?? "")?.name ?? "";
-          const categoryName = categoryMap.get(product.categoryId ?? "")?.name ?? "";
-          const searchSpace = [product.name, product.sku, product.barcode, product.batchNumber, product.serialNumber, brandName, supplierName, categoryName]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(deferredSearch.toLowerCase()));
-          return (
-          (selectedCategoryId ? product.categoryId === selectedCategoryId : true) &&
-          (selectedBrandId ? product.brandId === selectedBrandId : true) &&
-          (selectedSupplierId ? product.supplierId === selectedSupplierId : true) &&
-          searchSpace
-          );
-        }
-      ),
-    [products, deferredSearch, selectedCategoryId, selectedBrandId, selectedSupplierId, categoryMap, brandMap, supplierMap]
-  );
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageProducts = useMemo(() => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, filtered]);
-
-  React.useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
-
   React.useEffect(() => {
     setCurrentPage(1);
   }, [deferredSearch, selectedCategoryId, selectedBrandId, selectedSupplierId]);
 
   React.useEffect(() => {
-    loadCatalog().catch(() => undefined);
+    loadCatalog({ skipProducts: true }).catch(() => undefined);
   }, [loadCatalog]);
+
+  const loadProductPage = React.useCallback(async (nextPage: number) => {
+    setListLoading(true);
+    setListError(null);
+    try {
+      const response = await listProductsPage({
+        branchId: selectedBranchId,
+        page: nextPage,
+        pageSize,
+        search: deferredSearch,
+        categoryId: selectedCategoryId,
+        brandId: selectedBrandId,
+        supplierId: selectedSupplierId
+      });
+      setPageProducts(response.items);
+      setCurrentPage(response.page);
+      setTotalProducts(response.total);
+      setTotalPages(response.totalPages);
+    } catch {
+      setPageProducts([]);
+      setTotalProducts(0);
+      setTotalPages(1);
+      setListError("We could not load products. Check your connection and try again.");
+    } finally {
+      setListLoading(false);
+    }
+  }, [deferredSearch, selectedBranchId, selectedCategoryId, selectedBrandId, selectedSupplierId]);
+
+  React.useEffect(() => {
+    void loadProductPage(currentPage);
+  }, [currentPage, loadProductPage]);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setBarcodeScannerVisible(false);
+    }
+  }, [visible]);
 
   async function refreshCatalog() {
     if (refreshing) return;
     setRefreshing(true);
     try {
       await loadCatalog();
+      await loadProductPage(currentPage);
     } finally {
       setRefreshing(false);
     }
@@ -344,6 +362,9 @@ export function ProductsScreen() {
   const currentSupplierId = watch("supplierId");
   const currentUnit = watch("unit");
   const canManageInventory = hasPermission(user, "manageInventory");
+  const activeProductCount = products.filter((product) => product.isActive).length;
+  const lowStockCount = products.filter((product) => product.isActive && product.stockOnHand <= product.lowStockThreshold).length;
+  const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
 
   if (!canManageInventory) {
     return (
@@ -378,6 +399,34 @@ export function ProductsScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog}>
+        <Card style={{ gap: 14, padding: 18 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Inventory pulse</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>Know what is moving.</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>Keep pricing, availability, and replenishment decisions close to the sale.</Text>
+            </View>
+            <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
+              <Ionicons name="cube-outline" size={23} color={tokens.colors.primaryStrong} />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {[
+              { label: "Active", value: activeProductCount, tone: tokens.colors.primaryStrong },
+              { label: "Low stock", value: lowStockCount, tone: tokens.colors.warning },
+              { label: "SKU count", value: products.length, tone: tokens.colors.success }
+            ].map((item) => (
+              <View key={item.label} style={{ flex: 1, padding: 11, borderRadius: 16, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border }}>
+                <Text style={{ color: item.tone, fontSize: 18, fontWeight: "900" }}>{item.value}</Text>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.45 }}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Stock at cost</Text>
+            <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>{formatMoney(inventoryValue, business?.currency)}</Text>
+          </View>
+        </Card>
         <Card>
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
         </Card>
@@ -457,7 +506,14 @@ export function ProductsScreen() {
             ))}
           </ScrollView>
         </Card>
-        {filtered.length ? (
+        {listLoading ? (
+          <Card style={{ alignItems: "center", paddingVertical: 24 }}><Text style={{ color: tokens.colors.textSecondary }}>Loading products...</Text></Card>
+        ) : listError ? (
+          <Card style={{ alignItems: "center", gap: 10, paddingVertical: 20 }}>
+            <Text style={{ color: tokens.colors.danger, textAlign: "center" }}>{listError}</Text>
+            <PrimaryButton title="Try again" variant="secondary" onPress={() => void loadProductPage(currentPage)} />
+          </Card>
+        ) : pageProducts.length ? (
           <>
             <View style={{ gap: 10 }}>
               {pageProducts.map((product) => {
@@ -527,39 +583,22 @@ export function ProductsScreen() {
               })}
             </View>
             {totalPages > 1 ? (
-              <Card style={{ gap: 10 }}>
+              <Card style={{ gap: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                   <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                     Page {currentPage} of {totalPages}
                   </Text>
                   <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
-                    Showing {Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filtered.length, currentPage * pageSize)} of {filtered.length}
+                    Showing {Math.min(totalProducts, (currentPage - 1) * pageSize + 1)}-{Math.min(totalProducts, currentPage * pageSize)} of {totalProducts}
                   </Text>
                 </View>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Previous"
-                      variant="secondary"
-                      disabled={currentPage === 1}
-                      onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Next"
-                      variant="secondary"
-                      disabled={currentPage === totalPages}
-                      onPress={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                    />
-                  </View>
-                </View>
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} compact />
               </Card>
             ) : null}
           </>
         ) : (
           <EmptyState
-            title={search ? "No matching products" : "No products yet"}
+            title={search || selectedCategoryId || selectedBrandId || selectedSupplierId ? "No matching products" : "No products yet"}
             subtitle={search ? "Try a different product name or SKU, or clear the search to see everything." : "Create your first product to start tracking stock and sales."}
             action={<PrimaryButton title="Add product" onPress={() => setVisible(true)} />}
             icon="cube-outline"
@@ -583,7 +622,23 @@ export function ProductsScreen() {
           <Controller
             control={control}
             name="barcode"
-            render={({ field: { value, onChange } }) => <InputField label="Barcode" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional barcode for scanner input." />}
+            render={({ field: { value, onChange } }) => (
+              <InputField
+                label="Barcode"
+                value={(value as string) ?? ""}
+                onChangeText={onChange}
+                helperText="Optional barcode for scanner input. Tap the scan icon to fill it automatically."
+                rightAccessory={
+                  <Pressable
+                    onPress={() => setBarcodeScannerVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Scan barcode"
+                  >
+                    <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
+                  </Pressable>
+                }
+              />
+            )}
           />
           <Controller
             control={control}
@@ -786,6 +841,16 @@ export function ProductsScreen() {
           />
         </AppScrollView>
       </SimpleModal>
+      <BarcodeScannerModal
+        visible={visible && barcodeScannerVisible}
+        title="Scan product barcode"
+        subtitle="Point the camera at the barcode to fill the product field automatically."
+        onClose={() => setBarcodeScannerVisible(false)}
+        onBarcodeScanned={async (barcode) => {
+          setValue("barcode", barcode, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+          setBarcodeScannerVisible(false);
+        }}
+      />
       <SimpleModal visible={categoryVisible} title="Add category" onClose={() => setCategoryVisible(false)}>
         <View style={{ gap: 12 }}>
           <InputField label="Category name" value={categoryName} onChangeText={setCategoryName} placeholder="Fast Moving" helperText="Use a simple name like Drinks or Cleaning." />

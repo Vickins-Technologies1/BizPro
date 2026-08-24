@@ -55,7 +55,7 @@ export class RegisterDto {
   @IsIn(BUSINESS_TYPES)
   businessType!: BusinessType;
 
-  @IsIn(["lite", "standard", "pro"])
+  @IsIn(["command", "pro", "elite", "enterprise"])
   planTier!: PlanTier;
 
   @IsString()

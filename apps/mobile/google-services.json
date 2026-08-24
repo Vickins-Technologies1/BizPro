@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "600114414036",
+    "project_id": "bizpro-5aa94",
+    "storage_bucket": "bizpro-5aa94.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:600114414036:android:6458a123a154408da49641",
+        "android_client_info": {
+          "package_name": "com.bizpro.vickins"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBS6bvH0d4s__DE3AEEJ2rFfY58GSeLQjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

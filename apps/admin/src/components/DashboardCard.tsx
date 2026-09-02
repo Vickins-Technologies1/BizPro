@@ -19,11 +19,11 @@ export function DashboardCard({
       style={{
         background: "linear-gradient(180deg, rgba(17,24,39,0.94), rgba(15,23,42,0.92))",
         border: "1px solid var(--border)",
-        borderRadius: "20px",
-        boxShadow: hovered ? "0 18px 44px rgba(0,0,0,0.34)" : "var(--shadow)",
+        borderRadius: "14px",
+        boxShadow: hovered ? "0 12px 28px rgba(0,0,0,0.24)" : "0 8px 22px rgba(0,0,0,0.18)",
         transform: hovered ? "translateY(-1px)" : "translateY(0)",
         transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
-        padding: 18,
+        padding: 14,
         position: "relative",
         overflow: "hidden"
       }}
@@ -43,7 +43,7 @@ export function DashboardCard({
           }}
         />
       ) : null}
-      <h3 style={{ margin: 0, fontSize: 16, marginBottom: 12, fontFamily: "var(--font-grotesk)", letterSpacing: -0.2 }}>{title}</h3>
+      <h3 style={{ margin: 0, fontSize: 14, marginBottom: 10, fontFamily: "var(--font-grotesk)", letterSpacing: -0.1 }}>{title}</h3>
       {children}
     </section>
   );

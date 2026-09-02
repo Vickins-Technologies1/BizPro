@@ -4,11 +4,13 @@ import type { BusinessType, IndustryKey, PlanTier, UserRole, PaymentMethod, Paym
 import { BUSINESS_TYPES, INDUSTRY_KEYS, PLAN_TIERS, USER_ROLES } from "@vbo/shared";
 import { buildBusinessSchemas } from "./business.schemas";
 import { buildCatalogSchemas } from "./catalog.schemas";
+import { buildInvoiceSchemas } from "./invoice.schemas";
 import { buildFinanceSchemas } from "./finance.schemas";
 import { buildSuppliersSchemas } from "./suppliers.schemas";
 import { buildSyncSchemas } from "./sync.schemas";
 import { buildSubscriptionSchemas } from "./subscription.schemas";
 import { buildOpsSchemas } from "./ops.schemas";
+import { BusinessOperation, BusinessOperationSchema } from "./business-operations.schemas";
 
 @Schema({ timestamps: true, collection: "businesses" })
 export class Business {
@@ -29,6 +31,67 @@ export class Business {
 
   @Prop({ required: true, default: "KES" })
   currency!: string;
+
+  @Prop({ type: String, default: null })
+  logoUrl?: string | null;
+
+  @Prop({ type: String, default: null })
+  phone?: string | null;
+
+  @Prop({ type: String, default: null })
+  email?: string | null;
+
+  @Prop({ type: String, default: null })
+  address?: string | null;
+
+  @Prop({ type: String, default: null })
+  taxPin?: string | null;
+
+  @Prop({ type: String, default: null })
+  vatRegistrationNumber?: string | null;
+
+  @Prop({
+    type: Object,
+    default: {
+      prefix: "INV-",
+      startingNumber: 1,
+      nextNumber: 1,
+      padding: 6,
+      autoGenerate: true,
+      resetBehavior: "never",
+      defaultPaymentTermsDays: 30,
+      publicSharingEnabled: true,
+      paymentMethods: ["cash", "mpesa", "bank", "card", "cheque", "other", "credit"]
+    }
+  })
+  invoiceSettings?: {
+    prefix: string;
+    startingNumber: number;
+    nextNumber: number;
+    padding: number;
+    autoGenerate: boolean;
+    resetBehavior: "never" | "yearly" | "monthly";
+    defaultPaymentTermsDays: number;
+    publicSharingEnabled: boolean;
+    paymentMethods: string[];
+  } | null;
+
+  @Prop({
+    type: Object,
+    default: {
+      defaultTaxCategory: "vat",
+      defaultTaxRate: 16,
+      defaultTaxInclusive: false
+    }
+  })
+  taxSettings?: {
+    taxPin?: string | null;
+    vatRegistrationNumber?: string | null;
+    defaultTaxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+    defaultTaxRate: number;
+    defaultTaxInclusive: boolean;
+    defaultTaxCode?: string | null;
+  } | null;
 
   @Prop({ required: true, enum: [...PLAN_TIERS] satisfies PlanTier[] })
   planTier!: PlanTier;
@@ -615,11 +678,20 @@ export class Customer {
   @Prop({ required: true })
   name!: string;
 
+  @Prop({ type: String, default: null })
+  businessName?: string | null;
+
   @Prop({ type: String })
   phone?: string | null;
 
   @Prop({ type: String })
   email?: string | null;
+
+  @Prop({ type: String, default: null })
+  address?: string | null;
+
+  @Prop({ type: String, default: null })
+  taxPin?: string | null;
 
   @Prop({ type: String })
   notes?: string | null;
@@ -764,6 +836,9 @@ export class CreditNote {
   @Prop({ type: String, default: null })
   branchId?: string | null;
 
+  @Prop({ type: String, default: null })
+  invoiceId?: string | null;
+
   @Prop({ required: true })
   reference!: string;
 
@@ -793,6 +868,201 @@ export class CreditNote {
 }
 export type CreditNoteDocument = HydratedDocument<CreditNote>;
 export const CreditNoteSchema = SchemaFactory.createForClass(CreditNote);
+
+@Schema({ timestamps: true, collection: "invoices" })
+export class Invoice {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
+  @Prop({ type: String, default: null, index: true })
+  customerId?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerName?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerBusinessName?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerEmail?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerPhone?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerAddress?: string | null;
+
+  @Prop({ type: String, default: null })
+  customerTaxPin?: string | null;
+
+  @Prop({ required: true, index: true })
+  invoiceNumber!: string;
+
+  @Prop({ type: String, default: null, index: true })
+  referenceNumber?: string | null;
+
+  @Prop({ type: String, default: null })
+  purchaseOrderNumber?: string | null;
+
+  @Prop({ required: true })
+  issueDate!: Date;
+
+  @Prop({ required: true })
+  dueDate!: Date;
+
+  @Prop({ required: true, default: "30 days" })
+  paymentTerms!: string;
+
+  @Prop({ required: true, default: "KES" })
+  currency!: string;
+
+  @Prop({ required: true, enum: ["draft", "sent", "viewed", "partially_paid", "paid", "overdue", "cancelled", "void", "refunded", "archived"], default: "draft" })
+  status!: "draft" | "sent" | "viewed" | "partially_paid" | "paid" | "overdue" | "cancelled" | "void" | "refunded" | "archived";
+
+  @Prop({ required: true, default: 0 })
+  subtotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  discountTotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  taxableAmount!: number;
+
+  @Prop({ required: true, default: 0 })
+  taxTotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  grandTotal!: number;
+
+  @Prop({ required: true, default: 0 })
+  amountPaid!: number;
+
+  @Prop({ required: true, default: 0 })
+  balanceDue!: number;
+
+  @Prop({ type: String, default: null })
+  notes?: string | null;
+
+  @Prop({ type: String, default: null })
+  termsAndConditions?: string | null;
+
+  @Prop({ type: String, default: null })
+  shareToken?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationStatus?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationProvider?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationReference?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationRequestId?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationDocumentNumber?: string | null;
+
+  @Prop({ type: Date, default: null })
+  fiscalizationDate?: Date | null;
+
+  @Prop({ type: Object, default: null })
+  fiscalizationResponse?: Record<string, unknown> | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationError?: string | null;
+
+  @Prop({ type: String, default: null })
+  fiscalizationPayloadReference?: string | null;
+
+  @Prop({ type: Array, default: [] })
+  lineItems!: Array<Record<string, unknown>>;
+
+  @Prop({ type: Array, default: [] })
+  payments!: Array<Record<string, unknown>>;
+
+  @Prop({ type: Array, default: [] })
+  history!: Array<Record<string, unknown>>;
+
+  @Prop({ type: Date, default: null })
+  archivedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  sentAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  viewedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  paidAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  cancelledAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  voidedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  refundedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type InvoiceDocument = HydratedDocument<Invoice>;
+export const InvoiceSchema = SchemaFactory.createForClass(Invoice);
+InvoiceSchema.index({ businessId: 1, invoiceNumber: 1 }, { unique: true });
+InvoiceSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
+
+@Schema({ timestamps: true, collection: "debit_notes" })
+export class DebitNote {
+  @Prop({ type: String, index: true })
+  externalId?: string | null;
+
+  @Prop({ required: true, index: true })
+  businessId!: string;
+
+  @Prop({ required: true, index: true })
+  invoiceId!: string;
+
+  @Prop({ type: String, default: null, index: true })
+  customerId?: string | null;
+
+  @Prop({ type: String, default: null })
+  branchId?: string | null;
+
+  @Prop({ required: true, index: true })
+  reference!: string;
+
+  @Prop({ required: true })
+  reason!: string;
+
+  @Prop({ required: true, default: 0 })
+  amount!: number;
+
+  @Prop({ required: true, default: 0 })
+  taxAdjustment!: number;
+
+  @Prop({ type: String, default: null })
+  note?: string | null;
+
+  @Prop({ required: true, enum: ["draft", "issued", "void"], default: "draft" })
+  status!: "draft" | "issued" | "void";
+
+  @Prop({ required: true })
+  issuedAt!: Date;
+
+  @Prop({ type: Date, default: null })
+  deletedAt?: Date | null;
+}
+export type DebitNoteDocument = HydratedDocument<DebitNote>;
+export const DebitNoteSchema = SchemaFactory.createForClass(DebitNote);
 
 export interface SaleItem {
   productId: string;
@@ -876,6 +1146,9 @@ export class Payment {
 
   @Prop({ type: String })
   saleId?: string | null;
+
+  @Prop({ type: String, default: null })
+  invoiceId?: string | null;
 
   @Prop({ type: String })
   debtPaymentId?: string | null;
@@ -1183,6 +1456,11 @@ export const catalogSchemas = buildCatalogSchemas({
   StockAdjustment: { name: StockAdjustment.name, schema: StockAdjustmentSchema }
 });
 
+export const invoiceSchemas = buildInvoiceSchemas({
+  Invoice: { name: Invoice.name, schema: InvoiceSchema },
+  DebitNote: { name: DebitNote.name, schema: DebitNoteSchema }
+});
+
 export const supplierSchemas = buildSuppliersSchemas({
   SupplierCategory: { name: SupplierCategory.name, schema: SupplierCategorySchema },
   SupplierContact: { name: SupplierContact.name, schema: SupplierContactSchema },
@@ -1217,6 +1495,8 @@ export const opsSchemas = buildOpsSchemas({
   BusinessNotification: { name: BusinessNotification.name, schema: BusinessNotificationSchema }
 });
 
-export const allSchemas = [...businessSchemas, ...catalogSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas] as const;
+export const businessOperationSchemas = [{ name: BusinessOperation.name, schema: BusinessOperationSchema }] as const;
+
+export const allSchemas = [...businessSchemas, ...catalogSchemas, ...invoiceSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas, ...businessOperationSchemas] as const;
 
 export type MongoId = Types.ObjectId;

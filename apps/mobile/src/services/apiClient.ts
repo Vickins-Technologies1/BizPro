@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { secureStore } from "@/storage/secure";
+import { createBusinessOperationDraft, enqueueAction, isOfflineError } from "@/services/offlineQueue";
 import type {
   AccessPermission,
   BankAccount,
@@ -12,6 +13,8 @@ import type {
   CustomerAnalytics,
   CustomerAttachment,
   CustomerGroup,
+  DebitNote,
+  Invoice,
   FinanceInvoice,
   FinanceOverview,
   FinancePayment,
@@ -33,6 +36,9 @@ import type {
   SupplierPerformanceReport,
   SupplierStatement,
   UserRole
+  ,BusinessOperation,
+  BusinessOperationKind,
+  BusinessOperationStatus
 } from "@shared";
 
 type RequestOptions = {
@@ -193,8 +199,11 @@ function normalizeCustomer(customer: RawEntity): Customer {
   return {
     ...normalized,
     groupId: normalized.groupId ?? null,
+    businessName: normalized.businessName ?? null,
     phone: normalized.phone ?? null,
     email: normalized.email ?? null,
+    address: normalized.address ?? null,
+    taxPin: normalized.taxPin ?? null,
     creditLimit: Number(normalized.creditLimit ?? 0),
     loyaltyPoints: Number(normalized.loyaltyPoints ?? 0),
     notes: normalized.notes ?? null,
@@ -247,6 +256,120 @@ function normalizeCustomerAnalytics(analytics: RawEntity): CustomerAnalytics {
         }))
       : []
   };
+}
+
+function normalizeInvoiceLineItem(line: RawEntity) {
+  return {
+    id: String(line.id ?? line.externalId ?? ""),
+    productId: line.productId ?? null,
+    productName: line.productName ?? null,
+    description: String(line.description ?? line.productName ?? "Item"),
+    quantity: Number(line.quantity ?? 0),
+    unit: String(line.unit ?? "pcs"),
+    unitPrice: Number(line.unitPrice ?? 0),
+    discountType: line.discountType ?? "fixed",
+    discountValue: Number(line.discountValue ?? 0),
+    lineDiscount: Number(line.lineDiscount ?? 0),
+    lineSubtotal: Number(line.lineSubtotal ?? 0),
+    lineTax: Number(line.lineTax ?? 0),
+    lineTotal: Number(line.lineTotal ?? 0),
+    tax: {
+      taxCategory: line.tax?.taxCategory ?? "vat",
+      taxCode: line.tax?.taxCode ?? null,
+      taxRate: Number(line.tax?.taxRate ?? 0),
+      taxInclusive: Boolean(line.tax?.taxInclusive),
+      taxAmount: Number(line.tax?.taxAmount ?? 0),
+      taxableAmount: Number(line.tax?.taxableAmount ?? 0)
+    }
+  };
+}
+
+function normalizeDebitNote(note: RawEntity): DebitNote {
+  const normalized = withId(note);
+  return {
+    ...normalized,
+    customerId: normalized.customerId ?? null,
+    invoiceId: String(normalized.invoiceId ?? ""),
+    reference: String(normalized.reference ?? ""),
+    reason: String(normalized.reason ?? ""),
+    amount: Number(normalized.amount ?? 0),
+    taxAdjustment: Number(normalized.taxAdjustment ?? 0),
+    note: normalized.note ?? null,
+    status: normalized.status ?? "draft",
+    issuedAt: normalizeIsoDate(normalized.issuedAt)
+  } as DebitNote;
+}
+
+function normalizeInvoice(invoice: RawEntity): Invoice {
+  const normalized = withId(invoice);
+  return {
+    ...normalized,
+    branchId: normalized.branchId ?? null,
+    customerId: normalized.customerId ?? null,
+    customerName: normalized.customerName ?? null,
+    customerBusinessName: normalized.customerBusinessName ?? null,
+    customerEmail: normalized.customerEmail ?? null,
+    customerPhone: normalized.customerPhone ?? null,
+    customerAddress: normalized.customerAddress ?? null,
+    customerTaxPin: normalized.customerTaxPin ?? null,
+    referenceNumber: normalized.referenceNumber ?? null,
+    purchaseOrderNumber: normalized.purchaseOrderNumber ?? null,
+    issueDate: normalizeIsoDate(normalized.issueDate),
+    dueDate: normalizeIsoDate(normalized.dueDate),
+    paymentTerms: normalized.paymentTerms ?? "30 days",
+    currency: normalized.currency ?? "KES",
+    status: normalized.status ?? "draft",
+    subtotal: Number(normalized.subtotal ?? 0),
+    discountTotal: Number(normalized.discountTotal ?? 0),
+    taxableAmount: Number(normalized.taxableAmount ?? 0),
+    taxTotal: Number(normalized.taxTotal ?? 0),
+    grandTotal: Number(normalized.grandTotal ?? 0),
+    amountPaid: Number(normalized.amountPaid ?? 0),
+    balanceDue: Number(normalized.balanceDue ?? 0),
+    notes: normalized.notes ?? null,
+    termsAndConditions: normalized.termsAndConditions ?? null,
+    archivedAt: normalized.archivedAt ? normalizeIsoDate(normalized.archivedAt) : null,
+    sentAt: normalized.sentAt ? normalizeIsoDate(normalized.sentAt) : null,
+    viewedAt: normalized.viewedAt ? normalizeIsoDate(normalized.viewedAt) : null,
+    paidAt: normalized.paidAt ? normalizeIsoDate(normalized.paidAt) : null,
+    cancelledAt: normalized.cancelledAt ? normalizeIsoDate(normalized.cancelledAt) : null,
+    voidedAt: normalized.voidedAt ? normalizeIsoDate(normalized.voidedAt) : null,
+    refundedAt: normalized.refundedAt ? normalizeIsoDate(normalized.refundedAt) : null,
+    shareToken: normalized.shareToken ?? null,
+    fiscalizationStatus: normalized.fiscalizationStatus ?? null,
+    fiscalizationProvider: normalized.fiscalizationProvider ?? null,
+    fiscalizationReference: normalized.fiscalizationReference ?? null,
+    fiscalizationRequestId: normalized.fiscalizationRequestId ?? null,
+    fiscalizationDocumentNumber: normalized.fiscalizationDocumentNumber ?? null,
+    fiscalizationDate: normalized.fiscalizationDate ? normalizeIsoDate(normalized.fiscalizationDate) : null,
+    fiscalizationResponse: normalized.fiscalizationResponse ?? null,
+    fiscalizationError: normalized.fiscalizationError ?? null,
+    fiscalizationPayloadReference: normalized.fiscalizationPayloadReference ?? null,
+    lineItems: Array.isArray(normalized.lineItems) ? normalized.lineItems.map((line: RawEntity) => normalizeInvoiceLineItem(line)) : [],
+    payments: Array.isArray(normalized.payments)
+      ? normalized.payments.map((payment: RawEntity) => ({
+          id: String(payment.id ?? payment.paymentId ?? payment.externalId ?? ""),
+          paymentId: payment.paymentId ?? null,
+          amount: Number(payment.amount ?? 0),
+          method: payment.method ?? "cash",
+          paymentDate: normalizeIsoDate(payment.paymentDate ?? null),
+          reference: payment.reference ?? null,
+          note: payment.note ?? null
+        }))
+      : [],
+    history: Array.isArray(normalized.history)
+      ? normalized.history.map((entry: RawEntity) => ({
+          id: String(entry.id ?? ""),
+          action: String(entry.action ?? "event"),
+          note: entry.note ?? null,
+          actorId: entry.actorId ?? null,
+          createdAt: String(entry.createdAt ?? new Date().toISOString()),
+          payload: entry.payload ?? null
+        }))
+      : [],
+    creditNotes: Array.isArray(normalized.creditNotes) ? (normalized.creditNotes.map((note: RawEntity) => withId(note)) as CreditNote[]) : [],
+    debitNotes: Array.isArray(normalized.debitNotes) ? normalized.debitNotes.map((note: RawEntity) => normalizeDebitNote(note)) : []
+  } as Invoice;
 }
 
 async function getSessionToken() {
@@ -620,8 +743,11 @@ export async function createCustomer(input: {
   externalId?: string | null;
   groupId?: string | null;
   name: string;
+  businessName?: string | null;
   phone?: string | null;
   email?: string | null;
+  address?: string | null;
+  taxPin?: string | null;
   creditLimit?: number;
   loyaltyPoints?: number;
   notes?: string | null;
@@ -715,6 +841,206 @@ export async function createFinanceCreditNote(input: {
   return withId({ ...note, creditDate: normalizeIsoDate(note.creditDate) }) as CreditNote;
 }
 
+export async function getInvoiceDashboard(from?: string, to?: string, branchId?: string | null) {
+  const query = new URLSearchParams();
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
+  if (branchId) query.set("branchId", branchId);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiRequest<{
+    totalInvoiced: number;
+    paid: number;
+    outstanding: number;
+    overdue: number;
+    drafts: number;
+    thisMonth: number;
+    thisYear: number;
+    paymentTotal: number;
+    totalPaid: number;
+    overdueCount: number;
+  }>(`/invoices/dashboard${suffix}`);
+}
+
+export async function listInvoices(input: {
+  branchId?: string | null;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  from?: string;
+  to?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  const query = new URLSearchParams();
+  if (input.branchId) query.set("branchId", input.branchId);
+  if (input.page) query.set("page", String(input.page));
+  if (input.pageSize) query.set("pageSize", String(input.pageSize));
+  if (input.search?.trim()) query.set("search", input.search.trim());
+  if (input.status) query.set("status", input.status);
+  if (input.customerId) query.set("customerId", input.customerId);
+  if (input.from) query.set("from", input.from);
+  if (input.to) query.set("to", input.to);
+  if (input.sortBy) query.set("sortBy", input.sortBy);
+  if (input.sortOrder) query.set("sortOrder", input.sortOrder);
+  const response = await apiRequest<{ items: RawEntity[]; page: number; pageSize: number; total: number; totalPages: number }>(`/invoices?${query.toString()}`);
+  return { ...response, items: response.items.map((item) => normalizeInvoice(item)) };
+}
+
+export async function getInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}`, branchId));
+  return normalizeInvoice(invoice);
+}
+
+export async function getInvoicePdfHtml(id: string, branchId?: string | null) {
+  return apiRequest<{ html: string }>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/pdf-html`, branchId));
+}
+
+export async function createInvoice(input: Omit<Invoice, "id" | "createdAt" | "updatedAt" | "deletedAt" | "history" | "payments" | "lineItems" | "creditNotes" | "debitNotes"> & {
+  branchId?: string | null;
+  externalId?: string | null;
+  issueDate: string;
+  dueDate: string;
+  lineItems: Array<{
+    productId?: string | null;
+    productName?: string | null;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    discountType?: "percentage" | "fixed";
+    discountValue?: number;
+    taxCategory?: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+    taxCode?: string | null;
+    taxRate?: number;
+    taxInclusive?: boolean;
+  }>;
+}) {
+  const invoice = await apiRequest<RawEntity>("/invoices", { method: "POST", body: input });
+  return normalizeInvoice(invoice);
+}
+
+export async function updateInvoice(id: string, patch: Partial<Invoice> & { branchId?: string | null; issueDate?: string; dueDate?: string; lineItems?: Array<any> }) {
+  const invoice = await apiRequest<RawEntity>(`/invoices/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+  return normalizeInvoice(invoice);
+}
+
+export async function duplicateInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/duplicate`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function sendInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/send`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function markInvoiceViewed(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/view`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function recordInvoicePayment(
+  id: string,
+  input: { amount: number; method: string; paymentDate: string; reference?: string | null; note?: string | null; externalId?: string | null },
+  branchId?: string | null
+) {
+  const response = await apiRequest<{ invoice: RawEntity; payment: RawEntity }>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/payments`, branchId), { method: "POST", body: input });
+  return { invoice: normalizeInvoice(response.invoice), payment: withId(response.payment) as Payment };
+}
+
+export async function cancelInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/cancel`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function voidInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/void`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function archiveInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/archive`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function restoreInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/restore`, branchId), { method: "POST" });
+  return normalizeInvoice(invoice);
+}
+
+export async function deleteDraftInvoice(id: string, branchId?: string | null) {
+  const invoice = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}`, branchId), { method: "DELETE" });
+  return normalizeInvoice(invoice);
+}
+
+export async function createInvoiceCreditNote(
+  id: string,
+  input: {
+    businessId: string;
+    branchId?: string | null;
+    externalId?: string | null;
+    reference: string;
+    customerId?: string | null;
+    amount: number;
+    reason: string;
+    note?: string | null;
+    creditDate: string;
+    status?: CreditNote["status"];
+  },
+  branchId?: string | null
+) {
+  const note = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/credit-notes`, branchId), { method: "POST", body: input });
+  return withId({ ...note, creditDate: normalizeIsoDate(note.creditDate) }) as CreditNote;
+}
+
+export async function createInvoiceDebitNote(
+  id: string,
+  input: {
+    businessId: string;
+    branchId?: string | null;
+    externalId?: string | null;
+    reference: string;
+    reason: string;
+    amount: number;
+    taxAdjustment: number;
+    note?: string | null;
+    issuedAt: string;
+    status?: "draft" | "issued" | "void";
+  },
+  branchId?: string | null
+) {
+  const note = await apiRequest<RawEntity>(withBranchQuery(`/invoices/${encodeURIComponent(id)}/debit-notes`, branchId), { method: "POST", body: input });
+  return normalizeDebitNote(note);
+}
+
+export async function getInvoiceCustomerHistory(customerId: string, branchId?: string | null) {
+  const history = await apiRequest<{
+    totalInvoiced: number;
+    totalPaid: number;
+    outstandingBalance: number;
+    overdueAmount: number;
+    invoiceCount: number;
+    recentInvoices: RawEntity[];
+    paymentHistory: RawEntity[];
+    creditNotes: RawEntity[];
+    debitNotes: RawEntity[];
+  }>(withBranchQuery(`/invoices/customer/${encodeURIComponent(customerId)}`, branchId));
+  return {
+    ...history,
+    recentInvoices: history.recentInvoices.map((invoice) => normalizeInvoice(invoice)),
+    paymentHistory: history.paymentHistory.map((payment) => withId(payment) as Payment),
+    creditNotes: history.creditNotes.map((note) => withId(note) as CreditNote),
+    debitNotes: history.debitNotes.map((note) => normalizeDebitNote(note))
+  };
+}
+
+export async function getInvoicePublic(token: string) {
+  const invoice = await apiRequest<RawEntity>(`/invoices/public/${encodeURIComponent(token)}`, { auth: false });
+  return normalizeInvoice(invoice);
+}
+
 export async function updateFinanceCreditNote(id: string, patch: Partial<CreditNote>, branchId?: string | null) {
   const note = await apiRequest<RawEntity>(`/finance/credit-notes/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
   return withId({ ...note, creditDate: normalizeIsoDate(note.creditDate) }) as CreditNote;
@@ -788,6 +1114,74 @@ export async function archivePettyCashEntry(id: string) {
 export async function listSales(branchId?: string | null) {
   const sales = await apiRequest<RawEntity[]>(withBranchQuery("/sales", branchId));
   return sales.map((sale) => withSaleItems(sale)) as Sale[];
+}
+
+export async function listBusinessOperations(input: { kind?: BusinessOperationKind; status?: BusinessOperationStatus } = {}) {
+  const query = new URLSearchParams();
+  if (input.kind) query.set("kind", input.kind);
+  if (input.status) query.set("status", input.status);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const rows = await apiRequest<RawEntity[]>(`/business-operations${suffix}`);
+  return rows.map(normalizeBusinessOperation);
+}
+
+export async function createBusinessOperation(input: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId?: string | null }) {
+  const row = await apiRequest<RawEntity>("/business-operations", { method: "POST", body: input });
+  return normalizeBusinessOperation(row);
+}
+
+export async function createBusinessOperationSafe(input: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId: string }) {
+  try {
+    return await createBusinessOperation(input);
+  } catch (error) {
+    if (!isOfflineError(error)) throw error;
+    await enqueueAction({ id: `operation:${input.externalId}`, businessId: input.businessId, kind: "createBusinessOperation", payload: input, dedupeKey: `operation:${input.businessId}:${input.externalId}` });
+    return createBusinessOperationDraft(input);
+  }
+}
+
+export async function updateBusinessOperation(id: string, patch: Partial<BusinessOperation>) {
+  const row = await apiRequest<RawEntity>(`/business-operations/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+  return normalizeBusinessOperation(row);
+}
+
+export async function updateBusinessOperationSafe(businessId: string, id: string, patch: Partial<BusinessOperation>) {
+  try {
+    return await updateBusinessOperation(id, patch);
+  } catch (error) {
+    if (!isOfflineError(error)) throw error;
+    await enqueueAction({ id: "operation-update:" + id + ":" + Date.now(), businessId, kind: "updateBusinessOperation", payload: { businessId, operationId: id, patch } });
+    return { id, businessId, ...patch } as BusinessOperation;
+  }
+}
+
+export async function archiveBusinessOperation(id: string) {
+  const row = await apiRequest<RawEntity>(`/business-operations/${encodeURIComponent(id)}/archive`, { method: "POST" });
+  return normalizeBusinessOperation(row);
+}
+
+function normalizeBusinessOperation(raw: RawEntity): BusinessOperation {
+  return {
+    id: String(raw.id ?? raw._id),
+    externalId: raw.externalId ?? null,
+    businessId: String(raw.businessId),
+    branchId: raw.branchId ?? null,
+    kind: raw.kind,
+    status: raw.status,
+    title: String(raw.title ?? "Operation"),
+    customerId: raw.customerId ?? null,
+    staffId: raw.staffId ?? null,
+    scheduledAt: raw.scheduledAt ? normalizeIsoDate(raw.scheduledAt) : null,
+    durationMinutes: raw.durationMinutes == null ? null : Number(raw.durationMinutes),
+    tableName: raw.tableName ?? null,
+    vehiclePlate: raw.vehiclePlate ?? null,
+    notes: raw.notes ?? null,
+    items: Array.isArray(raw.items) ? raw.items : [],
+    total: Number(raw.total ?? 0),
+    deletedAt: raw.deletedAt ? normalizeIsoDate(raw.deletedAt) : null,
+    createdAt: normalizeIsoDate(raw.createdAt),
+    updatedAt: normalizeIsoDate(raw.updatedAt)
+  };
 }
 
 export async function createSale(input: {

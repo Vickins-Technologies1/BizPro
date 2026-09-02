@@ -21,8 +21,11 @@ class CreateCustomerDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() groupId?: string | null;
   @IsString() name!: string;
+  @IsOptional() @IsString() businessName?: string | null;
   @IsOptional() @IsString() phone?: string | null;
   @IsOptional() @IsString() email?: string | null;
+  @IsOptional() @IsString() address?: string | null;
+  @IsOptional() @IsString() taxPin?: string | null;
   @IsOptional() @IsNumber() creditLimit?: number;
   @IsOptional() @IsNumber() loyaltyPoints?: number;
   @IsOptional() @IsString() notes?: string | null;
@@ -35,8 +38,11 @@ class UpdateCustomerDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() groupId?: string | null;
   @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() businessName?: string | null;
   @IsOptional() @IsString() phone?: string | null;
   @IsOptional() @IsString() email?: string | null;
+  @IsOptional() @IsString() address?: string | null;
+  @IsOptional() @IsString() taxPin?: string | null;
   @IsOptional() @IsNumber() creditLimit?: number;
   @IsOptional() @IsNumber() loyaltyPoints?: number;
   @IsOptional() @IsString() notes?: string | null;
@@ -131,8 +137,11 @@ export class CustomersController {
       businessId: user.businessId,
       branchId: dto.branchId ?? user.branchId ?? null,
       groupId: dto.groupId ?? null,
+      businessName: dto.businessName ?? null,
       phone: dto.phone ?? null,
       email: dto.email ?? null,
+      address: dto.address ?? null,
+      taxPin: dto.taxPin ?? null,
       notes: dto.notes ?? null,
       creditLimit: dto.creditLimit ?? 0,
       loyaltyPoints: dto.loyaltyPoints ?? 0,
@@ -149,8 +158,11 @@ export class CustomersController {
       ...(dto.branchId !== undefined ? { branchId: dto.branchId } : {}),
       ...(dto.groupId !== undefined ? { groupId: dto.groupId } : {}),
       ...(dto.name !== undefined ? { name: dto.name } : {}),
+      ...(dto.businessName !== undefined ? { businessName: dto.businessName } : {}),
       ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
       ...(dto.email !== undefined ? { email: dto.email } : {}),
+      ...(dto.address !== undefined ? { address: dto.address } : {}),
+      ...(dto.taxPin !== undefined ? { taxPin: dto.taxPin } : {}),
       ...(dto.creditLimit !== undefined ? { creditLimit: dto.creditLimit } : {}),
       ...(dto.loyaltyPoints !== undefined ? { loyaltyPoints: dto.loyaltyPoints } : {}),
       ...(dto.notes !== undefined ? { notes: dto.notes } : {}),

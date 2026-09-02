@@ -59,20 +59,24 @@ export function BrandsScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refresh}>
-        <Card>
+      <AppScrollView refreshing={refreshing} onRefresh={refresh} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Brand directory</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filtered.length} visible of {brands.length} records</Text>
+            </View>
+            <PrimaryButton title="Add brand" onPress={() => openEditor(null)} />
+          </View>
           <InputField label="Search brands" value={search} onChangeText={setSearch} placeholder="Brand name or note" />
-        </Card>
-        <Card>
-          <PrimaryButton title="Add brand" onPress={() => openEditor(null)} />
         </Card>
         {filtered.length ? (
           filtered.map((brand) => (
-            <Card key={brand.id} style={{ gap: 8 }}>
+            <Card key={brand.id} style={{ gap: 8, padding: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{brand.name}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{brand.description ?? "No description"}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>{brand.name}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }} numberOfLines={1}>{brand.description ?? "No description"}</Text>
                 </View>
                 <Badge label={brand.isActive ? "Active" : "Archived"} tone={brand.isActive ? "success" : "warning"} />
               </View>

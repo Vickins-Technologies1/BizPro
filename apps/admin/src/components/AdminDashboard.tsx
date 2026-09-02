@@ -100,20 +100,20 @@ export function AdminDashboard() {
   const trustRate = rows.reduce((sum, row) => sum + row.devices.filter((device) => device.trusted).length, 0);
 
   return (
-    <main style={{ maxWidth: 1360, margin: "0 auto", padding: 20 }}>
-      <header style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, flexWrap: "wrap" }}>
+    <main style={{ maxWidth: 1360, margin: "0 auto", padding: 16 }}>
+      <header style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "end", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ textTransform: "uppercase", letterSpacing: 1.8, color: "var(--text-muted)", fontSize: 11 }}>Biz Pro Support Console</div>
-          <h1 style={{ margin: "6px 0 0", fontSize: 32, lineHeight: 1.05, fontFamily: "var(--font-grotesk)" }}>Executive operations dashboard</h1>
-          <p style={{ margin: "8px 0 0", color: "var(--text-secondary)", maxWidth: 640 }}>Business coverage, subscription posture, sync health, and payment reconciliation.</p>
+          <h1 style={{ margin: "5px 0 0", fontSize: 27, lineHeight: 1.05, fontFamily: "var(--font-grotesk)" }}>Executive operations dashboard</h1>
+          <p style={{ margin: "6px 0 0", color: "var(--text-secondary)", maxWidth: 640, fontSize: 13 }}>Business coverage, subscription posture, sync health, and payment reconciliation.</p>
         </div>
-        <div style={{ padding: "10px 14px", border: "1px solid var(--border)", borderRadius: 14, background: "rgba(17,24,39,0.7)" }}>
+        <div style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 11, background: "rgba(17,24,39,0.7)" }}>
           <div style={{ color: "var(--text-muted)", fontSize: 11 }}>Business types supported</div>
           <div style={{ color: "var(--text)", fontWeight: 700 }}>{BUSINESS_TYPES.length}</div>
         </div>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 14 }}>
         {([
           ["Businesses", totalBusinesses, "rgba(59,130,246,0.35)"],
           ["Active plans", activePlans, "rgba(16,185,129,0.35)"],
@@ -121,12 +121,12 @@ export function AdminDashboard() {
           ["Trusted devices", trustRate, "rgba(239,68,68,0.32)"]
         ] as Array<[string, number, string]>).map(([label, value, accent]) => (
           <DashboardCard key={label} title={label} accent={accent}>
-            <div style={{ fontSize: 30, lineHeight: 1, fontFamily: "var(--font-grotesk)", fontWeight: 700 }}>{value}</div>
+            <div style={{ fontSize: 26, lineHeight: 1, fontFamily: "var(--font-grotesk)", fontWeight: 700 }}>{value}</div>
           </DashboardCard>
         ))}
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.55fr) minmax(320px, 1fr)", gap: 12 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.55fr) minmax(280px, 1fr)", gap: 10 }}>
         <DashboardCard title="Businesses">
           <div style={{ display: "grid", gap: 12 }}>
             {rows.map(({ business, devices, subscription, syncHealth }) => (

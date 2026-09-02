@@ -22,7 +22,8 @@ export const ACCESS_PERMISSIONS = [
   "manageTables",
   "manageWorkOrders",
   "managePharmacy",
-  "dispenseMedicines"
+  "dispenseMedicines",
+  "manageOperations"
 ] as const;
 
 export type AccessPermission = (typeof ACCESS_PERMISSIONS)[number];
@@ -58,7 +59,8 @@ export const ROLE_PRESETS: RolePreset[] = [
       "manageSuppliers",
       "manageExpenses",
       "viewFinancialReports",
-      "manageSettings"
+      "manageSettings",
+      "manageOperations"
     ]
   },
   {
@@ -77,7 +79,8 @@ export const ROLE_PRESETS: RolePreset[] = [
       "manageCustomers",
       "manageSuppliers",
       "manageExpenses",
-      "viewFinancialReports"
+      "viewFinancialReports",
+      "manageOperations"
     ]
   },
   {
@@ -90,19 +93,19 @@ export const ROLE_PRESETS: RolePreset[] = [
     role: "waiter",
     label: "Waiter",
     description: "Handle service orders, tables, and customer-facing sales flow.",
-    permissions: ["viewDashboard", "manageSales", "createSales", "manageCustomers", "manageTables", "manageBookings"]
+    permissions: ["viewDashboard", "manageSales", "createSales", "manageCustomers", "manageTables", "manageBookings", "manageOperations"]
   },
   {
     role: "receptionist",
     label: "Receptionist",
     description: "Manage front-desk customers, bookings, and appointments.",
-    permissions: ["viewDashboard", "manageCustomers", "manageAppointments", "manageBookings", "createSales"]
+    permissions: ["viewDashboard", "manageCustomers", "manageAppointments", "manageBookings", "manageOperations", "createSales"]
   },
   {
     role: "stylist",
     label: "Stylist",
     description: "Manage client appointments and service sales.",
-    permissions: ["viewDashboard", "manageSales", "createSales", "manageCustomers", "manageAppointments", "manageBookings"]
+    permissions: ["viewDashboard", "manageSales", "createSales", "manageCustomers", "manageAppointments", "manageBookings", "manageOperations"]
   },
   {
     role: "mechanic",
@@ -122,7 +125,8 @@ export const ROLE_PRESETS: RolePreset[] = [
       "manageInventory",
       "managePharmacy",
       "dispenseMedicines",
-      "viewFinancialReports"
+      "viewFinancialReports",
+      "manageOperations"
     ]
   }
 ];

@@ -166,10 +166,10 @@ export function ProductDetailScreen() {
           </View>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshHistory}>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Quick lookup</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshHistory} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Quick lookup</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
             Jump to another product by SKU or barcode without leaving inventory detail.
           </Text>
           <InputField
@@ -220,11 +220,11 @@ export function ProductDetailScreen() {
             <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>No exact match yet. Try a full code or barcode.</Text>
           ) : null}
         </Card>
-        <Card style={{ gap: 12 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{currentProduct.name}</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>{currentProduct.barcode ?? "No barcode"}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{currentProduct.name}</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{currentProduct.barcode ?? "No barcode"}</Text>
             </View>
             <Badge label={lowStock ? "Low stock" : "Healthy"} tone={lowStock ? "danger" : "success"} />
           </View>
@@ -259,8 +259,8 @@ export function ProductDetailScreen() {
           </View>
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Stock history</Text>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Stock history</Text>
           {historyLoading ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
               <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />
@@ -285,8 +285,8 @@ export function ProductDetailScreen() {
           )}
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Sales history</Text>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Sales history</Text>
           {historyLoading ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
               <ActivityIndicator size="small" color={tokens.colors.primaryStrong} />

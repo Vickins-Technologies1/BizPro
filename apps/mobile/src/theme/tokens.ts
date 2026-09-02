@@ -125,10 +125,10 @@ const lightTheme: ThemeTokens = {
   },
   shadow: {
     card: {
-      shadowColor: "#0F172A",
-      shadowOpacity: 0.06,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 4 },
+    shadowColor: "#0F172A",
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
       elevation: 2
     },
     modal: {
@@ -173,10 +173,10 @@ const darkTheme: ThemeTokens = {
   shadow: {
     card: {
       shadowColor: "#000",
-      shadowOpacity: 0.22,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 5
+      shadowOpacity: 0.16,
+      shadowRadius: 9,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
     },
     modal: {
       shadowColor: "#000",

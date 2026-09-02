@@ -3,7 +3,7 @@ import { Animated, BackHandler, Pressable, StyleSheet, Text, useWindowDimensions
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AccessPermission } from "@shared";
-import { hasPermission } from "@shared";
+import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
 import { useThemeTokens } from "@/theme";
 
@@ -39,6 +39,7 @@ const DRAWER_GROUPS: Array<{ title: string; items: DrawerItem[] }> = [
       { label: "Suppliers", icon: "briefcase-outline", routeName: "Suppliers", permission: "manageSuppliers" },
       { label: "Purchase orders", icon: "document-text-outline", routeName: "PurchaseOrders", permission: "manageInventory" },
       { label: "Stock transfers", icon: "swap-horizontal-outline", routeName: "StockTransfers", permission: "manageInventory" }
+      ,{ label: "Operations", icon: "briefcase-outline", routeName: "Operations", permission: "manageOperations" }
     ]
   },
   {
@@ -57,6 +58,8 @@ const DRAWER_GROUPS: Array<{ title: string; items: DrawerItem[] }> = [
 export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreDrawerProps) {
   const theme = useThemeTokens();
   const user = useAppStore((state) => state.user);
+  const business = useAppStore((state) => state.business);
+  const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const drawerWidth = Math.min(360, Math.max(292, width - 24));
@@ -118,7 +121,7 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
         <View style={styles.rule} />
         <View style={styles.groups}>
           {DRAWER_GROUPS.map((group) => {
-            const items = group.items.filter((item) => !item.permission || hasPermission(user, item.permission));
+            const items = group.items.filter((item) => (!item.permission || hasPermission(user, item.permission)) && (item.routeName !== "Operations" || businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders));
             if (!items.length) return null;
             return (
               <View key={group.title} style={styles.group}>

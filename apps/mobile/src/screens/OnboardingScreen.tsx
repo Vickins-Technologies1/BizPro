@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
-import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveIndustryModule } from "@shared";
+import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveBusinessTypeConfig, resolveIndustryModule } from "@shared";
 import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
@@ -86,6 +86,10 @@ export function OnboardingScreen() {
   );
   const businessTypeOptions = selectedIndustry.businessTypes;
   const selectedTypeOption = businessTypeOptions.find((option) => option.value === selectedBusinessType) ?? businessTypeOptions[0] ?? null;
+  const selectedBusinessConfig = React.useMemo(
+    () => resolveBusinessTypeConfig({ industryKey: selectedIndustryKey, businessType: selectedBusinessType }),
+    [selectedBusinessType, selectedIndustryKey]
+  );
 
   React.useEffect(() => {
     if (!businessTypeOptions.length) return;
@@ -137,32 +141,28 @@ export function OnboardingScreen() {
 
   return (
     <Screen hideFooter>
-      <GradientHeader title="Biz Pro" subtitle="A guided setup flow for a new business" />
-      <AppScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24 }}>
-        <Card style={{ gap: 12 }}>
+      <GradientHeader title="Biz Pro" subtitle="Set up your workspace" />
+      <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 9, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{activeStep.title}</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{activeStep.subtitle}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{activeStep.title}</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 11 }}>{activeStep.subtitle}</Text>
             </View>
             <Badge label={`Step ${stepIndex + 1} of ${steps.length}`} tone="primary" />
           </View>
-          <View style={{ height: 6, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
+          <View style={{ height: 4, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
             <View style={{ width: `${progress}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.success }} />
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             {steps.map((step, index) => (
-              <Badge
-                key={step.key}
-                label={`${index + 1}. ${step.title}`}
-                tone={index === stepIndex ? "success" : index < stepIndex ? "primary" : "warning"}
-              />
+              <View key={step.key} style={{ flex: 1, height: 3, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.success : tokens.colors.border }} />
             ))}
           </View>
         </Card>
 
         {stepIndex === 0 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Business information</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
               We&apos;ll create the owner login, set up the business profile, and prepare the first branch for daily operations.
@@ -257,7 +257,7 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 1 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Industry</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
               Choose the industry that best matches the business. The rest of the setup will adapt to that selection.
@@ -303,7 +303,7 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 2 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Business type</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
               We&apos;ll tailor the workspace to the selected industry. Pick the type that best describes how the business operates.
@@ -312,6 +312,9 @@ export function OnboardingScreen() {
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11 }}>Selected industry</Text>
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{selectedIndustry.label}</Text>
               <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{selectedIndustry.dashboard.summary}</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                {selectedBusinessConfig.onboarding.map((item) => <Badge key={item} label={`Setup: ${item}`} tone="success" />)}
+              </View>
             </View>
             <View style={{ gap: 10 }}>
               {businessTypeOptions.map((option) => {
@@ -342,11 +345,17 @@ export function OnboardingScreen() {
                 );
               })}
             </View>
+            {selectedTypeOption ? (
+              <Card style={{ gap: 8, backgroundColor: `${tokens.colors.success}12` }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{selectedTypeOption.label} workflow</Text>
+                <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{selectedBusinessConfig.workflow.steps.join("  >  ")}</Text>
+              </Card>
+            ) : null}
           </Card>
         ) : null}
 
         {stepIndex === 3 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Subscription plan</Text>
             <View style={{ padding: 12, borderRadius: 16, backgroundColor: `${tokens.colors.success}18`, borderWidth: 1, borderColor: tokens.colors.success, gap: 4 }}>
               <Text style={{ color: tokens.colors.success, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>30 DAYS FREE - NO CARD REQUIRED</Text>
@@ -386,7 +395,7 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 4 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Security</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
               Add the login password now. You can also set an optional cashier PIN for quick sign-in later.
@@ -425,7 +434,7 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 5 ? (
-          <Card style={{ gap: 12 }}>
+          <Card style={{ gap: 10, padding: 12 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Finish</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
               Review the setup below. Everything from the current flow is still included, only reorganized into a guided experience.
@@ -449,7 +458,7 @@ export function OnboardingScreen() {
           </Card>
         ) : null}
 
-        <Card style={{ gap: 12 }}>
+        <Card style={{ gap: 9, padding: 12 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton

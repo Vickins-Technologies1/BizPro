@@ -20,6 +20,7 @@ import { OnboardingScreen } from "@/screens/OnboardingScreen";
 import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
 import { NotificationsScreen } from "@/screens/NotificationsScreen";
 import { AdaptiveWorkspaceNavigator } from "@/navigation/WorkspaceNavigator";
+import { BusinessOperationsScreen } from "@/screens/BusinessOperationsScreen";
 
 type RootStackParamList = {
   Launchpad: undefined;
@@ -35,6 +36,7 @@ type RootStackParamList = {
   StockTransfers: undefined;
   TeamAccess: undefined;
   Employees: undefined;
+  Operations: undefined;
   ProductDetail: { productId: string };
 };
 
@@ -107,6 +109,7 @@ export function RootNavigator() {
           <RootStack.Screen name="Notifications" component={NotificationsScreen} />
           <RootStack.Screen name="TeamAccess" component={TeamAccessScreen} />
           <RootStack.Screen name="Employees" component={EmployeesScreen} />
+          <RootStack.Screen name="Operations" component={BusinessOperationsScreen} />
         </RootStack.Navigator>
       ) : (
         <AuthNavigator />

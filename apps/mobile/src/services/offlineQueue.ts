@@ -1,6 +1,6 @@
 import { secureStore } from "@/storage/secure";
 import { createEventId } from "@/utils/id";
-import type { Brand, Category, Customer, CustomerAttachment, Expense, Payment, Product, Sale, Supplier } from "@shared";
+import type { Brand, BusinessOperation, Category, Customer, CustomerAttachment, Expense, Payment, Product, Sale, Supplier } from "@shared";
 
 export type OfflineQueueKind =
   | "createCategory"
@@ -12,7 +12,9 @@ export type OfflineQueueKind =
   | "createSupplier"
   | "createExpense"
   | "recordCustomerPayment"
-  | "createSale";
+  | "createSale"
+  | "createBusinessOperation"
+  | "updateBusinessOperation";
 
 export type OfflineQueueEntry =
   | {
@@ -213,6 +215,26 @@ export type OfflineQueueEntry =
         balanceDue: number;
         items: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; costPrice: number; lineDiscount: number; lineTotal: number }>;
       };
+      createdAt: string;
+      attempts: number;
+      lastError: string | null;
+    }
+  | {
+      id: string;
+      businessId: string;
+      dedupeKey?: string | null;
+      kind: "createBusinessOperation";
+      payload: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId: string };
+      createdAt: string;
+      attempts: number;
+      lastError: string | null;
+    }
+  | {
+      id: string;
+      businessId: string;
+      dedupeKey?: string | null;
+      kind: "updateBusinessOperation";
+      payload: { businessId: string; operationId: string; patch: Partial<BusinessOperation> };
       createdAt: string;
       attempts: number;
       lastError: string | null;
@@ -521,6 +543,30 @@ export function createExpenseDraft(input: {
     recordedById: input.recordedById ?? null,
     deletedAt: null
   } as unknown as Expense;
+}
+
+export function createBusinessOperationDraft(input: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId: string }): BusinessOperation {
+  return {
+    id: input.externalId,
+    externalId: input.externalId,
+    businessId: input.businessId,
+    branchId: input.branchId ?? null,
+    kind: input.kind,
+    status: input.status,
+    title: input.title,
+    customerId: input.customerId ?? null,
+    staffId: input.staffId ?? null,
+    scheduledAt: input.scheduledAt ?? null,
+    durationMinutes: input.durationMinutes ?? null,
+    tableName: input.tableName ?? null,
+    vehiclePlate: input.vehiclePlate ?? null,
+    notes: input.notes ?? null,
+    items: input.items ?? [],
+    total: input.total ?? 0,
+    deletedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 }
 
 export function createPaymentDraft(input: {

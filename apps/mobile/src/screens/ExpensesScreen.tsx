@@ -91,19 +91,28 @@ export function ExpensesScreen() {
           </View>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshExpenses}>
-        <Card>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshExpenses} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Spend ledger</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filtered.length} visible expense records</Text>
+            </View>
+            <Badge label={`${expenses.length} total`} tone="warning" />
+          </View>
           <InputField label="Search expenses" value={search} onChangeText={setSearch} placeholder="Filter notes" />
         </Card>
         {filtered.length ? (
           filtered.map((expense) => (
-            <Card key={expense.id} style={{ gap: 8 }}>
+            <Card key={expense.id} style={{ gap: 6, padding: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{expense.note}</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900", flex: 1 }} numberOfLines={1}>{expense.note}</Text>
                 <Badge label="expense" tone="warning" />
               </View>
-              <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>{expense.amount.toLocaleString("en-KE", { style: "currency", currency: business?.currency ?? "KES" })}</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>{expense.expenseDate}</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "900" }}>{expense.amount.toLocaleString("en-KE", { style: "currency", currency: business?.currency ?? "KES" })}</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{expense.expenseDate}</Text>
+              </View>
             </Card>
           ))
         ) : (

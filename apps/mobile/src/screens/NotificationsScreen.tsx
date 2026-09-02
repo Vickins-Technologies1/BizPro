@@ -77,14 +77,14 @@ export function NotificationsScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={() => void loadInbox(page, "refresh")} contentContainerStyle={{ gap: 12, paddingBottom: 28 }}>
-        <Card style={{ gap: 10, padding: 14 }}>
+        <Card style={{ gap: 10, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="notifications-outline" size={22} color={tokens.colors.primaryStrong} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Business inbox</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17 }}>Workspace updates and alerts.</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Business inbox</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Workspace updates and alerts.</Text>
             </View>
             <Badge label={`${unreadCount} unread`} tone={unreadCount ? "warning" : "success"} />
           </View>
@@ -102,14 +102,14 @@ export function NotificationsScreen() {
               const isUnread = !notification.readAt;
               return (
                 <Pressable key={notification.id} onPress={() => void openNotification(notification)}>
-                  <Card style={{ gap: 7, padding: 12, borderColor: isUnread ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: isUnread ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
+                  <Card style={{ gap: 6, padding: 11, borderColor: isUnread ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: isUnread ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
                     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
                       <View style={{ width: 34, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: isUnread ? tokens.colors.primary + "18" : tokens.colors.surfaceAlt }}>
                         <Ionicons name={isUnread ? "mail-unread-outline" : "mail-open-outline"} size={17} color={isUnread ? tokens.colors.primaryStrong : tokens.colors.textMuted} />
                       </View>
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>{notification.title}</Text>
-                        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17 }} numberOfLines={2}>{notification.body}</Text>
+                        <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }} numberOfLines={1}>{notification.title}</Text>
+                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>{notification.body}</Text>
                       </View>
                       <Badge label={notification.priority} tone={notification.priority === "critical" ? "danger" : isUnread ? "warning" : "primary"} />
                     </View>

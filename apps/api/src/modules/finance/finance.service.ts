@@ -9,6 +9,8 @@ import {
   CreditNoteDocument,
   Expense,
   ExpenseDocument,
+  Invoice,
+  InvoiceDocument,
   Payment,
   PaymentDocument,
   PettyCashEntry,
@@ -33,6 +35,7 @@ type DateRange = Record<string, Date>;
 export class FinanceService {
   constructor(
     @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
+    @InjectModel(Invoice.name) private readonly invoiceModel: Model<InvoiceDocument>,
     @InjectModel(Expense.name) private readonly expenseModel: Model<ExpenseDocument>,
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(BankAccount.name) private readonly bankAccountModel: Model<BankAccountDocument>,
@@ -46,14 +49,16 @@ export class FinanceService {
     const expenseRange = buildDateRange(from, to);
     const paymentRange = buildDateRange(from, to);
     const entryRange = buildDateRange(from, to);
+    const invoiceRange = buildDateRange(from, to);
 
-    const [sales, expenseTotals, payments, creditNotes, bankAccounts, pettyCashEntries] = await Promise.all([
+    const [sales, expenseTotals, payments, creditNotes, bankAccounts, pettyCashEntries, invoices] = await Promise.all([
       this.saleModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(saleRange ? { createdAt: saleRange } : {}) }).lean(),
       this.expenseModel.aggregate([{ $match: { businessId, ...buildBranchMatch(branchId), ...(expenseRange ? { expenseDate: expenseRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.paymentModel.aggregate([{ $match: { businessId, ...buildBranchMatch(branchId), ...(paymentRange ? { createdAt: paymentRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.creditNoteModel.aggregate([{ $match: { businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(entryRange ? { creditDate: entryRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.bankAccountModel.find({ businessId, deletedAt: null }).lean(),
-      this.pettyCashModel.find({ businessId, deletedAt: null, ...(entryRange ? { entryDate: entryRange } : {}) }).lean()
+      this.pettyCashModel.find({ businessId, deletedAt: null, ...(entryRange ? { entryDate: entryRange } : {}) }).lean(),
+      this.invoiceModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(invoiceRange ? { issueDate: invoiceRange } : {}) }).lean()
     ]);
 
     const incomeTotal = sales.reduce((sum, sale) => sum + Number(sale.grandTotal ?? 0), 0);
@@ -70,9 +75,9 @@ export class FinanceService {
     const creditNoteTotal = creditNotes[0]?.total ?? 0;
     const bankBalanceTotal = bankAccounts.reduce((sum, account) => sum + Number(account.currentBalance ?? account.openingBalance ?? 0), 0);
     const pettyCashBalance = pettyCashEntries.reduce((sum, entry) => sum + (entry.direction === "in" ? Number(entry.amount ?? 0) : -Number(entry.amount ?? 0)), 0);
-    const invoiceCount = sales.filter((sale) => Number(sale.balanceDue ?? 0) > 0).length;
-    const invoiceTotal = sales.reduce((sum, sale) => sum + Math.max(0, Number(sale.balanceDue ?? 0)), 0);
-    const taxTotal = sales.reduce((sum, sale) => sum + Number(sale.taxTotal ?? 0), 0);
+    const invoiceCount = invoices.length;
+    const invoiceTotal = invoices.reduce((sum, invoice) => sum + Math.max(0, Number((invoice as { balanceDue?: number }).balanceDue ?? 0)), 0);
+    const taxTotal = invoices.reduce((sum, invoice) => sum + Number((invoice as { taxTotal?: number }).taxTotal ?? 0), 0);
     const profitLossTotal = incomeTotal - cogsTotal - expensesTotal;
     const cashFlowTotal = paymentTotal - expensesTotal + pettyCashBalance;
 
@@ -95,19 +100,25 @@ export class FinanceService {
   invoices(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
     const range = buildDateRange(from, to);
-    return this.saleModel
-      .find({ businessId, deletedAt: null, balanceDue: { $gt: 0 }, ...buildBranchMatch(branchId), ...(range ? { createdAt: range } : {}) })
+    return this.invoiceModel
+      .find({ businessId, deletedAt: null, balanceDue: { $gt: 0 }, ...buildBranchMatch(branchId), ...(range ? { issueDate: range } : {}) })
       .sort({ createdAt: -1 })
       .lean()
-      .then((sales) =>
-        sales.map((sale) => ({
-          id: String(sale.externalId ?? sale._id),
-          receiptNumber: sale.receiptNumber,
-          customerId: sale.customerId ?? null,
-          grandTotal: Number(sale.grandTotal ?? 0),
-          balanceDue: Number(sale.balanceDue ?? 0),
-          paymentStatus: sale.paymentStatus,
-          createdAt: String((sale as { createdAt?: string | Date }).createdAt ?? new Date().toISOString())
+      .then((invoices) =>
+        invoices.map((invoice) => ({
+          id: String(invoice.externalId ?? invoice._id),
+          receiptNumber: invoice.invoiceNumber,
+          invoiceNumber: invoice.invoiceNumber,
+          customerId: invoice.customerId ?? null,
+          customerName: invoice.customerName ?? null,
+          grandTotal: Number(invoice.grandTotal ?? 0),
+          amountPaid: Number(invoice.amountPaid ?? 0),
+          balanceDue: Number(invoice.balanceDue ?? 0),
+          paymentStatus: invoice.balanceDue <= 0 ? "paid" : invoice.amountPaid > 0 ? "partial" : "unpaid",
+          status: invoice.status,
+          issueDate: String((invoice as { issueDate?: string | Date }).issueDate ?? new Date().toISOString()),
+          dueDate: String((invoice as { dueDate?: string | Date }).dueDate ?? new Date().toISOString()),
+          createdAt: String((invoice as { createdAt?: string | Date }).createdAt ?? new Date().toISOString())
         }) satisfies FinanceInvoice)
       );
   }
@@ -345,6 +356,7 @@ export class FinanceService {
       id: String(rest.externalId ?? _id),
       customerId: rest.customerId ?? null,
       saleId: rest.saleId ?? null,
+      invoiceId: rest.invoiceId ?? null,
       debtPaymentId: rest.debtPaymentId ?? null,
       reference: rest.reference ?? null,
       note: rest.note ?? null,

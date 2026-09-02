@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { ActivityIndicator, Animated, AppState, Easing, Image, Platform, StyleSheet, Text, View } from "react-native";
+import { Animated, AppState, Easing, Image, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Asset } from "expo-asset";
 import * as Device from "expo-device";
 import * as SystemUI from "expo-system-ui";
 import NetInfo from "@react-native-community/netinfo";
@@ -34,10 +33,6 @@ export function RootApp() {
   }, [theme.colors.background]);
 
   useEffect(() => {
-    void Asset.fromModule(getBrandLogo(themeMode)).downloadAsync().catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
     bootstrap();
   }, [bootstrap]);
 
@@ -61,7 +56,7 @@ export function RootApp() {
       deviceId,
       deviceName: Device.deviceName ?? Device.modelName ?? "Biz Pro device",
       platform: Platform.OS as "android" | "ios" | "web",
-      requestPermission: true
+      requestPermission: false
     }).then((result) => {
       if (result.status === "error") {
         console.warn("[notifications] Startup registration unavailable", result.message);
@@ -128,50 +123,13 @@ export function RootApp() {
 
 function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
   const theme = getThemeTokens(themeMode);
-  const fade = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.92)).current;
-  const drift = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const driftLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(drift, { toValue: 1, duration: 2200, useNativeDriver: true }),
-        Animated.timing(drift, { toValue: 0, duration: 2200, useNativeDriver: true })
-      ])
-    );
-
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 520, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true })
-    ]).start(() => driftLoop.start());
-
-    return () => {
-      driftLoop.stop();
-    };
-  }, [drift, fade, scale]);
-
-  const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [10, -8] });
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-          <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20 }}>
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Animated.View style={{ alignItems: "center", gap: 18, opacity: fade, transform: [{ translateY }, { scale }] }}>
-                <Image
-                  source={getBrandLogo(themeMode)}
-                  resizeMode="contain"
-                  style={{ width: 260, height: 260, backgroundColor: "transparent" }}
-                />
-                <ActivityIndicator size="large" color={theme.colors.primaryStrong} style={{ marginTop: 4 }} />
-              </Animated.View>
-            </View>
-            <View style={{ alignItems: "center", paddingBottom: 6 }}>
-              <Text style={{ color: theme.colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
-                Powered by Vickins Technologies
-              </Text>
-            </View>
+          <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <Image source={getBrandLogo(themeMode)} resizeMode="contain" style={{ width: 220, height: 220, backgroundColor: "transparent" }} />
           </View>
         </SafeAreaView>
         <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={theme.colors.background} />

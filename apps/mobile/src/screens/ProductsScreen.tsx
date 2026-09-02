@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { INVENTORY_UNITS, productCreateSchema, resolveIndustryModule, type Product } from "@shared";
+import { INVENTORY_UNITS, productCreateSchema, resolveBusinessTypeConfig, resolveIndustryModule, type Product } from "@shared";
 import { AppScrollView, Card, GradientHeader, InputField, Pagination, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
@@ -76,6 +76,7 @@ export function ProductsScreen() {
   const pageSize = 6;
   const deferredSearch = React.useDeferredValue(search);
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
 
   const {
     control,
@@ -369,7 +370,7 @@ export function ProductsScreen() {
   if (!canManageInventory) {
     return (
       <Screen>
-        <GradientHeader title="Catalog" subtitle="Products, stock, and pricing" />
+        <GradientHeader title={businessConfig.navigation.catalogLabel} subtitle={businessConfig.navigation.catalogDescription} />
         <View style={{ padding: 16 }}>
           <EmptyState
             title="Catalog access restricted"
@@ -385,8 +386,8 @@ export function ProductsScreen() {
   return (
     <Screen>
       <GradientHeader
-        title="Catalog"
-        subtitle={`${industry.label} products, stock, and pricing`}
+        title={businessConfig.navigation.catalogLabel}
+        subtitle={`${industry.label} ${businessConfig.navigation.catalogDescription}`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
             <Pressable onPress={() => setCategoryVisible(true)}>
@@ -402,9 +403,9 @@ export function ProductsScreen() {
         <Card style={{ gap: 14, padding: 18 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Inventory pulse</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>Know what is moving.</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>Keep pricing, availability, and replenishment decisions close to the sale.</Text>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>{businessConfig.navigation.catalogLabel} pulse</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>{businessConfig.workflow.headline}</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{businessConfig.navigation.catalogDescription}.</Text>
             </View>
             <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="cube-outline" size={23} color={tokens.colors.primaryStrong} />
@@ -431,7 +432,7 @@ export function ProductsScreen() {
           <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
         </Card>
         <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Inventory tools</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{businessConfig.navigation.catalogLabel} tools</Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton title="Add brand" variant="secondary" onPress={() => setBrandVisible(true)} />
@@ -619,27 +620,25 @@ export function ProductsScreen() {
             name="sku"
             render={({ field: { value, onChange } }) => <InputField label="SKU" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional shelf or lookup code." />}
           />
-          <Controller
-            control={control}
-            name="barcode"
-            render={({ field: { value, onChange } }) => (
-              <InputField
-                label="Barcode"
-                value={(value as string) ?? ""}
-                onChangeText={onChange}
-                helperText="Optional barcode for scanner input. Tap the scan icon to fill it automatically."
-                rightAccessory={
-                  <Pressable
-                    onPress={() => setBarcodeScannerVisible(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Scan barcode"
-                  >
-                    <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
-                  </Pressable>
-                }
-              />
-            )}
-          />
+          {businessConfig.capabilities.barcode ? (
+            <Controller
+              control={control}
+              name="barcode"
+              render={({ field: { value, onChange } }) => (
+                <InputField
+                  label="Barcode"
+                  value={(value as string) ?? ""}
+                  onChangeText={onChange}
+                  helperText="Optional barcode for scanner input. Tap the scan icon to fill it automatically."
+                  rightAccessory={
+                    <Pressable onPress={() => setBarcodeScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Scan barcode">
+                      <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
+                    </Pressable>
+                  }
+                />
+              )}
+            />
+          ) : null}
           <Controller
             control={control}
             name="unit"
@@ -683,7 +682,7 @@ export function ProductsScreen() {
               ))}
             </ScrollView>
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          {businessConfig.fields.some((field) => field.key === "batchNumber" || field.key === "expiryDate") ? <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}
@@ -702,12 +701,12 @@ export function ProductsScreen() {
                 )}
               />
             </View>
-          </View>
-          <Controller
+          </View> : null}
+          {businessConfig.businessType === "garage" || businessConfig.businessType === "auto_parts" ? <Controller
             control={control}
             name="serialNumber"
             render={({ field: { value, onChange } }) => <InputField label="Serial number" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional serialized item tracking." />}
-          />
+          /> : null}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Tag label="No category" tone="primary" selected={!currentCategoryId} onPress={() => setValue("categoryId", null)} />
             {categories.map((category) => (
@@ -791,6 +790,10 @@ export function ProductsScreen() {
           <PrimaryButton
             title="Save product"
             onPress={handleSubmit(async (values) => {
+              if (businessConfig.businessType === "pharmacy" && (!values.batchNumber?.trim() || !values.expiryDate)) {
+                Alert.alert("Batch and expiry required", "Pharmacy medicines must have a batch number and expiry date before they can be stocked.");
+                return;
+              }
               setSavingProduct(true);
               try {
                 await addProduct({

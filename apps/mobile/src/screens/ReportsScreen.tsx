@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { hasPermission } from "@shared";
+import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 import type { DailySummary } from "@shared";
 import {
   AppScrollView,
@@ -36,6 +36,7 @@ export function ReportsScreen() {
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const liveDataVersion = useAppStore((state) => `${state.sales.length}:${state.expenses.length}`);
   const canViewReports = hasPermission(user, "viewReports");
+  const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
 
   const [activeFilter, setActiveFilter] = React.useState<Filter>("week");
   const [customRange, setCustomRange] = React.useState<RangeState | null>(null);
@@ -130,8 +131,8 @@ export function ReportsScreen() {
   return (
     <Screen>
       <GradientHeader
-        title="Reports"
-        subtitle={`${rangeLabel} • trend and performance overview`}
+        title={`${businessConfig.label} reports`}
+        subtitle={`${rangeLabel} • ${businessConfig.reports.slice(0, 2).join(" and ")}`}
         right={
           <Pressable onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back-outline" size={26} color={tokens.colors.text} />
@@ -241,11 +242,11 @@ export function ReportsScreen() {
             </Card>
 
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Top products</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{businessConfig.terminology.catalogItem} performance</Text>
               {topProducts.length ? (
                 topProducts.map((row) => <ProductBar key={row.productId} row={row} max={maxQuantity(topProducts)} />)
               ) : (
-                <Text style={{ color: tokens.colors.textSecondary }}>No product movement yet. Top products will appear after sales come in.</Text>
+                <Text style={{ color: tokens.colors.textSecondary }}>No {businessConfig.terminology.catalogItem.toLowerCase()} movement yet. Performance will appear after transactions come in.</Text>
               )}
             </Card>
 

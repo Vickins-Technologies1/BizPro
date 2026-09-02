@@ -56,19 +56,19 @@ export function SettingsScreen() {
           </Pressable>
         }
       />
-      <AppScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }}>
-        <Card style={{ gap: 10 }}>
+      <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 8, padding: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ width: 50, height: 50, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primaryStrong }}>
               <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>{(business?.name ?? "B").slice(0, 1).toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11, fontWeight: "800" }}>Business snapshot</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 19, fontWeight: "900" }}>{business?.name}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{business?.name}</Text>
             </View>
             <Badge label={roleLabel} tone="primary" />
           </View>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{industry.label}</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{industry.label} · Signed in as {user?.fullName ?? "Unknown"}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Badge label={industry.label} tone="success" />
             <Badge label={`Plan ${business?.planTier?.toUpperCase()}`} tone="primary" />
@@ -76,11 +76,10 @@ export function SettingsScreen() {
             <Badge label={`Sync ${pendingSync}`} tone={pendingSync ? "warning" : "success"} />
             <Badge label={roleLabel} tone="primary" />
           </View>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Signed in as {user?.fullName ?? "Unknown"}.</Text>
         </Card>
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Branch scope</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Choose the branch scope used across the workspace.</Text>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Branch scope</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Choose the workspace data scope.</Text>
           {user?.role === "owner" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {branches.length > 1 ? (
@@ -100,9 +99,9 @@ export function SettingsScreen() {
             <Badge label={branches.find((branch) => branch.id === selectedBranchId)?.name ?? branches[0]?.name ?? "Assigned branch"} tone="primary" />
           )}
         </Card>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Account access</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Account access</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
             {user?.role === "owner"
               ? "Owner accounts have full business control."
               : user?.role === "manager"
@@ -118,9 +117,9 @@ export function SettingsScreen() {
             <PrimaryButton title="Open employee workspace" variant="secondary" onPress={() => navigation.navigate("Employees")} />
           ) : null}
         </Card>
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Inventory administration</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Manage inventory records and logistics.</Text>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Inventory administration</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Manage records and logistics.</Text>
           <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
             <View style={{ flex: 1, minWidth: "45%" }}>
               <PrimaryButton title="Brands" variant="secondary" onPress={() => navigation.navigate("Brands")} />
@@ -136,11 +135,11 @@ export function SettingsScreen() {
             </View>
           </View>
         </Card>
-        <Card style={{ gap: 12 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Queued offline actions</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Saved locally and replayed when sync resumes.</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Queued offline actions</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Saved locally until sync resumes.</Text>
             </View>
             <Badge label={`${queuedActions.length} queued`} tone={queuedActions.length ? "warning" : "success"} />
           </View>

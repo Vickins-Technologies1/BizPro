@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import type { Brand, Branch, Business, Category, Customer, CustomerAttachment, CustomerGroup, DailySummary, Expense, Payment, Product, Sale, Supplier } from "@shared";
+import * as FileSystem from "expo-file-system";
 import { secureStore } from "@/storage/secure";
 import { createId } from "@/utils/id";
 import { dateKey } from "@/utils/date";
 import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receiptService";
-import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, getReportsSummary, getTopProducts } from "@/services/apiClient";
+import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
 import { initialThemeMode, setThemeTokens, type ThemeMode } from "@/theme/tokens";
@@ -31,6 +32,98 @@ import { setAuthFailureHandler } from "@/services/apiClient";
 
 export interface DashboardSummary extends DailySummary {
   topProducts: Array<{ productId: string; productName: string; quantity: number; total: number }>;
+}
+
+type StartupCache = {
+  version: 1;
+  savedAt: string;
+  dashboard: DashboardSummary | null;
+  products: Product[];
+  categories: Category[];
+  brands: Brand[];
+  customers: Customer[];
+  customerGroups: CustomerGroup[];
+  suppliers: Supplier[];
+  sales: Sale[];
+  expenses: Expense[];
+};
+
+const STARTUP_CACHE_PATH = (() => {
+  const base = FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? null;
+  return base ? `${base}bizpro-startup-cache-v1.json` : null;
+})();
+
+function sanitizeStartupCache(cache: StartupCache): StartupCache {
+  return {
+    ...cache,
+    dashboard: cache.dashboard
+      ? {
+          ...cache.dashboard,
+          topProducts: Array.isArray(cache.dashboard.topProducts) ? cache.dashboard.topProducts : []
+        }
+      : null,
+    products: Array.isArray(cache.products) ? cache.products : [],
+    categories: Array.isArray(cache.categories) ? cache.categories : [],
+    brands: Array.isArray(cache.brands) ? cache.brands : [],
+    customers: Array.isArray(cache.customers) ? cache.customers : [],
+    customerGroups: Array.isArray(cache.customerGroups) ? cache.customerGroups : [],
+    suppliers: Array.isArray(cache.suppliers) ? cache.suppliers : [],
+    sales: Array.isArray(cache.sales) ? cache.sales : [],
+    expenses: Array.isArray(cache.expenses) ? cache.expenses : []
+  };
+}
+
+async function readStartupCache(): Promise<StartupCache | null> {
+  if (!STARTUP_CACHE_PATH) return null;
+  try {
+    const info = await FileSystem.getInfoAsync(STARTUP_CACHE_PATH);
+    if (!info.exists) return null;
+    const raw = await FileSystem.readAsStringAsync(STARTUP_CACHE_PATH);
+    const parsed = JSON.parse(raw) as Partial<StartupCache>;
+    if (parsed.version !== 1) return null;
+    return sanitizeStartupCache({
+      version: 1,
+      savedAt: typeof parsed.savedAt === "string" ? parsed.savedAt : new Date().toISOString(),
+      dashboard: parsed.dashboard ?? null,
+      products: Array.isArray(parsed.products) ? (parsed.products as Product[]) : [],
+      categories: Array.isArray(parsed.categories) ? (parsed.categories as Category[]) : [],
+      brands: Array.isArray(parsed.brands) ? (parsed.brands as Brand[]) : [],
+      customers: Array.isArray(parsed.customers) ? (parsed.customers as Customer[]) : [],
+      customerGroups: Array.isArray(parsed.customerGroups) ? (parsed.customerGroups as CustomerGroup[]) : [],
+      suppliers: Array.isArray(parsed.suppliers) ? (parsed.suppliers as Supplier[]) : [],
+      sales: Array.isArray(parsed.sales) ? (parsed.sales as Sale[]) : [],
+      expenses: Array.isArray(parsed.expenses) ? (parsed.expenses as Expense[]) : []
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function writeStartupCache(state: Pick<AppState, "dashboard" | "products" | "categories" | "brands" | "customers" | "customerGroups" | "suppliers" | "sales" | "expenses">) {
+  if (!STARTUP_CACHE_PATH) return;
+  const cache = sanitizeStartupCache({
+    version: 1,
+    savedAt: new Date().toISOString(),
+    dashboard: state.dashboard,
+    products: state.products,
+    categories: state.categories,
+    brands: state.brands,
+    customers: state.customers,
+    customerGroups: state.customerGroups,
+    suppliers: state.suppliers,
+    sales: state.sales,
+    expenses: state.expenses
+  });
+  await FileSystem.writeAsStringAsync(STARTUP_CACHE_PATH, JSON.stringify(cache));
+}
+
+async function clearStartupCache() {
+  if (!STARTUP_CACHE_PATH) return;
+  try {
+    await FileSystem.deleteAsync(STARTUP_CACHE_PATH, { idempotent: true });
+  } catch {
+    // Ignore cache cleanup failures during startup/logout.
+  }
 }
 
 type SyncProgress = {
@@ -134,6 +227,8 @@ function describeQueuedAction(action: { kind: string; payload: Record<string, un
       return `Payment ${String(action.payload.externalId ?? "")}`.trim();
     case "createExpense":
       return `Expense ${String(action.payload.externalId ?? "")}`.trim();
+    case "createBusinessOperation":
+      return `${String(action.payload.kind ?? "Operation")} ${String(action.payload.title ?? "")}`.trim();
     default:
       return `${action.kind}`.replace(/([a-z])([A-Z])/g, "$1 $2");
   }
@@ -208,6 +303,20 @@ function shouldApplyQueuedActionToCurrentBranch(action: { payload?: unknown }, s
   return actionBranchId === null || actionBranchId === selectedBranchId;
 }
 
+function workspaceFromStartupCache(cache: StartupCache | null) {
+  return {
+    dashboard: cache?.dashboard ?? null,
+    products: cache?.products ?? [],
+    categories: cache?.categories ?? [],
+    brands: cache?.brands ?? [],
+    customers: cache?.customers ?? [],
+    customerGroups: cache?.customerGroups ?? [],
+    suppliers: cache?.suppliers ?? [],
+    sales: cache?.sales ?? [],
+    expenses: cache?.expenses ?? []
+  };
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   ready: false,
   loading: false,
@@ -235,64 +344,74 @@ export const useAppStore = create<AppState>((set, get) => ({
   bootstrap: async () => {
     set({ loading: true, error: null });
     try {
-      const hydrateWorkspace = async () => {
-        await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
-        await get().rehydrateQueuedState();
-      };
-
-      const storedThemeMode = await secureStore.getThemeMode();
+      const [storedThemeMode, storedDeviceId, storedSession, startupCache] = await Promise.all([
+        secureStore.getThemeMode(),
+        secureStore.getDeviceId(),
+        readStoredSession(),
+        readStartupCache()
+      ]);
       const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : storedThemeMode === "light" ? "light" : initialThemeMode;
       if (!storedThemeMode) {
-        await secureStore.setThemeMode(themeMode);
+        void secureStore.setThemeMode(themeMode);
       }
       setThemeTokens(themeMode);
-      set({ themeMode });
-
-      let deviceId = await secureStore.getDeviceId();
-      if (!deviceId) {
-        deviceId = createId();
-        await secureStore.setDeviceId(deviceId);
+      const deviceId = storedDeviceId ?? createId();
+      if (!storedDeviceId) {
+        void secureStore.setDeviceId(deviceId);
       }
 
-      const storedSession = await readStoredSession();
       if (storedSession?.accessToken) {
-        try {
-          const remote = await authMe();
-          const branches = remote.branches ?? storedSession.branches ?? [];
-          const selectedBranchId = deriveSelectedBranchId(remote.user, branches, storedSession?.selectedBranchId);
-          set({
-            themeMode,
-            business: remote.business,
-            user: remote.user,
-            branches,
-            selectedBranchId,
-            deviceId,
-            ready: true,
-            authLoading: false
-          });
-          await hydrateWorkspace();
-          return;
-        } catch (error) {
-          if (isOfflineError(error)) {
-            const branches = storedSession.branches ?? [];
+        const branches = storedSession.branches ?? [];
+        const selectedBranchId = deriveSelectedBranchId(storedSession.user, branches, storedSession.selectedBranchId);
+        set({
+          themeMode,
+          business: storedSession.business ?? null,
+          user: storedSession.user,
+          branches,
+          selectedBranchId,
+          deviceId,
+          ready: true,
+          authLoading: false,
+          ...workspaceFromStartupCache(startupCache)
+        });
+        await Promise.allSettled([get().refreshPendingSync(), get().rehydrateQueuedState()]);
+        void authMe()
+          .then((remote) => {
+            const currentSession = get();
+            if (!currentSession.user || !currentSession.business) {
+              return;
+            }
+            const remoteBranches = remote.branches ?? currentSession.branches;
+            const remoteSelectedBranchId = deriveSelectedBranchId(remote.user, remoteBranches, currentSession.selectedBranchId);
+            void secureStore
+              .setSession(
+                JSON.stringify({
+                  ...storedSession,
+                  user: remote.user,
+                  business: remote.business,
+                  branches: remoteBranches,
+                  selectedBranchId: remoteSelectedBranchId
+                })
+              )
+              .catch(() => undefined);
             set({
-              themeMode,
-              business: storedSession.business ?? null,
-              user: storedSession.user,
-              branches,
-              selectedBranchId: deriveSelectedBranchId(storedSession.user, branches, storedSession.selectedBranchId),
-              deviceId,
-              ready: true,
-              authLoading: false
+              business: remote.business,
+              user: remote.user,
+              branches: remoteBranches,
+              selectedBranchId: remoteSelectedBranchId
             });
-            await hydrateWorkspace();
-            return;
-          }
-          console.warn("[auth] Stored session could not be restored", error);
-          await secureStore.clearSession();
-        }
+            void writeStartupCache(get()).catch(() => undefined);
+            void Promise.allSettled([get().refreshPendingSync(), get().loadDashboard(), get().loadCatalog(), get().rehydrateQueuedState()]);
+          })
+          .catch((error) => {
+            if (!isOfflineError(error)) {
+              console.warn("[auth] Stored session validation failed", error);
+            }
+          });
+        return;
       }
 
+      await clearStartupCache();
       set({
         themeMode,
         business: null,
@@ -301,7 +420,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         selectedBranchId: null,
         deviceId,
         ready: true,
-        authLoading: false
+        authLoading: false,
+        dashboard: null,
+        products: [],
+        categories: [],
+        brands: [],
+        customers: [],
+        customerGroups: [],
+        suppliers: [],
+        sales: [],
+        expenses: []
       });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Failed to initialize app", authLoading: false });
@@ -323,6 +451,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedBranchId,
       error: null
     });
+    void writeStartupCache(get()).catch(() => undefined);
     if (refreshData) {
       void Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
     }
@@ -389,6 +518,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   logout: async () => {
     await secureStore.clearSession();
+    await clearStartupCache();
     set({
       business: null,
       user: null,
@@ -405,7 +535,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       pendingSync: 0,
       syncing: false,
       syncMessage: "Cloud only",
-      syncProgress: null
+      syncProgress: null,
+      dashboard: null,
+      products: [],
+      categories: [],
+      brands: [],
+      customers: [],
+      customerGroups: [],
+      suppliers: [],
+      sales: [],
+      expenses: []
     });
   },
   setThemeMode: async (mode) => {
@@ -419,13 +558,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!business) return;
     const branchId = resolveReadBranchId(get());
     const [summary, topProducts] = await Promise.all([getReportsSummary(undefined, undefined, branchId), getTopProducts(undefined, undefined, branchId)]);
+    const nextDashboard = {
+      ...summary,
+      date: dateKey(),
+      topProducts
+    };
     set({
-      dashboard: {
-        ...summary,
-        date: dateKey(),
-        topProducts
-      }
+      dashboard: nextDashboard
     });
+    const state = get();
+    void writeStartupCache({
+      dashboard: nextDashboard,
+      products: state.products,
+      categories: state.categories,
+      brands: state.brands,
+      customers: state.customers,
+      customerGroups: state.customerGroups,
+      suppliers: state.suppliers,
+      sales: state.sales,
+      expenses: state.expenses
+    }).catch(() => undefined);
   },
   loadCatalog: async (options) => {
     const business = get().business;
@@ -442,6 +594,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       listExpenses(branchId)
     ]);
     set({ categories, brands, products, customers, customerGroups, suppliers, sales, expenses });
+    const state = get();
+    void writeStartupCache({
+      dashboard: state.dashboard,
+      products,
+      categories,
+      brands,
+      customers,
+      customerGroups,
+      suppliers,
+      sales,
+      expenses
+    }).catch(() => undefined);
     await get().rehydrateQueuedState();
   },
   setSelectedBranchId: async (branchId) => {
@@ -450,8 +614,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       state.user?.role === "owner"
         ? branchId
         : state.user?.branchId ?? state.branches.find((branch) => branch.isDefault)?.id ?? state.branches[0]?.id ?? null;
-    set({ selectedBranchId: resolvedBranchId });
+    set({
+      selectedBranchId: resolvedBranchId,
+      dashboard: null,
+      products: [],
+      customers: [],
+      sales: [],
+      expenses: []
+    });
     await persistSelectedBranchId(resolvedBranchId);
+    void writeStartupCache({
+      dashboard: null,
+      products: [],
+      categories: get().categories,
+      brands: get().brands,
+      customers: [],
+      customerGroups: get().customerGroups,
+      suppliers: get().suppliers,
+      sales: [],
+      expenses: []
+    }).catch(() => undefined);
     await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
   },
   rehydrateQueuedState: async () => {
@@ -1092,6 +1274,12 @@ export const useAppStore = create<AppState>((set, get) => ({
               break;
             case "createSale":
               await apiCreateSale(action.payload);
+              break;
+            case "createBusinessOperation":
+              await createBusinessOperation(action.payload);
+              break;
+            case "updateBusinessOperation":
+              await updateBusinessOperation(action.payload.operationId, action.payload.patch);
               break;
           }
           await removeAction(action.id);

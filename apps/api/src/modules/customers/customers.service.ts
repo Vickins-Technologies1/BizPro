@@ -18,8 +18,11 @@ type CustomerPatchInput = {
   branchId?: string | null;
   groupId?: string | null;
   name?: string;
+  businessName?: string | null;
   phone?: string | null;
   email?: string | null;
+  address?: string | null;
+  taxPin?: string | null;
   notes?: string | null;
   creditLimit?: number;
   loyaltyPoints?: number;
@@ -115,8 +118,11 @@ export class CustomersService {
       externalId: input.externalId ?? null,
       groupId: input.groupId ?? null,
       name: input.name,
+      businessName: input.businessName ?? null,
       phone: input.phone ?? null,
       email: input.email ?? null,
+      address: input.address ?? null,
+      taxPin: input.taxPin ?? null,
       notes: input.notes ?? null,
       creditLimit: input.creditLimit ?? 0,
       loyaltyPoints: input.loyaltyPoints ?? 0,
@@ -134,8 +140,11 @@ export class CustomersService {
     if (patch.externalId !== undefined) customer.externalId = patch.externalId ?? null;
     if (patch.groupId !== undefined) customer.groupId = patch.groupId ?? null;
     if (patch.name !== undefined) customer.name = patch.name;
+    if (patch.businessName !== undefined) customer.businessName = patch.businessName ?? null;
     if (patch.phone !== undefined) customer.phone = patch.phone ?? null;
     if (patch.email !== undefined) customer.email = patch.email ?? null;
+    if (patch.address !== undefined) customer.address = patch.address ?? null;
+    if (patch.taxPin !== undefined) customer.taxPin = patch.taxPin ?? null;
     if (patch.notes !== undefined) customer.notes = patch.notes ?? null;
     if (patch.creditLimit !== undefined) customer.creditLimit = Number(patch.creditLimit ?? 0);
     if (patch.loyaltyPoints !== undefined) customer.loyaltyPoints = Number(patch.loyaltyPoints ?? 0);
@@ -293,8 +302,11 @@ export class CustomersService {
       ...customer,
       id: resolvedId,
       groupId: customer.groupId ?? null,
+      businessName: customer.businessName ?? null,
       phone: customer.phone ?? null,
       email: customer.email ?? null,
+      address: customer.address ?? null,
+      taxPin: customer.taxPin ?? null,
       notes: customer.notes ?? null,
       creditLimit: Number(customer.creditLimit ?? 0),
       loyaltyPoints: Number(customer.loyaltyPoints ?? 0),

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   hasPermission,
+  resolveBusinessTypeConfig,
   resolveIndustryModule,
   formatRoleLabel,
   type DailySummary,
@@ -56,6 +57,7 @@ export function DashboardScreen() {
   const syncNow = useAppStore((state) => state.syncNow);
   const canViewDashboard = hasPermission(user, "viewDashboard");
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
 
   const [activeFilter, setActiveFilter] = React.useState<Filter>("month");
   const [customRange, setCustomRange] = React.useState<RangeState | null>(null);
@@ -166,6 +168,7 @@ export function DashboardScreen() {
   const staffCount = analytics?.summary.staffCount ?? employeesCount ?? 0;
   const salesCount = analytics?.summary.salesCount ?? sales.length;
   const productCount = analytics?.summary.productCount ?? products.length;
+  const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
   const overdueCustomers = customers.filter((customer) => (customer.balance ?? 0) > 0).length;
   const trendSeries = analytics?.revenueTrend ?? [];
   const trendLabels = trendSeries.map((point) => point.period);
@@ -332,42 +335,17 @@ export function DashboardScreen() {
         ) : (
           <>
             <View style={styles.metricGrid}>
-              <View style={metricWrapStyle}>
-                <MetricCard
-                  label="Total Revenue"
-                  value={formatMoney(revenueTotal, business?.currency)}
-                  hint={`${salesCount} sales · ${formatGrowth(growthPercent)}`}
-                  icon="trending-up-outline"
-                  tone="primary"
-                />
-              </View>
-              <View style={metricWrapStyle}>
-                <MetricCard
-                  label="Collected Payments"
-                  value={formatMoney(paymentTotal, business?.currency)}
-                  hint={`${paymentCount} transactions`}
-                  icon="wallet-outline"
-                  tone="success"
-                />
-              </View>
-              <View style={metricWrapStyle}>
-                <MetricCard
-                  label="Customers"
-                  value={String(customerCount)}
-                  hint={`${overdueCustomers} with balances`}
-                  icon="people-outline"
-                  tone="warning"
-                />
-              </View>
-              <View style={metricWrapStyle}>
-                <MetricCard
-                  label="Low Stock"
-                  value={String(lowStockCount)}
-                  hint={`${productCount} tracked`}
-                  icon="alert-circle-outline"
-                  tone="danger"
-                />
-              </View>
+              {industry.dashboard.widgets.map((widget) => (
+                <View key={widget.key} style={metricWrapStyle}>
+                  <MetricCard
+                    label={widget.label}
+                    value={dashboardMetricValue(widget.metric, { revenueTotal, paymentTotal, customerCount, lowStockCount, salesCount, productCount, inventoryValue, business, analytics, employeesCount })}
+                    hint={widget.description ?? `${businessConfig.label} activity`}
+                    icon={(widget.icon ?? "analytics-outline") as any}
+                    tone={widget.tone ?? "primary"}
+                  />
+                </View>
+              ))}
             </View>
 
             <Card style={styles.chartCard}>
@@ -964,6 +942,44 @@ function toneColor(tone: "primary" | "success" | "warning" | "danger") {
   return tokens.colors.primary;
 }
 
+function dashboardMetricValue(
+  metric: string,
+  input: {
+    revenueTotal: number;
+    paymentTotal: number;
+    customerCount: number;
+    lowStockCount: number;
+    salesCount: number;
+    productCount: number;
+    inventoryValue: number;
+    business: { currency?: string | null } | null;
+    analytics: EnterpriseAnalytics | null;
+    employeesCount: number | null;
+  }
+) {
+  switch (metric) {
+    case "salesTotal":
+    case "revenueTotal":
+      return formatMoney(input.revenueTotal, input.business?.currency ?? undefined);
+    case "inventoryValue":
+      return formatMoney(input.inventoryValue, input.business?.currency ?? undefined);
+    case "customersCount":
+    case "clientsCount":
+    case "patientsCount":
+      return String(input.customerCount);
+    case "lowStockCount":
+      return String(input.lowStockCount);
+    case "ordersCount":
+      return String(input.salesCount);
+    case "staffCount":
+    case "stylistsCount":
+    case "mechanicsCount":
+      return String(input.employeesCount ?? input.analytics?.summary.staffCount ?? 0);
+    default:
+      return String(input.salesCount || input.productCount);
+  }
+}
+
 function withAlpha(hex: string, alpha: number) {
   const value = hex.replace("#", "");
   const parsed = Number.parseInt(value, 16);
@@ -1017,9 +1033,8 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
+    backgroundColor: "transparent",
+    borderWidth: 0,
     position: "relative"
   },
   iconButtonPressed: {

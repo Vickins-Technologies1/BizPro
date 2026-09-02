@@ -185,28 +185,34 @@ export function PurchaseOrdersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll}>
-        <Card>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Inbound planning</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredOrders.length} visible of {orders.length} orders</Text>
+            </View>
+            <PrimaryButton title="Create order" onPress={() => openEditor(null)} />
+          </View>
           <InputField label="Search orders" value={search} onChangeText={setSearch} placeholder="Order number, supplier, or status" />
-        </Card>
-        <Card>
-          <PrimaryButton title="Create order" onPress={() => openEditor(null)} />
         </Card>
         {filteredOrders.length ? (
           filteredOrders.map((order) => {
             const supplierName = suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? "No supplier";
             return (
-              <Card key={order.id} style={{ gap: 8 }}>
+              <Card key={order.id} style={{ gap: 6, padding: 12 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{order.orderNumber}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary }}>{supplierName}</Text>
+                    <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{order.orderNumber}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{supplierName}</Text>
                     <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(order.orderDate, "PPP")}</Text>
                   </View>
                   <Badge label={order.status.replaceAll("_", " ")} tone={order.status === "received" ? "success" : order.status === "cancelled" ? "danger" : "primary"} />
                 </View>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(order.total, business?.currency)}</Text>
-                <Text style={{ color: tokens.colors.textSecondary }}>{order.items.length} line{order.items.length === 1 ? "" : "s"}</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(order.total, business?.currency)}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{order.items.length} line{order.items.length === 1 ? "" : "s"}</Text>
+                </View>
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(order)} />

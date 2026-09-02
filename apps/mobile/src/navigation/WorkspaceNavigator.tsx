@@ -11,7 +11,7 @@ import { MoreDrawerProvider } from "@/navigation/moreDrawerContext";
 import { tokens } from "@/theme/tokens";
 import { useThemeTokens } from "@/theme";
 import { useAppStore } from "@/store/useAppStore";
-import { getEffectivePermissions } from "@shared";
+import { getEffectivePermissions, resolveBusinessTypeConfig } from "@shared";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PosScreen } from "@/screens/PosScreen";
 import { ProductsScreen } from "@/screens/ProductsScreen";
@@ -38,7 +38,7 @@ type WorkspaceTabParamList = {
 const WorkspaceTabs = createBottomTabNavigator<WorkspaceTabParamList>();
 type WorkspaceNavItem = keyof WorkspaceTabParamList | "More";
 
-const MOBILE_PRIMARY_ROUTES: WorkspaceNavItem[] = ["Dashboard", "POS", "Catalog", "Customers", "More"];
+const MOBILE_PRIMARY_ROUTES: WorkspaceNavItem[] = ["Dashboard", "POS", "Catalog", "Reports", "More"];
 const DESKTOP_SIDEBAR_ROUTES: WorkspaceNavItem[] = [
   "Dashboard",
   "POS",
@@ -178,7 +178,15 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
   const themeMode = useAppStore((store) => store.themeMode);
   const setThemeMode = useAppStore((store) => store.setThemeMode);
   const permissions = React.useMemo(() => getEffectivePermissions(user), [user]);
-  const visibleRoutes = isDesktop ? DESKTOP_SIDEBAR_ROUTES : MOBILE_PRIMARY_ROUTES;
+  const businessConfig = React.useMemo(
+    () => resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey }),
+    [business?.businessType, business?.industryKey]
+  );
+  const visibleRoutes = (isDesktop ? DESKTOP_SIDEBAR_ROUTES : MOBILE_PRIMARY_ROUTES).filter((routeName) => {
+    if (routeName === "Catalog") return businessConfig.capabilities.catalog;
+    if (routeName === "Customers") return businessConfig.capabilities.customers;
+    return true;
+  });
 
   return (
     <View
@@ -198,21 +206,17 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
               paddingHorizontal: 12
             }
         : {
-              marginHorizontal: 8,
-              marginBottom: Math.max(insets.bottom, 8),
-              marginTop: 8,
+              marginHorizontal: 10,
+              marginBottom: Math.max(insets.bottom, 4),
+              marginTop: 2,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 6,
-              paddingTop: 8,
-              paddingBottom: Math.max(insets.bottom, 8),
-              paddingHorizontal: 8,
-              borderWidth: 1,
-              borderColor: tokens.colors.border,
-              borderRadius: 26,
-              backgroundColor: tokens.colors.surface,
-              ...tokens.shadow.card
+              gap: 3,
+              paddingTop: 2,
+              paddingBottom: Math.max(insets.bottom, 4),
+              paddingHorizontal: 0,
+              backgroundColor: "transparent"
             }
       ]}
     >
@@ -272,7 +276,7 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
           </LinearGradient>
 
           <View style={{ gap: 8, flex: 1 }}>
-            {visibleRoutes.map((routeName) => renderWorkspaceItem({ routeName, state, descriptors, navigation, isDesktop, onMorePress }))}
+            {visibleRoutes.map((routeName) => renderWorkspaceItem({ routeName, state, descriptors, navigation, isDesktop, onMorePress, businessConfig }))}
           </View>
 
           <Card style={{ gap: 8, padding: 12 }}>
@@ -306,7 +310,7 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
             </View>
           ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-              {visibleRoutes.map((routeName) => renderWorkspaceItem({ routeName, state, descriptors, navigation, isDesktop, onMorePress }))}
+              {visibleRoutes.map((routeName) => renderWorkspaceItem({ routeName, state, descriptors, navigation, isDesktop, onMorePress, businessConfig }))}
           </View>
         </View>
       )}
@@ -394,7 +398,8 @@ function renderWorkspaceItem({
   descriptors,
   navigation,
   isDesktop,
-  onMorePress
+  onMorePress,
+  businessConfig
 }: {
   routeName: WorkspaceNavItem;
   state: BottomTabBarProps["state"];
@@ -402,12 +407,21 @@ function renderWorkspaceItem({
   navigation: BottomTabBarProps["navigation"];
   isDesktop: boolean;
   onMorePress: () => void;
+  businessConfig: ReturnType<typeof resolveBusinessTypeConfig>;
 }) {
   const route = state.routes.find((candidate) => candidate.name === routeName);
   const currentRouteName = state.routes[state.index]?.name as keyof WorkspaceTabParamList | undefined;
   const focused = currentRouteName === routeName;
   const options = route ? descriptors[route.key]?.options : undefined;
-  const label = routeName === "More" ? "More" : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
+  const label = routeName === "More"
+    ? "More"
+    : routeName === "Catalog"
+      ? businessConfig.navigation.catalogLabel
+      : routeName === "POS"
+        ? businessConfig.navigation.posLabel
+        : routeName === "Customers"
+          ? businessConfig.navigation.customersLabel
+          : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
   const icon = routeName === "More" ? (
     <Ionicons name="apps-outline" color={tokens.colors.textMuted} size={isDesktop ? 22 : 20} />
   ) : options?.tabBarIcon?.({
@@ -446,11 +460,13 @@ function renderWorkspaceItem({
             }
           : {
               flex: 1,
-              minHeight: 54,
+              minHeight: 40,
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: 16,
-              backgroundColor: focused ? `${tokens.colors.primary}20` : "transparent"
+              borderRadius: 0,
+              borderBottomWidth: focused ? 2 : 0,
+              borderBottomColor: tokens.colors.primaryStrong,
+              backgroundColor: "transparent"
             },
         pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] }
       ]}
@@ -459,25 +475,25 @@ function renderWorkspaceItem({
       {isDesktop ? (
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ color: focused ? tokens.colors.text : tokens.colors.textSecondary, fontSize: 14, fontWeight: "800" }}>{label}</Text>
-          <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>{routeDescription(routeName)}</Text>
+          <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>{routeDescription(routeName, businessConfig)}</Text>
         </View>
         ) : (
-        <Text style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textSecondary, fontSize: 10, fontWeight: "800", marginTop: 4 }}>{label}</Text>
+        <Text style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 0.25, marginTop: 2 }}>{label}</Text>
       )}
     </Pressable>
   );
 }
 
-function routeDescription(routeName: WorkspaceNavItem) {
+function routeDescription(routeName: WorkspaceNavItem, businessConfig: ReturnType<typeof resolveBusinessTypeConfig>) {
   switch (routeName) {
     case "Dashboard":
       return "Overview";
     case "POS":
-      return "Record sales";
+      return businessConfig.workflow.steps.join("  >  ");
     case "Catalog":
-      return "Products and stock";
+      return businessConfig.navigation.catalogDescription;
     case "Customers":
-      return "Balances and payments";
+      return `${businessConfig.terminology.customers} and payments`;
     case "Employees":
       return "Team access";
     case "Reports":

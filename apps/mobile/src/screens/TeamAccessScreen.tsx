@@ -28,11 +28,11 @@ export function TeamAccessScreen() {
         subtitle="Understand roles, permissions, and employee access"
         right={<Ionicons name="shield-checkmark-outline" size={26} color={tokens.colors.text} />}
       />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Card style={{ gap: 10 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 8, padding: 14 }}>
           <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Access snapshot</Text>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Current account</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Current account</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
             {user?.fullName ?? "This account"} is signed in as {roleLabel}. {role === "owner" ? "Owner access is always granted full permissions." : "This view shows what this account can and cannot do."}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -47,7 +47,7 @@ export function TeamAccessScreen() {
           </View>
         </Card>
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <StatCard label="Roles" value={`${roleDetails.length}`} icon="people-outline" tone="primary" />
           </View>
@@ -56,9 +56,9 @@ export function TeamAccessScreen() {
           </View>
         </View>
 
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Role matrix</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Role matrix</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
             Each role below uses a preset permission set. The owner can still customize employees after they are created.
           </Text>
           {roleDetails.map((item) => {
@@ -68,9 +68,9 @@ export function TeamAccessScreen() {
               <View
                 key={item.role}
                 style={{
-                  gap: 10,
-                  padding: 14,
-                  borderRadius: 20,
+                  gap: 8,
+                  padding: 11,
+                  borderRadius: 15,
                   borderWidth: 1,
                   borderColor: isCurrent ? tokens.colors.primaryStrong : tokens.colors.border,
                   backgroundColor: isCurrent ? "rgba(37,99,235,0.08)" : tokens.colors.surfaceAlt
@@ -78,8 +78,8 @@ export function TeamAccessScreen() {
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{item.title}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{item.subtitle}</Text>
+                    <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{item.title}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{item.subtitle}</Text>
                   </View>
                   <Badge label={isCurrent ? "current" : `${permissions.length} perms`} tone={item.tone} />
                 </View>
@@ -93,8 +93,8 @@ export function TeamAccessScreen() {
           })}
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Owner workflow</Text>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Owner workflow</Text>
           {[
             "Create the business owner during onboarding.",
             "Add employees after the first sign-in.",
@@ -119,9 +119,9 @@ export function TeamAccessScreen() {
           ))}
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Access notes</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Access notes</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
             Open the employee workspace to manage staff profiles, permissions, and audit history.
           </Text>
           <PrimaryButton title="Open employees" onPress={() => navigation.navigate("Employees")} />

@@ -35,6 +35,7 @@ import {
   SyncEvent,
   SyncEventDocument
 } from "../schemas";
+import { BusinessOperation as BusinessOperationModel, BusinessOperationDocument } from "../business-operations.schemas";
 import { CreateSaleInput } from "../sales/sales.service";
 
 @Injectable()
@@ -55,7 +56,8 @@ export class SyncService {
     @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(StockMovement.name) private readonly stockMovementModel: Model<StockMovementDocument>,
-    @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>
+    @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
+    @InjectModel(BusinessOperationModel.name) private readonly businessOperationModel: Model<BusinessOperationDocument>
   ) {}
 
   async push(businessId: string, deviceId: string, events: Array<{ eventId: string; entityType: string; entityId: string; action: string; payload: Record<string, unknown>; createdAt: string }>) {
@@ -101,7 +103,7 @@ export class SyncService {
 
   async pull(businessId: string, deviceId: string, since?: string) {
     const after = since ? new Date(since) : new Date(0);
-    const [categories, brands, products, customers, customerGroups, suppliers, purchaseOrders, stockTransfers, stockAdjustments, expenses, sales, payments, stockMovements] = await Promise.all([
+    const [categories, brands, products, customers, customerGroups, suppliers, purchaseOrders, stockTransfers, stockAdjustments, expenses, sales, payments, stockMovements, businessOperations] = await Promise.all([
       this.categoryModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.brandModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.productModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
@@ -114,7 +116,8 @@ export class SyncService {
       this.expenseModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.saleModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
       this.paymentModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
-      this.stockMovementModel.find({ businessId, updatedAt: { $gt: after } }).lean()
+      this.stockMovementModel.find({ businessId, updatedAt: { $gt: after } }).lean(),
+      this.businessOperationModel.find({ businessId, updatedAt: { $gt: after } }).lean()
     ]);
     const changes = [
       ...categories.map((payload) => ({ entityType: "category", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
@@ -129,7 +132,8 @@ export class SyncService {
       ...expenses.map((payload) => ({ entityType: "expense", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...sales.map((payload) => ({ entityType: "sale", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
       ...payments.map((payload) => ({ entityType: "payment", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
-      ...stockMovements.map((payload) => ({ entityType: "stockMovement", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } }))
+      ...stockMovements.map((payload) => ({ entityType: "stockMovement", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } })),
+      ...businessOperations.map((payload) => ({ entityType: "businessOperation", action: "upsert", entityId: payload.externalId ?? payload._id.toString(), payload: { ...payload, id: payload.externalId ?? payload._id.toString() } }))
     ];
     await this.checkpointModel.findOneAndUpdate(
       { businessId, deviceId },
@@ -148,6 +152,31 @@ export class SyncService {
   }
 
   private async applyEvent(businessId: string, event: { entityType: string; action: string; entityId: string; payload: Record<string, unknown> }) {
+    if (event.entityType === "businessOperation") {
+      await this.businessOperationModel.findOneAndUpdate(
+        { businessId, externalId: event.entityId },
+        {
+          externalId: event.entityId,
+          businessId,
+          branchId: (event.payload.branchId as string | null) ?? null,
+          kind: String(event.payload.kind ?? "order"),
+          status: String(event.payload.status ?? "open"),
+          title: String(event.payload.title ?? "Operation"),
+          customerId: (event.payload.customerId as string | null) ?? null,
+          staffId: (event.payload.staffId as string | null) ?? null,
+          scheduledAt: event.payload.scheduledAt ? new Date(String(event.payload.scheduledAt)) : null,
+          durationMinutes: event.payload.durationMinutes == null ? null : Number(event.payload.durationMinutes),
+          tableName: (event.payload.tableName as string | null) ?? null,
+          vehiclePlate: (event.payload.vehiclePlate as string | null) ?? null,
+          notes: (event.payload.notes as string | null) ?? null,
+          items: Array.isArray(event.payload.items) ? event.payload.items : [],
+          total: Number(event.payload.total ?? 0),
+          deletedAt: event.payload.deletedAt ? new Date(String(event.payload.deletedAt)) : null
+        },
+        { upsert: true, new: true }
+      );
+      return;
+    }
     if (event.entityType === "product") {
       await this.productModel.findOneAndUpdate(
         { businessId, externalId: event.entityId },

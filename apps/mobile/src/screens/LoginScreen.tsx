@@ -4,7 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { loginSchema } from "@shared";
-import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
+import { AppScrollView, Card, InputField, PrimaryButton, Screen } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -29,18 +29,13 @@ export function LoginScreen() {
 
   return (
     <Screen hideFooter>
-      <GradientHeader title="Welcome back" subtitle="Your business, ready when you are" />
-      <AppScrollView contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
-        <Card style={{ alignItems: "center", gap: 10, paddingVertical: 18 }}>
-          <BrandLogo style={{ width: 118, height: 40 }} />
-          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Sign in to BizPro</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, textAlign: "center", fontSize: 12 }}>Use your owner password or team PIN to continue.</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-            <Badge label="Offline ready" tone="primary" />
-            <Badge label="Secure access" tone="success" />
-          </View>
-        </Card>
-        <Card style={{ gap: 14 }}>
+      <AppScrollView contentContainerStyle={{ gap: 14, paddingTop: 26, paddingBottom: 26 }}>
+        <View style={{ alignItems: "center", gap: 8, paddingHorizontal: 20 }}>
+          <BrandLogo style={{ width: 92, height: 32 }} />
+          <Text style={{ color: tokens.colors.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 }}>Welcome back</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17, textAlign: "center" }}>Sign in to continue to BizPro.</Text>
+        </View>
+        <Card style={{ gap: 12, padding: 14 }}>
           <Controller
             control={control}
             name="identifier"
@@ -51,7 +46,7 @@ export function LoginScreen() {
                 onChangeText={onChange}
                 placeholder="07..."
                 error={errors.identifier?.message}
-                helperText="Use the phone number or owner name tied to the business."
+                helperText="Phone number or owner name."
               />
             )}
           />
@@ -66,12 +61,12 @@ export function LoginScreen() {
                 placeholder="••••"
                 secureTextEntry
                 error={errors.passwordOrPin?.message}
-                helperText="Enter the owner password or the cashier PIN."
+                helperText="Owner password or team PIN."
               />
             )}
           />
           <PrimaryButton
-            title="Sign in"
+            title="Sign In"
             loading={authLoading || submitting}
             onPress={handleSubmit(async (values) => {
               setSubmitting(true);
@@ -86,7 +81,7 @@ export function LoginScreen() {
           />
           <PrimaryButton title="Create owner account" variant="secondary" onPress={() => navigation.navigate("Onboarding")} />
         </Card>
-        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20, textAlign: "center", paddingHorizontal: 20 }}>New to BizPro? Create an owner account and get 30 days free with no card required.</Text>
+        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 28 }}>New to BizPro? Set up an owner account with a 30-day free trial.</Text>
       </AppScrollView>
     </Screen>
   );

@@ -408,34 +408,34 @@ export function CustomersScreen() {
         data={filteredCustomers}
         keyExtractor={(customer) => customer.id}
         ListHeaderComponent={
-          <View style={{ gap: 16 }}>
-            <Card style={{ gap: 12 }}>
+          <View style={{ gap: 10 }}>
+            <Card style={{ gap: 10, padding: 14 }}>
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Customer analytics</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Track value, not just debt</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
-                Search by name, phone, email, notes, or group. Customer groups and loyalty data stay optional so existing customers remain unaffected.
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Track value, not just debt</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 12 }} numberOfLines={2}>
+                Search customers, balances, groups, and loyalty in one workspace.
               </Text>
               {analyticsLoading ? <Loader label="Refreshing analytics..." /> : null}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
+                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Customers</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{activeAnalytics.totalCustomers}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>Total customer records</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{activeAnalytics.totalCustomers}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Total records</Text>
                 </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
+                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Outstanding</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>{activeAnalytics.owingCustomers} customers owe money</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{activeAnalytics.owingCustomers} owing</Text>
                 </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
+                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Credit limit</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>Assigned across customers</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Assigned credit</Text>
                 </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 8 }}>
+                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Loyalty</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "800" }}>{activeAnalytics.totalLoyaltyPoints}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>Total reward points</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{activeAnalytics.totalLoyaltyPoints}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Reward points</Text>
                 </Card>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -449,7 +449,7 @@ export function CustomersScreen() {
               </View>
             </Card>
 
-            <Card style={{ gap: 10 }}>
+            <Card style={{ gap: 9, padding: 14 }}>
               <InputField
                 label="Search customers"
                 value={search}
@@ -490,14 +490,14 @@ export function CustomersScreen() {
           const contactLine = customer.phone ?? customer.email ?? "No contact details";
           return (
             <Pressable key={customer.id} onPress={() => setSelectedCustomerId(customer.id)}>
-              <Card style={{ gap: 10 }}>
+              <Card style={{ gap: 8, padding: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                   <Avatar name={customer.name} size={46} tone={isOverCredit ? "warning" : customer.balance > 0 ? "danger" : "primary"} />
                   <View style={{ flex: 1, gap: 6 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
                       <View style={{ flex: 1, gap: 3 }}>
-                        <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{customer.name}</Text>
-                        <Text style={{ color: tokens.colors.textSecondary }}>{contactLine}</Text>
+                        <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{customer.name}</Text>
+                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{contactLine}</Text>
                       </View>
                       <Pressable
                         onPress={(event) => {

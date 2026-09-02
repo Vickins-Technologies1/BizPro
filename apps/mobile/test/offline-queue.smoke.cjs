@@ -18,6 +18,8 @@ const secureState = {
   offlineQueue: null
 };
 
+let startupCache = null;
+
 const apiState = {
   online: false,
   categories: [],
@@ -55,6 +57,27 @@ moduleLoader._load = function patchedLoad(request, parent, isMain) {
           secureState.offlineQueue = null;
         }
       }
+    };
+  }
+
+  if (request === "expo-file-system") {
+    return {
+      documentDirectory: "file:///tmp/",
+      cacheDirectory: "file:///tmp/",
+      getInfoAsync: async () => ({ exists: startupCache !== null }),
+      readAsStringAsync: async () => startupCache ?? "",
+      writeAsStringAsync: async (_path, content) => {
+        startupCache = String(content);
+      },
+      deleteAsync: async () => {
+        startupCache = null;
+      }
+    };
+  }
+
+  if (request === "@/services/notifications") {
+    return {
+      recordLocalNotification: async () => undefined
     };
   }
 
@@ -433,6 +456,7 @@ function resetEnvironment() {
     accessToken: "token-1"
   });
   secureState.offlineQueue = null;
+  startupCache = null;
   apiState.online = false;
   apiState.categories = [];
   apiState.customers = [];

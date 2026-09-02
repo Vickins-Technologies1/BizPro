@@ -21,6 +21,57 @@ export type IndustryBusinessTypeOption = {
   description: string;
 };
 
+export type BusinessCapability =
+  | "catalog"
+  | "inventory"
+  | "barcode"
+  | "purchasing"
+  | "customers"
+  | "appointments"
+  | "orders"
+  | "tables"
+  | "kitchen"
+  | "workOrders"
+  | "pharmacy"
+  | "projects"
+  | "payments";
+
+export type BusinessField = {
+  key: string;
+  label: string;
+  type: "text" | "number" | "currency" | "duration" | "toggle";
+  required?: boolean;
+  help?: string;
+};
+
+export type BusinessTypeConfig = {
+  businessType: BusinessType;
+  industryKey: IndustryKey;
+  label: string;
+  terminology: {
+    catalog: string;
+    catalogItem: string;
+    customers: string;
+    transaction: string;
+    staff: string;
+  };
+  capabilities: Readonly<Record<BusinessCapability, boolean>>;
+  workflow: {
+    headline: string;
+    steps: readonly string[];
+  };
+  fields: readonly BusinessField[];
+  navigation: {
+    catalogLabel: string;
+    posLabel: string;
+    customersLabel: string;
+    catalogDescription: string;
+  };
+  reports: readonly string[];
+  onboarding: readonly string[];
+  roles: readonly string[];
+};
+
 export type DashboardMetricKey =
   | "salesTotal"
   | "inventoryValue"
@@ -118,6 +169,132 @@ export function resolveIndustryKey(input: { industryKey?: string | null | undefi
 export function resolveIndustryModule(input: { industryKey?: string | null | undefined; businessType?: string | null | undefined; fallback?: IndustryKey } = {}) {
   const key = resolveIndustryKey(input);
   return getIndustryModule(key) ?? getIndustryModule(input.fallback ?? "services") ?? listIndustryModules()[0]!;
+}
+
+type BusinessTypeOverride = {
+  terminology?: Partial<BusinessTypeConfig["terminology"]>;
+  capabilities?: Partial<Record<BusinessCapability, boolean>>;
+  workflow?: BusinessTypeConfig["workflow"];
+  fields?: readonly BusinessField[];
+  navigation?: BusinessTypeConfig["navigation"];
+  reports?: readonly string[];
+  onboarding?: readonly string[];
+  roles?: readonly string[];
+};
+
+const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride>> = {
+  restaurant: {
+    terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
+    capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items, modifiers, and availability" },
+    workflow: { headline: "Table to payment", steps: ["Table or takeaway", "Create order", "Kitchen", "Serve", "Payment"] },
+    onboarding: ["Dining areas", "Tables", "Initial menu", "Kitchen workflow"],
+    roles: ["Owner", "Manager", "Cashier", "Waiter", "Kitchen"]
+  },
+  cafe: {
+    terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
+    capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items and quick-service availability" }
+  },
+  bakery: {
+    terminology: { catalog: "Bake list", catalogItem: "Baked good", customers: "Customers", transaction: "Order", staff: "Team" },
+    capabilities: { orders: true, tables: false, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Bake list", posLabel: "Orders", customersLabel: "Customers", catalogDescription: "Baked goods, batches, and availability" }
+  },
+  bar: {
+    terminology: { catalog: "Drinks", catalogItem: "Drink", customers: "Guests", transaction: "Tab", staff: "Team" },
+    capabilities: { orders: true, tables: true, kitchen: false, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Drinks", posLabel: "Tabs", customersLabel: "Guests", catalogDescription: "Drinks, tabs, and service availability" }
+  },
+  salon: {
+    terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Appointment", staff: "Staff" },
+    capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Services", posLabel: "Appointments", customersLabel: "Clients", catalogDescription: "Services, durations, and pricing" },
+    workflow: { headline: "Client to completion", steps: ["Client", "Appointment", "Staff", "Service", "Payment"] },
+    fields: [{ key: "duration", label: "Service duration", type: "duration", required: true }, { key: "assignedStaff", label: "Assigned staff", type: "text" }],
+    onboarding: ["Services", "Staff", "Booking calendar", "Appointment duration"],
+    roles: ["Owner", "Manager", "Reception", "Stylist"]
+  },
+  spa: {
+    terminology: { catalog: "Treatments", catalogItem: "Treatment", customers: "Clients", transaction: "Booking", staff: "Therapists" },
+    capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Treatments", posLabel: "Bookings", customersLabel: "Clients", catalogDescription: "Treatments, durations, and pricing" }
+  },
+  pharmacy: {
+    terminology: { catalog: "Medicines", catalogItem: "Medicine", customers: "Patients", transaction: "Dispensing", staff: "Pharmacists" },
+    capabilities: { pharmacy: true, inventory: true, barcode: true, purchasing: true, customers: true, catalog: true, appointments: false, orders: false, tables: false, kitchen: false, workOrders: false, projects: false },
+    navigation: { catalogLabel: "Medicines", posLabel: "Dispense", customersLabel: "Patients", catalogDescription: "Medicines, batches, expiry, and stock" },
+    fields: [{ key: "batchNumber", label: "Batch number", type: "text", required: true }, { key: "expiryDate", label: "Expiry date", type: "text", required: true }],
+    onboarding: ["Dispensing workflow", "Expiry tracking", "Suppliers", "Pharmacy staff"],
+    roles: ["Owner", "Manager", "Pharmacist", "Cashier"]
+  },
+  hardware: {
+    terminology: { catalog: "Stock", catalogItem: "Product", customers: "Customers", transaction: "Sale", staff: "Team" },
+    capabilities: { inventory: true, barcode: true, purchasing: true, catalog: true, customers: true, appointments: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Stock", posLabel: "Sales", customersLabel: "Customers", catalogDescription: "SKUs, units, variants, and reorder levels" },
+    fields: [{ key: "sku", label: "SKU", type: "text", required: true }, { key: "unit", label: "Unit of measure", type: "text", required: true }, { key: "reorderLevel", label: "Reorder level", type: "number" }]
+  },
+  garage: {
+    terminology: { catalog: "Parts", catalogItem: "Part", customers: "Vehicle owners", transaction: "Job", staff: "Mechanics" },
+    capabilities: { workOrders: true, inventory: true, catalog: true, customers: true, purchasing: true, barcode: false, appointments: true, orders: false, tables: false, kitchen: false, pharmacy: false, projects: false },
+    navigation: { catalogLabel: "Parts", posLabel: "Job cards", customersLabel: "Vehicle owners", catalogDescription: "Parts, labour, and workshop stock" },
+    workflow: { headline: "Job card to handover", steps: ["Open job", "Inspect vehicle", "Add parts and labour", "Complete work", "Payment"] },
+    onboarding: ["Service bays", "Mechanics", "Job card statuses", "Parts catalog"],
+    roles: ["Owner", "Manager", "Reception", "Mechanic"]
+  },
+  consultancy: {
+    terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Invoice", staff: "Team" },
+    capabilities: { projects: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, appointments: true, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false },
+    navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable services, retainers, and scopes" },
+    workflow: { headline: "Engagement to collection", steps: ["Engagement", "Scope", "Invoice", "Payment", "Follow-up"] },
+    onboarding: ["Service catalog", "Retainer settings", "Team", "Invoice terms"],
+    roles: ["Owner", "Manager", "Consultant"]
+  }
+};
+
+export function resolveBusinessTypeConfig(input: { businessType?: string | null | undefined; industryKey?: string | null | undefined } = {}): BusinessTypeConfig {
+  const module = resolveIndustryModule(input);
+  const businessType = isBusinessType(input.businessType ?? "") ? input.businessType as BusinessType : module.businessTypes[0]?.value ?? "general_service";
+  const baseCapabilities: Record<BusinessCapability, boolean> = {
+    catalog: true,
+    inventory: module.key !== "services" && module.key !== "professional_services",
+    barcode: module.key === "retail" || module.key === "healthcare" || module.key === "agriculture" || module.key === "automotive",
+    purchasing: module.key !== "services" && module.key !== "professional_services",
+    customers: true,
+    appointments: module.key === "beauty" || module.key === "healthcare" || module.key === "services" || module.key === "professional_services",
+    orders: module.key === "food_beverage",
+    tables: module.key === "food_beverage",
+    kitchen: module.key === "food_beverage",
+    workOrders: module.key === "automotive" || module.key === "services",
+    pharmacy: module.key === "healthcare" && businessType === "pharmacy",
+    projects: module.key === "professional_services",
+    payments: true
+  };
+  const override = BUSINESS_TYPE_OVERRIDES[businessType] ?? {};
+  const defaultTerminology = module.key === "food_beverage"
+    ? { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" }
+    : module.key === "beauty" || module.key === "services" || module.key === "professional_services"
+      ? { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Job", staff: "Staff" }
+      : { catalog: "Products", catalogItem: "Product", customers: "Customers", transaction: "Sale", staff: "Team" };
+  const terminology = { ...defaultTerminology, ...(override.terminology ?? {}) };
+  const navigation = override.navigation ?? { catalogLabel: terminology.catalog, posLabel: terminology.transaction + "s", customersLabel: terminology.customers, catalogDescription: `${terminology.catalog}, pricing, and availability` };
+  return {
+    businessType,
+    industryKey: module.key,
+    label: module.businessTypes.find((option) => option.value === businessType)?.label ?? module.label,
+    terminology,
+    capabilities: { ...baseCapabilities, ...(override.capabilities ?? {}) },
+    workflow: override.workflow ?? { headline: `${terminology.catalogItem} to payment`, steps: module.salesWorkflow.steps },
+    fields: override.fields ?? [],
+    navigation,
+    reports: module.reports,
+    onboarding: override.onboarding ?? [terminology.catalog, terminology.customers, terminology.staff],
+    roles: override.roles ?? ["Owner", "Manager", "Cashier"]
+  };
+}
+
+export function getBusinessTypeCapabilities(input: { businessType?: string | null; industryKey?: string | null }) {
+  return resolveBusinessTypeConfig(input).capabilities;
 }
 
 export function isIndustryKey(value: string): value is IndustryKey {

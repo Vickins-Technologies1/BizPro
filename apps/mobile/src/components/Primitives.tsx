@@ -1640,10 +1640,10 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       flex: 1
     },
     header: {
-      marginHorizontal: 14,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 16,
+      marginHorizontal: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 13,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       flexDirection: "row",
@@ -1673,10 +1673,10 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 11, lineHeight: 16 },
     card: {
       backgroundColor: tokens.colors.surface,
-      borderRadius: 16,
+      borderRadius: 13,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 14,
+      padding: 12,
       overflow: "hidden",
       ...tokens.shadow.card
     },
@@ -2023,10 +2023,10 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       lineHeight: 18
     },
     scrollContent: {
-      paddingHorizontal: 14,
-      paddingTop: 10,
-      gap: 10,
-      paddingBottom: 18
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      gap: 8,
+      paddingBottom: 16
     },
     skeleton: {
       backgroundColor: withAlpha(tokens.colors.textMuted, 0.12),

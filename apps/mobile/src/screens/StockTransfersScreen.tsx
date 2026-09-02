@@ -173,28 +173,34 @@ export function StockTransfersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll}>
-        <Card>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Movement ledger</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredTransfers.length} visible of {transfers.length} transfers</Text>
+            </View>
+            <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} />
+          </View>
           <InputField label="Search transfers" value={search} onChangeText={setSearch} placeholder="Transfer number, branch, or status" />
-        </Card>
-        <Card>
-          <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} />
         </Card>
         {filteredTransfers.length ? (
           filteredTransfers.map((transfer) => (
-            <Card key={transfer.id} style={{ gap: 8 }}>
+            <Card key={transfer.id} style={{ gap: 6, padding: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{transfer.transferNumber}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{transfer.transferNumber}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                     {transfer.fromBranchId ?? "From branch"} → {transfer.toBranchId ?? "To branch"}
                   </Text>
                   <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(transfer.transferDate, "PPP")}</Text>
                 </View>
                 <Badge label={transfer.status.replaceAll("_", " ")} tone={transfer.status === "received" ? "success" : transfer.status === "cancelled" ? "danger" : "primary"} />
               </View>
-              <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(transfer.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0), business?.currency)}</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>{transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(transfer.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0), business?.currency)}</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
+              </View>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(transfer)} />

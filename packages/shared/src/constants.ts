@@ -43,7 +43,7 @@ export const USER_ROLES = [
   "pharmacist"
 ] as const;
 
-export const PAYMENT_METHODS = ["cash", "mpesa", "bank", "credit"] as const;
+export const PAYMENT_METHODS = ["cash", "mpesa", "bank", "card", "cheque", "other", "credit"] as const;
 
 export const PAYMENT_STATUSES = [
   "paid",

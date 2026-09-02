@@ -534,8 +534,15 @@ export function SuppliersScreen() {
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll}>
-        <Card style={{ gap: 10 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Supplier directory</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredSuppliers.length} visible of {suppliers.length} records</Text>
+            </View>
+            <PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />
+          </View>
           <InputField label="Search suppliers" value={search} onChangeText={setSearch} placeholder="Supplier name, code, or contact" />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Tag label="All categories" tone="primary" selected={categoryFilterId === "all"} onPress={() => setCategoryFilterId("all")} />
@@ -551,16 +558,13 @@ export function SuppliersScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />
-            </View>
-            <View style={{ flex: 1 }}>
               <PrimaryButton title="Add category" variant="secondary" onPress={() => openCategoryEditor(null)} />
             </View>
           </View>
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Supplier Categories</Text>
+        <Card style={{ gap: 9, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Supplier categories</Text>
           {categories.length ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {categories.map((category) => (
@@ -580,15 +584,15 @@ export function SuppliersScreen() {
             const supplierPaymentTotal = selectedSupplierId === supplier.id ? totalSupplierBalance : 0;
             const supplierBalance = selectedSupplierId === supplier.id ? supplierOutstanding : Math.max(0, supplierOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0) - 0);
             return (
-              <Card key={supplier.id} style={{ gap: 10, borderColor: isSelected ? tokens.colors.primaryStrong : tokens.colors.border, borderWidth: 1 }}>
-                <Pressable onPress={() => setSelectedSupplierId(supplier.id)} style={{ gap: 8 }}>
+              <Card key={supplier.id} style={{ gap: 8, padding: 12, borderColor: isSelected ? tokens.colors.primaryStrong : tokens.colors.border, borderWidth: 1 }}>
+                <Pressable onPress={() => setSelectedSupplierId(supplier.id)} style={{ gap: 6 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{supplier.name}</Text>
-                      <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
+                      <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{supplier.name}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }} numberOfLines={1}>
                         {supplier.code ?? "No code"} • {supplier.contactName ?? "No contact"} • {supplier.phone ?? "No phone"}
                       </Text>
-                      <Text style={{ color: tokens.colors.textMuted, lineHeight: 18 }}>{supplier.email ?? "No email"}</Text>
+                      <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }} numberOfLines={1}>{supplier.email ?? "No email"}</Text>
                     </View>
                     <Badge label={supplier.isActive ? "Active" : "Archived"} tone={supplier.isActive ? "success" : "warning"} />
                   </View>

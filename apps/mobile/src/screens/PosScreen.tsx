@@ -1,6 +1,7 @@
 import React from "react";
 import { Alert, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { resolveBusinessTypeConfig } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
 import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
@@ -34,6 +35,7 @@ export function PosScreen() {
   const syncMessage = useAppStore((state) => state.syncMessage);
   const createSale = useAppStore((state) => state.createSale);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
+  const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
 
   const [search, setSearch] = React.useState("");
   const [modalVisible, setModalVisible] = React.useState(false);
@@ -424,8 +426,8 @@ export function PosScreen() {
   return (
     <Screen>
       <GradientHeader
-        title="Sales"
-        subtitle="Review recent sales and record a new one when needed"
+        title={businessConfig.navigation.posLabel}
+        subtitle={`${businessConfig.workflow.headline} • works offline and syncs later`}
         right={
           <Pressable onPress={() => setModalVisible(true)}>
             <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
@@ -433,35 +435,33 @@ export function PosScreen() {
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={refreshSales}>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Sales history</Text>
-          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Keep the page focused on recent sales.</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
-            Tap Record Sale to open the cart flow. The history below updates automatically after each save.
+      <AppScrollView refreshing={refreshing} onRefresh={refreshSales} contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
+          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>{businessConfig.navigation.posLabel} history</Text>
+          <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{businessConfig.workflow.headline}</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 11 }}>
+            Open the {businessConfig.terminology.transaction.toLowerCase()} flow. History syncs after save.
           </Text>
-          <PrimaryButton title="Record Sale" onPress={() => setModalVisible(true)} />
+          <PrimaryButton title={businessConfig.navigation.posLabel === "Sales" ? "Record Sale" : `Create ${businessConfig.terminology.transaction}`} onPress={() => setModalVisible(true)} />
         </Card>
 
-        <Card style={{ gap: 10 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Metric label="Drafts" value={String(drafts.length)} />
             <Metric label="Queued" value={String(pendingSync)} />
           </View>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>{syncMessage}</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>{syncMessage}</Text>
         </Card>
 
         <Card>
           <InputField label="Search sales" value={search} onChangeText={setSearch} placeholder="Receipt, method, or status" />
         </Card>
 
-        <Card style={{ gap: 10 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <View style={{ gap: 4, flex: 1 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Draft sales</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-                Hold a basket, resume later, or keep a return slip for supervisor review.
-              </Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Draft {businessConfig.terminology.transaction.toLowerCase()}s</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>Hold a basket and resume it later.</Text>
             </View>
             <Badge label={`${drafts.length} saved`} tone={drafts.length ? "success" : "primary"} />
           </View>
@@ -523,11 +523,11 @@ export function PosScreen() {
             const paymentState = String(sale.paymentStatus ?? "paid");
             const transactionType = (sale as any).transactionType ?? "sale";
             return (
-              <Card key={sale.id} style={{ gap: 8 }}>
+              <Card key={sale.id} style={{ gap: 6, padding: 12 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "800" }}>{sale.receiptNumber}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{sale.receiptNumber}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                       {formatDate(sale.createdAt, "PPP p")} • {methodLabel}
                     </Text>
                   </View>
@@ -536,8 +536,8 @@ export function PosScreen() {
                     <Badge label={formatPaymentStatusLabel(paymentState)} tone={paymentState === "paid" ? "success" : paymentState === "unpaid" ? "danger" : "warning"} />
                   </View>
                 </View>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 16, fontWeight: "800" }}>{formatMoney(sale.grandTotal, business?.currency ?? "KES")}</Text>
-                <Text style={{ color: tokens.colors.textSecondary }}>
+                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(sale.grandTotal, business?.currency ?? "KES")}</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                   {sale.items.length} item{sale.items.length === 1 ? "" : "s"} • {sale.customerId ? "Linked customer" : "Walk-in sale"}
                 </Text>
                 <View style={{ flexDirection: "row", gap: 10 }}>
@@ -591,13 +591,16 @@ export function PosScreen() {
       </AppScrollView>
 
       <SimpleModal visible={modalVisible} title="Record sale" onClose={() => setModalVisible(false)}>
-        <AppScrollView contentContainerStyle={{ gap: 12 }}>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-            Pick the product, tap the quantity, confirm payment, then record the sale.
+        <AppScrollView contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
+            Add products, confirm payment, and record the sale.
           </Text>
 
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Checkout mode</Text>
+          <Card style={{ gap: 8, padding: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Checkout mode</Text>
+              <Badge label={checkoutMode === "return" ? "Return" : "Sale"} tone={checkoutMode === "return" ? "warning" : "success"} />
+            </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {[
                 { value: "sale" as const, label: "Sale" },
@@ -610,9 +613,17 @@ export function PosScreen() {
             </View>
           </Card>
 
-          <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Choose products</Text>
-            <InputField label="Search products" value={productSearch} onChangeText={setProductSearch} placeholder="Find a product" />
+          <Card style={{ gap: 9, padding: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Products</Text>
+              <Badge label={`${filteredProducts.length} found`} tone="primary" />
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
+              <View style={{ flex: 1 }}>
+                <InputField label={`Search ${businessConfig.terminology.catalogItem.toLowerCase()}s`} value={productSearch} onChangeText={setProductSearch} placeholder={`Find a ${businessConfig.terminology.catalogItem.toLowerCase()}`} />
+              </View>
+              <PrimaryButton title="Scan" variant="secondary" iconLeft="scan-outline" onPress={() => setScannerVisible(true)} />
+            </View>
             {filteredProducts.length ? (
               <View style={{ gap: 8 }}>
                 {filteredProducts.map((product) => (
@@ -620,22 +631,21 @@ export function PosScreen() {
                     key={product.id}
                     onPress={() => addToCart(product.id)}
                     style={{
-                      padding: 14,
-                      borderRadius: 18,
+                      padding: 9,
+                      borderRadius: 12,
                       borderWidth: 1,
                       borderColor: tokens.colors.border,
                       backgroundColor: tokens.colors.surfaceAlt,
-                      gap: 4
+                      gap: 3
                     }}
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                      <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800", flex: 1 }}>{product.name}</Text>
-                      <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
+                      <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900", flex: 1 }} numberOfLines={1}>{product.name}</Text>
+                      <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "900" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
                     </View>
-                    <Text style={{ color: tokens.colors.textSecondary }}>
-                      {product.sku ?? "No SKU"} • Stock {product.stockOnHand}
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                      {product.sku ?? "No SKU"} • {product.stockOnHand > 0 ? `Stock ${product.stockOnHand}` : "Out of stock"}
                     </Text>
-                    <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Tap to add</Text>
                   </Pressable>
                 ))}
               </View>
@@ -644,29 +654,32 @@ export function PosScreen() {
             )}
           </Card>
 
-          <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Sale summary</Text>
+          <Card style={{ gap: 9, padding: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Cart</Text>
+              <Badge label={`${cart.length} line${cart.length === 1 ? "" : "s"}`} tone={cart.length ? "success" : "primary"} />
+            </View>
             {cart.length ? (
               cart.map((line) => (
-                <View key={line.productId} style={{ gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
+                <View key={line.productId} style={{ gap: 7, paddingVertical: 8, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{line.name}</Text>
-                      <Text style={{ color: tokens.colors.textSecondary }}>{formatMoney(line.unitPrice, business?.currency ?? "KES")} each</Text>
+                      <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900" }} numberOfLines={1}>{line.name}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{formatMoney(line.unitPrice, business?.currency ?? "KES")} each</Text>
                     </View>
                     <Pressable onPress={() => removeLine(line.productId)} accessibilityRole="button" accessibilityLabel={`Remove ${line.name}`}>
-                      <Ionicons name="trash-outline" size={20} color={tokens.colors.danger} />
+                      <Ionicons name="trash-outline" size={17} color={tokens.colors.danger} />
                     </Pressable>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Pressable
                       onPress={() => changeLineQuantity(line.productId, -1)}
                       accessibilityRole="button"
                       accessibilityLabel={`Decrease ${line.name}`}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
+                        width: 30,
+                        height: 30,
+                        borderRadius: 10,
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: tokens.colors.surfaceAlt,
@@ -674,21 +687,19 @@ export function PosScreen() {
                         borderColor: tokens.colors.border
                       }}
                     >
-                      <Ionicons name="remove" size={18} color={tokens.colors.text} />
+                      <Ionicons name="remove" size={15} color={tokens.colors.text} />
                     </Pressable>
-                    <View style={{ flex: 1, alignItems: "center", gap: 2 }}>
-                      <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Quantity</Text>
-                      <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "900" }}>{line.quantity}</Text>
-                      <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Tap + for more</Text>
+                    <View style={{ minWidth: 34, alignItems: "center" }}>
+                      <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>{line.quantity}</Text>
                     </View>
                     <Pressable
                       onPress={() => changeLineQuantity(line.productId, 1)}
                       accessibilityRole="button"
                       accessibilityLabel={`Increase ${line.name}`}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
+                        width: 30,
+                        height: 30,
+                        borderRadius: 10,
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: tokens.colors.surfaceAlt,
@@ -696,8 +707,9 @@ export function PosScreen() {
                         borderColor: tokens.colors.border
                       }}
                     >
-                      <Ionicons name="add" size={18} color={tokens.colors.text} />
+                      <Ionicons name="add" size={15} color={tokens.colors.text} />
                     </Pressable>
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900", marginLeft: "auto" }}>{formatMoney(line.unitPrice * line.quantity - line.discount, business?.currency ?? "KES")}</Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-end" }}>
                     <View style={{ flex: 1 }}>
@@ -711,14 +723,7 @@ export function PosScreen() {
                         helperText="Optional discount for this item."
                       />
                     </View>
-                    <View style={{ flex: 1, paddingBottom: 2 }}>
-                      <Card style={{ gap: 4, padding: 14 }}>
-                        <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Line total</Text>
-                        <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>
-                          {formatMoney(line.unitPrice * line.quantity - line.discount, business?.currency ?? "KES")}
-                        </Text>
-                      </Card>
-                    </View>
+                    <View style={{ flex: 1 }} />
                   </View>
                 </View>
               ))
@@ -731,12 +736,15 @@ export function PosScreen() {
               <Text style={{ color: tokens.colors.textSecondary }}>Line discounts: {formatMoney(lineDiscountTotal, business?.currency ?? "KES")}</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>Order discount: {formatMoney(orderDiscountTotal, business?.currency ?? "KES")}</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>Tax: {formatMoney(taxTotal, business?.currency ?? "KES")}</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Total: {formatMoney(total, business?.currency ?? "KES")}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Total: {formatMoney(total, business?.currency ?? "KES")}</Text>
             </View>
           </Card>
 
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Payment</Text>
+          <Card style={{ gap: 8, padding: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Payment</Text>
+              <Badge label={paymentStatus} tone={paymentStatus === "paid" ? "success" : paymentStatus === "partial" ? "warning" : "primary"} />
+            </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {[
                 { value: "cash" as const, label: "Cash" },
@@ -748,8 +756,8 @@ export function PosScreen() {
               ))}
             </View>
             {primaryPayment ? (
-              <View style={{ gap: 12 }}>
-                <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
                   <View style={{ flex: 1 }}>
                     <InputField
                       label="Amount paid"
@@ -773,7 +781,7 @@ export function PosScreen() {
                   onChangeText={(value) => updatePaymentLine(primaryPayment.id, { note: value })}
                   placeholder="Optional note"
                 />
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>
                   Paid {formatMoney(amountPaid, business?.currency ?? "KES")} • Due {formatMoney(balanceDue, business?.currency ?? "KES")} • Change {formatMoney(changeDue, business?.currency ?? "KES")}
                 </Text>
               </View>

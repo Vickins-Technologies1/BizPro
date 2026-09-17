@@ -276,7 +276,7 @@ export function ProductsScreen() {
       })
     ];
     const csv = csvRows.join("\n");
-    const fileName = `biz-pro-products-${Date.now()}.csv`;
+    const fileName = `dira-os-products-${Date.now()}.csv`;
     const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ""}${fileName}`;
     await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
     if (await Sharing.isAvailableAsync()) {
@@ -794,6 +794,14 @@ export function ProductsScreen() {
                 Alert.alert("Batch and expiry required", "Pharmacy medicines must have a batch number and expiry date before they can be stocked.");
                 return;
               }
+              const normalizedBarcode = values.barcode?.trim().toLowerCase();
+              const existingProduct = normalizedBarcode
+                ? products.find((product) => (product.barcode ?? "").trim().toLowerCase() === normalizedBarcode)
+                : undefined;
+              if (existingProduct) {
+                Alert.alert("Barcode already exists", `${existingProduct.name} already uses this barcode. Choose a different barcode before saving.`);
+                return;
+              }
               setSavingProduct(true);
               try {
                 await addProduct({
@@ -850,8 +858,15 @@ export function ProductsScreen() {
         subtitle="Point the camera at the barcode to fill the product field automatically."
         onClose={() => setBarcodeScannerVisible(false)}
         onBarcodeScanned={async (barcode) => {
+          const normalizedBarcode = barcode.trim().toLowerCase();
+          const existingProduct = products.find((product) => (product.barcode ?? "").trim().toLowerCase() === normalizedBarcode);
+          if (existingProduct) {
+            Alert.alert("Barcode already exists", `${existingProduct.name} already uses this barcode.`);
+            return { status: "rejected", message: "Barcode already exists. Scan a different barcode." };
+          }
           setValue("barcode", barcode, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
           setBarcodeScannerVisible(false);
+          return { status: "accepted", message: "Barcode captured." };
         }}
       />
       <SimpleModal visible={categoryVisible} title="Add category" onClose={() => setCategoryVisible(false)}>

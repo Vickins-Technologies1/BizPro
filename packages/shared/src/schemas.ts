@@ -25,6 +25,23 @@ export const loginSchema = z.object({
   role: z.enum(USER_ROLES).optional(),
 });
 
+export const branchCreateSchema = z.object({
+  businessId: z.string().min(1, "Select the business before saving."),
+  name: z.string().min(2, "Enter the branch name."),
+  code: z.string().min(2, "Enter the branch code."),
+  location: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional().or(z.literal("")),
+  managerId: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  status: z.enum(["active", "inactive"]).default("active"),
+  isDefault: z.boolean().default(false)
+});
+
+export const branchUpdateSchema = branchCreateSchema.partial().extend({
+  businessId: z.string().min(1, "Select the business before saving.")
+});
+
 export const saleItemSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().positive(),

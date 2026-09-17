@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { ConfigService } from "@nestjs/config";
 import { Model } from "mongoose";
 import { SystemState, SystemStateDocument } from "./system-state.schema";
+import { BranchesService } from "./modules/branches/branches.service";
 
 @Injectable()
 export class BootstrapService implements OnModuleInit {
@@ -10,7 +11,8 @@ export class BootstrapService implements OnModuleInit {
 
   constructor(
     @InjectModel(SystemState.name) private readonly systemStateModel: Model<SystemStateDocument>,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly branchesService: BranchesService
   ) {}
 
   async onModuleInit() {
@@ -25,6 +27,9 @@ export class BootstrapService implements OnModuleInit {
       },
       { upsert: true }
     );
+    await this.branchesService.ensureDefaultBranches().catch((error) => {
+      this.logger.warn(`Default branch migration skipped: ${error instanceof Error ? error.message : String(error)}`);
+    });
     this.logger.log(`MongoDB bootstrap complete for database "${dbName}"`);
   }
 }

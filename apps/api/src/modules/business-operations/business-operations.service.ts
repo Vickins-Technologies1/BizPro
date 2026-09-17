@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { isBusinessOperationStatusTransitionAllowed, type BusinessOperationStatus } from "@vbo/shared";
+import { buildBranchMatch, resolveReadBranchId, type BranchScope } from "../../common/branch-scope";
 import { BusinessOperation, BusinessOperationDocument } from "../business-operations.schemas";
 
 const OPERATION_KINDS = ["order", "appointment", "work_order"] as const;
@@ -11,8 +12,9 @@ const OPERATION_STATUSES = ["draft", "open", "preparing", "ready", "confirmed", 
 export class BusinessOperationsService {
   constructor(@InjectModel(BusinessOperation.name) private readonly operationModel: Model<BusinessOperationDocument>) {}
 
-  list(businessId: string, kind?: string, status?: string) {
-    const filter: Record<string, unknown> = { businessId, deletedAt: null };
+  list(businessId: string, kind?: string, status?: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const filter: Record<string, unknown> = { businessId, deletedAt: null, ...buildBranchMatch(branchId) };
     if (kind && OPERATION_KINDS.includes(kind as (typeof OPERATION_KINDS)[number])) filter.kind = kind;
     if (status && OPERATION_STATUSES.includes(status as (typeof OPERATION_STATUSES)[number])) filter.status = status;
     return this.operationModel.find(filter).sort({ scheduledAt: 1, createdAt: -1 }).lean();

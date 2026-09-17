@@ -8,24 +8,33 @@ const POS_DRAFTS_KEY = "vbo.posDrafts";
 const NOTIFICATIONS_KEY = "vbo.notifications";
 const PUSH_REGISTRATION_KEY = "vbo.pushRegistration";
 
+async function readValue(key: string) {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    // A broken or unavailable keystore must not prevent the app from showing login.
+    return null;
+  }
+}
+
 export const secureStore = {
-  getSession: async () => SecureStore.getItemAsync(SESSION_KEY),
+  getSession: async () => readValue(SESSION_KEY),
   setSession: async (value: string) => SecureStore.setItemAsync(SESSION_KEY, value),
   clearSession: async () => SecureStore.deleteItemAsync(SESSION_KEY),
-  getDeviceId: async () => SecureStore.getItemAsync(DEVICE_KEY),
+  getDeviceId: async () => readValue(DEVICE_KEY),
   setDeviceId: async (value: string) => SecureStore.setItemAsync(DEVICE_KEY, value),
-  getThemeMode: async () => SecureStore.getItemAsync(THEME_KEY),
+  getThemeMode: async () => readValue(THEME_KEY),
   setThemeMode: async (value: string) => SecureStore.setItemAsync(THEME_KEY, value),
-  getOfflineQueue: async () => SecureStore.getItemAsync(OFFLINE_QUEUE_KEY),
+  getOfflineQueue: async () => readValue(OFFLINE_QUEUE_KEY),
   setOfflineQueue: async (value: string) => SecureStore.setItemAsync(OFFLINE_QUEUE_KEY, value),
   clearOfflineQueue: async () => SecureStore.deleteItemAsync(OFFLINE_QUEUE_KEY),
-  getPosDrafts: async () => SecureStore.getItemAsync(POS_DRAFTS_KEY),
+  getPosDrafts: async () => readValue(POS_DRAFTS_KEY),
   setPosDrafts: async (value: string) => SecureStore.setItemAsync(POS_DRAFTS_KEY, value),
   clearPosDrafts: async () => SecureStore.deleteItemAsync(POS_DRAFTS_KEY),
-  getNotifications: async () => SecureStore.getItemAsync(NOTIFICATIONS_KEY),
+  getNotifications: async () => readValue(NOTIFICATIONS_KEY),
   setNotifications: async (value: string) => SecureStore.setItemAsync(NOTIFICATIONS_KEY, value),
   clearNotifications: async () => SecureStore.deleteItemAsync(NOTIFICATIONS_KEY),
-  getPushRegistration: async () => SecureStore.getItemAsync(PUSH_REGISTRATION_KEY),
+  getPushRegistration: async () => readValue(PUSH_REGISTRATION_KEY),
   setPushRegistration: async (value: string) => SecureStore.setItemAsync(PUSH_REGISTRATION_KEY, value),
   clearPushRegistration: async () => SecureStore.deleteItemAsync(PUSH_REGISTRATION_KEY)
 };

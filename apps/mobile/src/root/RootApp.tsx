@@ -54,7 +54,7 @@ export function RootApp() {
       businessId: business.id,
       userId: user.id,
       deviceId,
-      deviceName: Device.deviceName ?? Device.modelName ?? "Biz Pro device",
+      deviceName: Device.deviceName ?? Device.modelName ?? "Dira OS device",
       platform: Platform.OS as "android" | "ios" | "web",
       requestPermission: false
     }).then((result) => {
@@ -94,11 +94,11 @@ export function RootApp() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={theme.colors.background} />
+          <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
           <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
             <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
               <ErrorState
-                title="Biz Pro could not start"
+                title="Dira OS could not start"
                 subtitle={error}
                 action={<PrimaryButton title="Try again" onPress={() => bootstrap().catch(() => undefined)} />}
                 icon="warning-outline"
@@ -113,7 +113,7 @@ export function RootApp() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={theme.colors.background} />
+        <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
         <RootNavigator />
         <ThemeTransitionOverlay themeMode={themeMode} />
       </SafeAreaProvider>
@@ -132,7 +132,7 @@ function LoadingSplash({ themeMode }: { themeMode: "light" | "dark" }) {
             <Image source={getBrandLogo(themeMode)} resizeMode="contain" style={{ width: 220, height: 220, backgroundColor: "transparent" }} />
           </View>
         </SafeAreaView>
-        <StatusBar style={themeMode === "dark" ? "light" : "dark"} translucent={false} backgroundColor={theme.colors.background} />
+        <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

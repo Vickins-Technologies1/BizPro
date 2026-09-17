@@ -33,7 +33,7 @@ export function LoginScreen() {
         <View style={{ alignItems: "center", gap: 8, paddingHorizontal: 20 }}>
           <BrandLogo style={{ width: 92, height: 32 }} />
           <Text style={{ color: tokens.colors.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 }}>Welcome back</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17, textAlign: "center" }}>Sign in to continue to BizPro.</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17, textAlign: "center" }}>Sign in to continue to Dira OS.</Text>
         </View>
         <Card style={{ gap: 12, padding: 14 }}>
           <Controller
@@ -81,7 +81,7 @@ export function LoginScreen() {
           />
           <PrimaryButton title="Create owner account" variant="secondary" onPress={() => navigation.navigate("Onboarding")} />
         </Card>
-        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 28 }}>New to BizPro? Set up an owner account with a 30-day free trial.</Text>
+        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 28 }}>New to Dira OS? Set up an owner account with a 30-day free trial.</Text>
       </AppScrollView>
     </Screen>
   );

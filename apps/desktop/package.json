@@ -1,0 +1,70 @@
+{
+  "name": "@vbo/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "electron": "electron electron/main.cjs",
+    "electron:dev": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && cross-env DIRA_DESKTOP_URL=http://localhost:3000 electron electron/main.cjs\"",
+    "desktop:build": "pnpm build && node scripts/prepare-standalone.cjs && electron-builder",
+    "desktop:dist": "pnpm desktop:build",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "@vbo/shared": "workspace:*",
+    "next": "^14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^32.2.7",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.diraos.desktop",
+    "productName": "Dira OS",
+    "executableName": "Dira OS",
+    "artifactName": "Dira OS Setup ${version}.${ext}",
+    "asar": false,
+    "npmRebuild": false,
+    "files": [
+      ".next/standalone/**/*",
+      "electron/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "category": "public.app-category.business"
+    },
+    "nsis": {
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

@@ -19,7 +19,7 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
 import { useThemeTokens } from "@/theme";
@@ -89,8 +89,10 @@ export function Screen({ children, hideFooter = true }: { children: React.ReactN
   const styles = usePrimitiveStyles();
   useAppStore((state) => state.themeMode);
   const motion = useAppearMotion();
+  // Android already resizes the edge-to-edge window via adjustResize. Applying a
+  // second height transform here can fight the IME insets while text is composing.
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
         <View pointerEvents="none" style={styles.screenBackdrop}>
           <LinearGradient colors={tokens.gradients.surface} style={StyleSheet.absoluteFillObject} />
@@ -122,8 +124,8 @@ export function AppScrollView({
       <ScrollView
       ref={scrollRef}
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      automaticallyAdjustKeyboardInsets
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
       overScrollMode="always"
@@ -212,7 +214,7 @@ export function GradientHeader({ title, subtitle, right }: { title: string; subt
     <LinearGradient colors={tokens.gradients.surface} style={styles.header}>
       <View style={styles.headerPill}>
         <Ionicons name="sparkles-outline" size={11} color={tokens.colors.primaryStrong} />
-        <Text style={styles.headerPillText}>Biz Pro</Text>
+        <Text style={styles.headerPillText}>Dira OS</Text>
       </View>
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.title}>{title}</Text>
@@ -239,6 +241,7 @@ export function DateRangePickerModal({
   onApply: (range: { startDate: string; endDate: string }) => void;
 }) {
   const styles = usePrimitiveStyles();
+  const insets = useSafeAreaInsets();
   const today = React.useMemo(() => new Date(), []);
   const initialCursor = React.useMemo(() => parsePickerDate(startDate ?? endDate ?? format(today, "yyyy-MM-dd")) ?? today, [endDate, startDate, today]);
   const [cursor, setCursor] = React.useState(initialCursor);
@@ -257,7 +260,7 @@ export function DateRangePickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
       <View style={[styles.modalCard, { padding: 16, backgroundColor: tokens.colors.surfaceElevated }]}>
           <View style={styles.modalHeader}>
             <View style={{ flex: 1, gap: 4 }}>
@@ -602,7 +605,7 @@ export function EmptyState({
         </View>
       ) : null}
       <View style={styles.emptyBadge}>
-        <Text style={styles.emptyBadgeText}>Biz Pro</Text>
+        <Text style={styles.emptyBadgeText}>Dira OS</Text>
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
@@ -700,6 +703,9 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      // Prevent Android from moving focus to the nearest action control when a
+      // controlled TextInput publishes a new value.
+      focusable={false}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       style={({ pressed }) => [
@@ -724,7 +730,7 @@ export function Button({
   );
 }
 
-export function Input({
+export const Input = React.memo(function Input({
   label,
   value,
   onChangeText,
@@ -768,11 +774,28 @@ export function Input({
   const [focused, setFocused] = React.useState(false);
   const styles = usePrimitiveStyles();
   const isSecureEntry = secureTextEntry ? !passwordVisible : false;
+  const nativeValueRef = React.useRef(value);
+
+  // Keep the native editor's text buffer independent from the form rerender.
+  // On Android/Fabric, feeding every keystroke straight back through `value`
+  // can replace the served input connection and move focus to another view.
+  React.useEffect(() => {
+    if (value === nativeValueRef.current) return;
+    nativeValueRef.current = value;
+    inputRef.current?.setNativeProps({ text: value });
+  }, [value]);
 
   return (
     <View style={{ gap: 8 }}>
       <View style={styles.fieldLabelRow}>
-        <Pressable onPress={() => inputRef.current?.focus()} accessibilityRole="button">
+        <Pressable
+          onPress={() => inputRef.current?.focus()}
+          // Labels are only a convenience tap target. They must not enter the
+          // Android focus chain and steal focus from the TextInput after a
+          // controlled value update.
+          accessible={false}
+          focusable={false}
+        >
           <Text style={styles.fieldLabel}>{label}</Text>
         </Pressable>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -794,8 +817,11 @@ export function Input({
         {leftAccessory}
         <TextInput
           ref={inputRef}
-          value={value}
-          onChangeText={onChangeText}
+          defaultValue={value}
+          onChangeText={(nextValue) => {
+            nativeValueRef.current = nextValue;
+            onChangeText(nextValue);
+          }}
           placeholder={placeholder}
           placeholderTextColor={tokens.colors.textMuted}
           secureTextEntry={isSecureEntry}
@@ -822,7 +848,7 @@ export function Input({
       {error ? <Text style={styles.helperError}>{error}</Text> : helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
     </View>
   );
-}
+});
 
 export function Dialog({
   visible,
@@ -840,9 +866,10 @@ export function Dialog({
   subtitle?: string;
 }) {
   const styles = usePrimitiveStyles();
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -887,9 +914,10 @@ export function BottomSheet({
   subtitle?: string;
 }) {
   const styles = usePrimitiveStyles();
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
         <KeyboardAvoidingView style={{ width: "100%", marginTop: "auto" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <View
@@ -1112,7 +1140,7 @@ export function Tag({
           borderRadius: 999,
           paddingHorizontal: 11,
           paddingVertical: 6,
-          backgroundColor: selected ? toneColor(tone, 0.18) : withAlpha(tokens.colors.surfaceAlt, 0.9),
+          backgroundColor: selected ? toneColor(tone, 0.18) : tokens.colors.surfaceElevated,
           borderWidth: 1,
           borderColor: selected ? toneColor(tone, 0.34) : tokens.colors.border,
           opacity: disabled ? 0.6 : 1
@@ -1171,7 +1199,7 @@ export function Dropdown({
             style={{
               minHeight: 42,
               borderRadius: 12,
-              backgroundColor: tokens.colors.surfaceAlt,
+              backgroundColor: tokens.colors.input,
               borderWidth: 1,
               borderColor: error ? tokens.colors.danger : tokens.colors.border,
               paddingHorizontal: 12,
@@ -1198,7 +1226,7 @@ export function Dropdown({
                 setVisible(false);
               }}
             >
-              <Card style={{ gap: 4, padding: 12, backgroundColor: option.value === value ? withAlpha(tokens.colors.primary, 0.08) : tokens.colors.surface }}>
+              <Card style={{ gap: 4, padding: 12, backgroundColor: option.value === value ? withAlpha(tokens.colors.primary, 0.08) : tokens.colors.surfaceElevated }}>
                 <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{option.label}</Text>
                 {option.description ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{option.description}</Text> : null}
               </Card>
@@ -1395,7 +1423,7 @@ export function Table<T>({
               paddingVertical: 8,
               paddingHorizontal: 2,
               borderRadius: 14,
-              backgroundColor: index % 2 === 0 ? withAlpha(tokens.colors.surfaceAlt, 0.38) : "transparent"
+              backgroundColor: index % 2 === 0 ? tokens.colors.surfaceAlt : "transparent"
             }}
           >
             {columns.map((column) => (
@@ -1512,7 +1540,9 @@ export function SwipeableActionRow({
     swipeableProps.renderRightActions = renderActions(rightActions, "flex-end");
   }
 
-  return <Swipeable {...swipeableProps}>{children}</Swipeable>;
+  // react-native-gesture-handler currently exposes React 18 types while the app uses React 19.
+  // Keep the compatibility cast at this integration boundary instead of weakening app-wide types.
+  return React.createElement(Swipeable as unknown as React.ElementType, swipeableProps as Record<string, unknown>, children);
 }
 
 export const DatePicker = DateRangePickerModal;
@@ -1625,7 +1655,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: 220,
       height: 220,
       borderRadius: 999,
-      opacity: 0.08
+      opacity: 0.07
     },
     screenGlowSecondary: {
       position: "absolute",
@@ -1634,7 +1664,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: 220,
       height: 220,
       borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.success, 0.035)
+      backgroundColor: withAlpha(tokens.colors.primary, 0.05)
     },
     screenContent: {
       flex: 1
@@ -1672,7 +1702,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     title: { color: tokens.colors.text, fontSize: 19, fontWeight: "900", letterSpacing: -0.25, lineHeight: 23 },
     subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 11, lineHeight: 16 },
     card: {
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: tokens.colors.surfaceElevated,
       borderRadius: 13,
       borderWidth: 1,
       borderColor: tokens.colors.border,
@@ -1736,7 +1766,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     inputShell: {
       minHeight: 42,
       borderRadius: 12,
-      backgroundColor: tokens.colors.surfaceAlt,
+      backgroundColor: tokens.colors.input,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       paddingHorizontal: 12,
@@ -1747,7 +1777,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     inputShellFocused: {
       borderColor: withAlpha(tokens.colors.primaryStrong, 0.7),
       shadowColor: tokens.colors.primaryStrong,
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.12,
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 6 },
       elevation: 3
@@ -1880,7 +1910,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       justifyContent: "center",
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      backgroundColor: tokens.colors.surface
+      backgroundColor: tokens.colors.surfaceElevated
     },
     paginationPage: {
       minWidth: 30,

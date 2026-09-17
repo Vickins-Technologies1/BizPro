@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncEventSchema = exports.stockAdjustmentCreateSchema = exports.stockTransferCreateSchema = exports.stockTransferLineSchema = exports.purchaseOrderCreateSchema = exports.purchaseOrderLineSchema = exports.supplierPaymentCreateSchema = exports.supplierDocumentCreateSchema = exports.supplierContactCreateSchema = exports.supplierCategoryCreateSchema = exports.supplierCreateSchema = exports.brandCreateSchema = exports.productCreateSchema = exports.creditNoteCreateSchema = exports.pettyCashEntryCreateSchema = exports.bankAccountCreateSchema = exports.expenseCreateSchema = exports.saleCreateSchema = exports.saleItemSchema = exports.loginSchema = exports.businessSetupSchema = void 0;
+exports.syncEventSchema = exports.stockAdjustmentCreateSchema = exports.stockTransferCreateSchema = exports.stockTransferLineSchema = exports.purchaseOrderCreateSchema = exports.purchaseOrderLineSchema = exports.supplierPaymentCreateSchema = exports.supplierDocumentCreateSchema = exports.supplierContactCreateSchema = exports.supplierCategoryCreateSchema = exports.supplierCreateSchema = exports.brandCreateSchema = exports.productCreateSchema = exports.debitNoteCreateSchema = exports.invoiceCreateSchema = exports.invoiceLineItemSchema = exports.creditNoteCreateSchema = exports.pettyCashEntryCreateSchema = exports.bankAccountCreateSchema = exports.expenseCreateSchema = exports.saleCreateSchema = exports.saleItemSchema = exports.loginSchema = exports.businessSetupSchema = void 0;
 const zod_1 = require("zod");
 const constants_1 = require("./constants");
 const industries_1 = require("./industries");
@@ -78,10 +78,61 @@ exports.creditNoteCreateSchema = zod_1.z.object({
     reference: zod_1.z.string().min(2, "Enter a reference."),
     amount: zod_1.z.number().positive("Enter an amount greater than zero."),
     reason: zod_1.z.string().min(2, "Describe the credit note."),
+    invoiceId: zod_1.z.string().nullable().optional(),
     relatedSaleId: zod_1.z.string().nullable().optional(),
     customerId: zod_1.z.string().nullable().optional(),
     note: zod_1.z.string().nullable().optional(),
     creditDate: isoDate.min(1, "Choose a date."),
+    status: zod_1.z.enum(["draft", "issued", "void"]).default("draft"),
+});
+exports.invoiceLineItemSchema = zod_1.z.object({
+    productId: zod_1.z.string().nullable().optional(),
+    productName: zod_1.z.string().nullable().optional(),
+    description: zod_1.z.string().min(1, "Enter a description."),
+    quantity: zod_1.z.number().positive("Quantity must be greater than zero."),
+    unit: zod_1.z.string().min(1, "Enter a unit."),
+    unitPrice: zod_1.z.number().nonnegative("Unit price cannot be negative."),
+    discountType: zod_1.z.enum(["percentage", "fixed"]).default("fixed"),
+    discountValue: zod_1.z.number().nonnegative().default(0),
+    taxCategory: zod_1.z.enum(["vat", "zero_rated", "exempt", "non_taxable", "custom"]).default("vat"),
+    taxCode: zod_1.z.string().nullable().optional(),
+    taxRate: zod_1.z.number().nonnegative().default(0),
+    taxInclusive: zod_1.z.boolean().default(false),
+});
+exports.invoiceCreateSchema = zod_1.z.object({
+    businessId: zod_1.z.string().min(1, "Select the business before saving."),
+    branchId: zod_1.z.string().nullable().optional(),
+    customerId: zod_1.z.string().nullable().optional(),
+    customerName: zod_1.z.string().nullable().optional(),
+    customerBusinessName: zod_1.z.string().nullable().optional(),
+    customerEmail: zod_1.z.string().nullable().optional(),
+    customerPhone: zod_1.z.string().nullable().optional(),
+    customerAddress: zod_1.z.string().nullable().optional(),
+    customerTaxPin: zod_1.z.string().nullable().optional(),
+    invoiceNumber: zod_1.z.string().nullable().optional(),
+    issueDate: isoDate.min(1, "Choose an invoice date."),
+    dueDate: isoDate.min(1, "Choose a due date."),
+    paymentTerms: zod_1.z.string().min(1, "Enter payment terms."),
+    currency: zod_1.z.string().min(3, "Use a 3-letter currency code.").max(3, "Use a 3-letter currency code."),
+    referenceNumber: zod_1.z.string().nullable().optional(),
+    purchaseOrderNumber: zod_1.z.string().nullable().optional(),
+    notes: zod_1.z.string().nullable().optional(),
+    termsAndConditions: zod_1.z.string().nullable().optional(),
+    status: zod_1.z.enum(["draft", "sent", "viewed", "partially_paid", "paid", "overdue", "cancelled", "void", "refunded", "archived"]).default("draft"),
+    lineItems: zod_1.z.array(exports.invoiceLineItemSchema).min(1, "Add at least one line item."),
+    amountPaid: zod_1.z.number().nonnegative().default(0),
+    discountTotal: zod_1.z.number().nonnegative().default(0),
+    taxTotal: zod_1.z.number().nonnegative().default(0),
+});
+exports.debitNoteCreateSchema = zod_1.z.object({
+    businessId: zod_1.z.string().min(1, "Select the business before saving."),
+    invoiceId: zod_1.z.string().min(1, "Link the debit note to an invoice."),
+    reference: zod_1.z.string().min(2, "Enter a reference."),
+    reason: zod_1.z.string().min(2, "Describe the debit note."),
+    amount: zod_1.z.number().positive("Enter an amount greater than zero."),
+    taxAdjustment: zod_1.z.number().nonnegative().default(0),
+    note: zod_1.z.string().nullable().optional(),
+    issuedAt: isoDate.min(1, "Choose a date."),
     status: zod_1.z.enum(["draft", "issued", "void"]).default("draft"),
 });
 exports.productCreateSchema = zod_1.z.object({

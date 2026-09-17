@@ -859,8 +859,14 @@ export function CustomersScreen() {
   );
 }
 
-function formatPaymentMethodLabel(method: "cash" | "mpesa" | "bank" | "credit") {
-  return method === "mpesa" ? "M-Pesa" : method === "cash" ? "Cash" : method === "bank" ? "Bank" : "Credit";
+function formatPaymentMethodLabel(method: string) {
+  if (method === "mpesa") return "M-Pesa";
+  if (method === "cash") return "Cash";
+  if (method === "bank") return "Bank";
+  if (method === "card") return "Card";
+  if (method === "cheque") return "Cheque";
+  if (method === "other") return "Other";
+  return "Credit";
 }
 
 function formatPaymentStatusLabel(status: string) {

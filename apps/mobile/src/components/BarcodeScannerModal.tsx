@@ -4,19 +4,26 @@ import { Ionicons } from "@expo/vector-icons";
 import { tokens } from "@/theme/tokens";
 import { PrimaryButton } from "@/components/Primitives";
 
+export type BarcodeScanResult = {
+  status?: "accepted" | "not-found" | "rejected";
+  message?: string;
+};
+
 type BarcodeScannerModalProps = {
   visible: boolean;
   title?: string;
   subtitle?: string;
   onClose: () => void;
-  onBarcodeScanned: (barcode: string, raw?: unknown) => void | Promise<void>;
+  /** Keep the camera open for continuous POS scanning. */
+  closeOnScan?: boolean;
+  onBarcodeScanned: (barcode: string, raw?: unknown) => BarcodeScanResult | void | Promise<BarcodeScanResult | void>;
 };
 
 type ScannerContentProps = Omit<BarcodeScannerModalProps, "visible"> & {
   visible: boolean;
 };
 
-export function BarcodeScannerModal({ visible, title = "Scan barcode", subtitle = "Point the camera at a product barcode", onClose, onBarcodeScanned }: BarcodeScannerModalProps) {
+export function BarcodeScannerModal({ visible, title = "Scan barcode", subtitle = "Point the camera at a product barcode", onClose, closeOnScan = true, onBarcodeScanned }: BarcodeScannerModalProps) {
   const [ScannerContent, setScannerContent] = React.useState<React.ComponentType<ScannerContentProps> | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
@@ -56,7 +63,7 @@ export function BarcodeScannerModal({ visible, title = "Scan barcode", subtitle 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {ScannerContent ? (
-        <ScannerContent visible={visible} title={title} subtitle={subtitle} onClose={onClose} onBarcodeScanned={onBarcodeScanned} />
+        <ScannerContent visible={visible} title={title} subtitle={subtitle} onClose={onClose} closeOnScan={closeOnScan} onBarcodeScanned={onBarcodeScanned} />
       ) : (
         <View style={styles.overlay}>
           <View style={styles.card}>

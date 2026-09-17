@@ -196,7 +196,7 @@ export function EmployeeManagementPanel({ business, employees, catalog, auditLog
     }
 
     if (!resetPassword.trim() && !resetPin.trim()) {
-      const confirmed = confirmDialog("No password or PIN was entered. Biz Pro will generate a temporary password. Continue?");
+      const confirmed = confirmDialog("No password or PIN was entered. Dira OS will generate a temporary password. Continue?");
       if (!confirmed) {
         return;
       }
@@ -811,7 +811,7 @@ const styles = {
   metricPill: {
     borderRadius: 16,
     border: "1px solid var(--border)",
-    background: "rgba(255,255,255,0.03)",
+    background: "var(--surface-soft)",
     padding: "12px 14px",
     display: "grid",
     gap: 4
@@ -844,8 +844,8 @@ const styles = {
     gap: 14,
     padding: 16,
     borderRadius: 18,
-    border: "1px solid rgba(255,255,255,0.07)",
-    background: "rgba(255,255,255,0.02)"
+    border: "1px solid var(--panel-border)",
+    background: "var(--surface-soft)"
   },
   panelHeader: {
     display: "flex",
@@ -874,9 +874,9 @@ const styles = {
   employeeRow: {
     width: "100%",
     textAlign: "left" as const,
-    border: "1px solid rgba(255,255,255,0.08)",
+    border: "1px solid var(--row-border)",
     borderRadius: 16,
-    background: "rgba(255,255,255,0.02)",
+    background: "var(--row-background)",
     padding: 14,
     display: "grid",
     gap: 10,
@@ -884,7 +884,7 @@ const styles = {
   },
   employeeRowSelected: {
     borderColor: "rgba(59,130,246,0.45)",
-    background: "rgba(59,130,246,0.12)"
+    background: "var(--primary-soft)"
   },
   employeeRowTop: {
     display: "flex",
@@ -910,11 +910,11 @@ const styles = {
     whiteSpace: "nowrap" as const
   },
   statusActive: {
-    background: "rgba(16,185,129,0.12)",
+    background: "var(--success-soft)",
     color: "var(--text)"
   },
   statusSuspended: {
-    background: "rgba(245,158,11,0.12)",
+    background: "var(--warning-soft)",
     color: "var(--text)"
   },
   employeeMetaRow: {
@@ -923,8 +923,8 @@ const styles = {
     gap: 8
   },
   metaChip: {
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.03)",
+    border: "1px solid var(--row-border)",
+    background: "var(--surface-soft)",
     borderRadius: 999,
     padding: "6px 10px",
     fontSize: 12,
@@ -933,8 +933,8 @@ const styles = {
   input: {
     width: "100%",
     borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(10,16,28,0.96)",
+    border: "1px solid var(--input-border)",
+    background: "var(--input)",
     color: "var(--text)",
     padding: "12px 14px",
     outline: "none"
@@ -957,8 +957,8 @@ const styles = {
     gap: 8
   },
   chipButton: {
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.04)",
+    border: "1px solid var(--input-border)",
+    background: "var(--surface-soft)",
     color: "var(--text)",
     borderRadius: 999,
     padding: "8px 12px",
@@ -974,15 +974,15 @@ const styles = {
     alignItems: "center",
     gap: 10,
     borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.02)",
+    border: "1px solid var(--row-border)",
+    background: "var(--row-background)",
     padding: "10px 12px",
     fontSize: 13,
     color: "var(--text-secondary)"
   },
   permissionChipActive: {
     borderColor: "rgba(59,130,246,0.35)",
-    background: "rgba(59,130,246,0.08)",
+    background: "var(--primary-soft)",
     color: "var(--text)"
   },
   helperRow: {
@@ -1010,10 +1010,10 @@ const styles = {
     cursor: "pointer"
   },
   secondaryButton: {
-    border: "1px solid rgba(255,255,255,0.12)",
+    border: "1px solid var(--input-border)",
     borderRadius: 14,
     padding: "12px 16px",
-    background: "rgba(255,255,255,0.04)",
+    background: "var(--surface-soft)",
     color: "var(--text)",
     fontWeight: 700,
     cursor: "pointer"
@@ -1032,8 +1032,8 @@ const styles = {
     gap: 12,
     padding: 14,
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.03)"
+    border: "1px solid var(--row-border)",
+    background: "var(--surface-soft)"
   },
   dangerActions: {
     display: "grid",
@@ -1063,8 +1063,8 @@ const styles = {
     alignItems: "center"
   },
   filterButton: {
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.03)",
+    border: "1px solid var(--row-border)",
+    background: "var(--surface-soft)",
     color: "var(--text-secondary)",
     borderRadius: 999,
     padding: "8px 12px",
@@ -1086,8 +1086,8 @@ const styles = {
     gap: 8,
     padding: 14,
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.02)"
+    border: "1px solid var(--row-border)",
+    background: "var(--row-background)"
   },
   auditRowTop: {
     display: "flex",
@@ -1109,7 +1109,7 @@ const styles = {
     textTransform: "uppercase" as const,
     letterSpacing: 1,
     color: "var(--text-muted)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    border: "1px solid var(--row-border)",
     borderRadius: 999,
     padding: "6px 10px",
     whiteSpace: "nowrap" as const
@@ -1124,9 +1124,9 @@ const styles = {
   emptyState: {
     padding: 16,
     borderRadius: 16,
-    border: "1px dashed rgba(255,255,255,0.12)",
+    border: "1px dashed var(--muted-border)",
     color: "var(--text-secondary)",
-    background: "rgba(255,255,255,0.02)"
+    background: "var(--surface-soft)"
   },
   ownerNote: {
     marginTop: 6,

@@ -5,7 +5,7 @@ import { secureStore } from "@/storage/secure";
 import { createId } from "@/utils/id";
 import { dateKey } from "@/utils/date";
 import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receiptService";
-import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, getReportsSummary, getTopProducts } from "@/services/apiClient";
+import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
 import { initialThemeMode, setThemeTokens, type ThemeMode } from "@/theme/tokens";
@@ -168,6 +168,7 @@ interface AppState {
   loadDashboard: () => Promise<void>;
   loadCatalog: (options?: { skipProducts?: boolean }) => Promise<void>;
   setSelectedBranchId: (branchId: string | null) => Promise<void>;
+  syncBranches: (branches: Branch[]) => Promise<void>;
   rehydrateQueuedState: () => Promise<void>;
   addCategory: (input: Omit<Category, "id" | "createdAt" | "updatedAt" | "deletedAt">) => Promise<Category>;
   addBrand: (input: Omit<Brand, "id" | "createdAt" | "updatedAt" | "deletedAt" | "isActive"> & { description?: string | null }) => Promise<Brand>;
@@ -253,7 +254,14 @@ async function readStoredSession(): Promise<StoredSession | null> {
   const raw = await secureStore.getSession();
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as StoredSession;
+    const parsed = JSON.parse(raw) as Partial<StoredSession>;
+    if (!parsed || typeof parsed !== "object" || typeof parsed.accessToken !== "string" || !parsed.accessToken.trim()) {
+      return null;
+    }
+    if (!parsed.user || typeof parsed.user !== "object" || typeof parsed.user.id !== "string" || typeof parsed.user.role !== "string") {
+      return null;
+    }
+    return parsed as StoredSession;
   } catch {
     return null;
   }
@@ -261,28 +269,29 @@ async function readStoredSession(): Promise<StoredSession | null> {
 
 function deriveSelectedBranchId(user: AppState["user"], branches: Branch[], preferredBranchId?: string | null) {
   if (!user) return null;
+  const activeBranches = branches.filter((branch) => branch.status !== "inactive");
   if (user.role === "owner") {
     const preferred = preferredBranchId?.trim() ? preferredBranchId.trim() : preferredBranchId === null ? null : undefined;
     if (preferred !== undefined) {
       if (preferred === null) {
-        return branches.length <= 1 ? user.branchId ?? branches[0]?.id ?? null : null;
+        return activeBranches.length <= 1 ? user.branchId ?? activeBranches[0]?.id ?? branches[0]?.id ?? null : null;
       }
-      if (branches.some((branch) => branch.id === preferred)) {
+      if (branches.some((branch) => branch.id === preferred && branch.status !== "inactive")) {
         return preferred;
       }
     }
-    if (branches.length <= 1) {
-      return user.branchId ?? branches[0]?.id ?? null;
+    if (activeBranches.length <= 1) {
+      return user.branchId ?? activeBranches[0]?.id ?? branches[0]?.id ?? null;
     }
     return null;
   }
   return user.branchId ?? branches[0]?.id ?? null;
 }
 
-async function persistSelectedBranchId(selectedBranchId: string | null) {
+async function persistBranchSession(branches: Branch[], selectedBranchId: string | null) {
   const storedSession = await readStoredSession();
   if (!storedSession) return;
-  await secureStore.setSession(JSON.stringify({ ...storedSession, selectedBranchId }));
+  await secureStore.setSession(JSON.stringify({ ...storedSession, branches, selectedBranchId }));
 }
 
 function resolveReadBranchId(state: Pick<AppState, "selectedBranchId" | "user">) {
@@ -293,8 +302,12 @@ function resolveReadBranchId(state: Pick<AppState, "selectedBranchId" | "user">)
 }
 
 function resolveWriteBranchId(state: Pick<AppState, "selectedBranchId" | "user" | "branches">, branchId?: string | null) {
-  if (branchId?.trim()) return branchId.trim();
-  return state.selectedBranchId ?? state.user?.branchId ?? state.branches.find((branch) => branch.isDefault)?.id ?? state.branches[0]?.id ?? null;
+  if (branchId?.trim()) {
+    const requested = branchId.trim();
+    const branch = state.branches.find((candidate) => candidate.id === requested && candidate.status !== "inactive");
+    if (branch) return requested;
+  }
+  return state.selectedBranchId ?? state.user?.branchId ?? state.branches.find((branch) => branch.isDefault && branch.status !== "inactive")?.id ?? state.branches.find((branch) => branch.status !== "inactive")?.id ?? state.branches[0]?.id ?? null;
 }
 
 function shouldApplyQueuedActionToCurrentBranch(action: { payload?: unknown }, selectedBranchId: string | null) {
@@ -535,16 +548,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       pendingSync: 0,
       syncing: false,
       syncMessage: "Cloud only",
-      syncProgress: null,
-      dashboard: null,
-      products: [],
-      categories: [],
-      brands: [],
-      customers: [],
-      customerGroups: [],
-      suppliers: [],
-      sales: [],
-      expenses: []
+      syncProgress: null
     });
   },
   setThemeMode: async (mode) => {
@@ -622,7 +626,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       sales: [],
       expenses: []
     });
-    await persistSelectedBranchId(resolvedBranchId);
+    await persistBranchSession(state.branches, resolvedBranchId);
     void writeStartupCache({
       dashboard: null,
       products: [],
@@ -635,6 +639,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       expenses: []
     }).catch(() => undefined);
     await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
+  },
+  syncBranches: async (branches) => {
+    const state = get();
+    const selectedBranchId = deriveSelectedBranchId(state.user, branches, state.selectedBranchId);
+    set({ branches, selectedBranchId });
+    await persistBranchSession(branches, selectedBranchId);
   },
   rehydrateQueuedState: async () => {
     const business = get().business;
@@ -1346,7 +1356,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       void recordLocalNotification({
         businessId: business.id,
         title: "Sync failed",
-        body: error instanceof Error ? error.message : "Biz Pro could not complete the sync.",
+        body: error instanceof Error ? error.message : "Dira OS could not complete the sync.",
         category: "sync",
         priority: "high"
       }).catch(() => undefined);

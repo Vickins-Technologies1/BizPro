@@ -1,4 +1,4 @@
-# BizPro Cloud Run Deployment
+# Dira OS Cloud Run Deployment
 
 This repository deploys the API to Google Cloud Run using the container under `apps/api/Dockerfile`.
 
@@ -42,7 +42,7 @@ gcloud services enable run.googleapis.com artifactregistry.googleapis.com iam.go
 gcloud artifacts repositories create <AR_REPOSITORY> \
   --repository-format=docker \
   --location=<REGION> \
-  --description="BizPro API images"
+  --description="Dira OS API images"
 ```
 
 3. Build and push the image from the repo root.
@@ -84,7 +84,7 @@ export WIF_PROVIDER=github-provider
 
 gcloud config set project "$PROJECT_ID"
 gcloud iam service-accounts create "$DEPLOYER_SA" \
-  --display-name="BizPro Cloud Run deployer"
+  --display-name="Dira OS Cloud Run deployer"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \

@@ -443,7 +443,7 @@ function resetEnvironment() {
     },
     business: {
       id: "business-1",
-      name: "Biz Pro Demo",
+      name: "Dira OS Demo",
       businessType: "retail_shop",
       planTier: "standard",
       billingStatus: "trial",

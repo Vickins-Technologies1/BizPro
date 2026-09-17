@@ -9,16 +9,16 @@ export type ReceiptArtifacts = {
   servedBy: string;
 };
 
-export function buildReceiptText(sale: Sale, items: SaleItem[], currency = "KES", servedBy = "Staff", businessName = "Biz Pro") {
+export function buildReceiptText(sale: Sale, items: SaleItem[], currency = "KES", servedBy = "Staff", businessName = "Dira OS") {
   return buildReceiptArtifacts(sale, items, currency, servedBy, businessName).text;
 }
 
-export function buildReceiptArtifacts(sale: Sale, items: SaleItem[], currency = "KES", servedBy = "Staff", businessName = "Biz Pro"): ReceiptArtifacts {
+export function buildReceiptArtifacts(sale: Sale, items: SaleItem[], currency = "KES", servedBy = "Staff", businessName = "Dira OS"): ReceiptArtifacts {
   const formattedDate = formatDate(sale.createdAt, "MMM d, yyyy h:mm a");
   const servedByLabel = servedBy.trim() || "Staff";
   const receiptTitle = `Receipt #${sale.receiptNumber}`;
   const lines = [
-    "Biz Pro",
+    "Dira OS",
     receiptTitle,
     `Date: ${formattedDate}`,
     `Served by: ${servedByLabel}`,

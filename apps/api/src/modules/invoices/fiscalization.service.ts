@@ -63,7 +63,11 @@ class NoopFiscalizationProvider implements FiscalizationProvider {
 
 @Injectable()
 export class FiscalizationService {
-  constructor(private readonly provider: FiscalizationProvider = new NoopFiscalizationProvider()) {}
+  private readonly provider: FiscalizationProvider;
+
+  constructor() {
+    this.provider = new NoopFiscalizationProvider();
+  }
 
   validateInvoice(request: FiscalizationRequest) {
     return this.provider.validateInvoice(request);

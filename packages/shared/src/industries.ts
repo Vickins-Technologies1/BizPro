@@ -44,6 +44,8 @@ export type BusinessField = {
   help?: string;
 };
 
+export type WorkspaceRoute = "Dashboard" | "POS" | "Catalog" | "Customers" | "Employees" | "Reports" | "Finance" | "Insights" | "Settings" | "Operations" | "More";
+
 export type BusinessTypeConfig = {
   businessType: BusinessType;
   industryKey: IndustryKey;
@@ -66,6 +68,8 @@ export type BusinessTypeConfig = {
     posLabel: string;
     customersLabel: string;
     catalogDescription: string;
+    primaryRoutes: readonly WorkspaceRoute[];
+    sidebarRoutes: readonly WorkspaceRoute[];
   };
   reports: readonly string[];
   onboarding: readonly string[];
@@ -176,7 +180,7 @@ type BusinessTypeOverride = {
   capabilities?: Partial<Record<BusinessCapability, boolean>>;
   workflow?: BusinessTypeConfig["workflow"];
   fields?: readonly BusinessField[];
-  navigation?: BusinessTypeConfig["navigation"];
+  navigation?: Partial<BusinessTypeConfig["navigation"]>;
   reports?: readonly string[];
   onboarding?: readonly string[];
   roles?: readonly string[];
@@ -186,7 +190,7 @@ const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride
   restaurant: {
     terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
     capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items, modifiers, and availability" },
+    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items, modifiers, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"], sidebarRoutes: ["Dashboard", "POS", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
     workflow: { headline: "Table to payment", steps: ["Table or takeaway", "Create order", "Kitchen", "Serve", "Payment"] },
     onboarding: ["Dining areas", "Tables", "Initial menu", "Kitchen workflow"],
     roles: ["Owner", "Manager", "Cashier", "Waiter", "Kitchen"]
@@ -194,22 +198,22 @@ const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride
   cafe: {
     terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
     capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items and quick-service availability" }
+    navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items and quick-service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
   },
   bakery: {
     terminology: { catalog: "Bake list", catalogItem: "Baked good", customers: "Customers", transaction: "Order", staff: "Team" },
     capabilities: { orders: true, tables: false, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Bake list", posLabel: "Orders", customersLabel: "Customers", catalogDescription: "Baked goods, batches, and availability" }
+    navigation: { catalogLabel: "Bake list", posLabel: "Orders", customersLabel: "Customers", catalogDescription: "Baked goods, batches, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
   },
   bar: {
     terminology: { catalog: "Drinks", catalogItem: "Drink", customers: "Guests", transaction: "Tab", staff: "Team" },
     capabilities: { orders: true, tables: true, kitchen: false, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Drinks", posLabel: "Tabs", customersLabel: "Guests", catalogDescription: "Drinks, tabs, and service availability" }
+    navigation: { catalogLabel: "Drinks", posLabel: "Tabs", customersLabel: "Guests", catalogDescription: "Drinks, tabs, and service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
   },
   salon: {
     terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Appointment", staff: "Staff" },
     capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Services", posLabel: "Appointments", customersLabel: "Clients", catalogDescription: "Services, durations, and pricing" },
+    navigation: { catalogLabel: "Services", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Services, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"], sidebarRoutes: ["Dashboard", "Operations", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
     workflow: { headline: "Client to completion", steps: ["Client", "Appointment", "Staff", "Service", "Payment"] },
     fields: [{ key: "duration", label: "Service duration", type: "duration", required: true }, { key: "assignedStaff", label: "Assigned staff", type: "text" }],
     onboarding: ["Services", "Staff", "Booking calendar", "Appointment duration"],
@@ -218,12 +222,12 @@ const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride
   spa: {
     terminology: { catalog: "Treatments", catalogItem: "Treatment", customers: "Clients", transaction: "Booking", staff: "Therapists" },
     capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Treatments", posLabel: "Bookings", customersLabel: "Clients", catalogDescription: "Treatments, durations, and pricing" }
+    navigation: { catalogLabel: "Treatments", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Treatments, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"] }
   },
   pharmacy: {
     terminology: { catalog: "Medicines", catalogItem: "Medicine", customers: "Patients", transaction: "Dispensing", staff: "Pharmacists" },
     capabilities: { pharmacy: true, inventory: true, barcode: true, purchasing: true, customers: true, catalog: true, appointments: false, orders: false, tables: false, kitchen: false, workOrders: false, projects: false },
-    navigation: { catalogLabel: "Medicines", posLabel: "Dispense", customersLabel: "Patients", catalogDescription: "Medicines, batches, expiry, and stock" },
+    navigation: { catalogLabel: "Medicines", posLabel: "Dispense", customersLabel: "Patients", catalogDescription: "Medicines, batches, expiry, and stock", primaryRoutes: ["Dashboard", "POS", "Catalog", "Customers", "More"] },
     fields: [{ key: "batchNumber", label: "Batch number", type: "text", required: true }, { key: "expiryDate", label: "Expiry date", type: "text", required: true }],
     onboarding: ["Dispensing workflow", "Expiry tracking", "Suppliers", "Pharmacy staff"],
     roles: ["Owner", "Manager", "Pharmacist", "Cashier"]
@@ -237,7 +241,7 @@ const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride
   garage: {
     terminology: { catalog: "Parts", catalogItem: "Part", customers: "Vehicle owners", transaction: "Job", staff: "Mechanics" },
     capabilities: { workOrders: true, inventory: true, catalog: true, customers: true, purchasing: true, barcode: false, appointments: true, orders: false, tables: false, kitchen: false, pharmacy: false, projects: false },
-    navigation: { catalogLabel: "Parts", posLabel: "Job cards", customersLabel: "Vehicle owners", catalogDescription: "Parts, labour, and workshop stock" },
+    navigation: { catalogLabel: "Parts", posLabel: "Checkout", customersLabel: "Vehicle owners", catalogDescription: "Parts, labour, and workshop stock", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"], sidebarRoutes: ["Dashboard", "Operations", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
     workflow: { headline: "Job card to handover", steps: ["Open job", "Inspect vehicle", "Add parts and labour", "Complete work", "Payment"] },
     onboarding: ["Service bays", "Mechanics", "Job card statuses", "Parts catalog"],
     roles: ["Owner", "Manager", "Reception", "Mechanic"]
@@ -245,7 +249,7 @@ const BUSINESS_TYPE_OVERRIDES: Partial<Record<BusinessType, BusinessTypeOverride
   consultancy: {
     terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Invoice", staff: "Team" },
     capabilities: { projects: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, appointments: true, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false },
-    navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable services, retainers, and scopes" },
+    navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable services, retainers, and scopes", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"] },
     workflow: { headline: "Engagement to collection", steps: ["Engagement", "Scope", "Invoice", "Payment", "Follow-up"] },
     onboarding: ["Service catalog", "Retainer settings", "Team", "Invoice terms"],
     roles: ["Owner", "Manager", "Consultant"]
@@ -277,7 +281,15 @@ export function resolveBusinessTypeConfig(input: { businessType?: string | null 
       ? { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Job", staff: "Staff" }
       : { catalog: "Products", catalogItem: "Product", customers: "Customers", transaction: "Sale", staff: "Team" };
   const terminology = { ...defaultTerminology, ...(override.terminology ?? {}) };
-  const navigation = override.navigation ?? { catalogLabel: terminology.catalog, posLabel: terminology.transaction + "s", customersLabel: terminology.customers, catalogDescription: `${terminology.catalog}, pricing, and availability` };
+  const defaultNavigation = {
+    catalogLabel: terminology.catalog,
+    posLabel: terminology.transaction + "s",
+    customersLabel: terminology.customers,
+    catalogDescription: `${terminology.catalog}, pricing, and availability`,
+    primaryRoutes: ["Dashboard", "POS", "Catalog", "Reports", "More"] as const,
+    sidebarRoutes: ["Dashboard", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] as const
+  };
+  const navigation = { ...defaultNavigation, ...(override.navigation ?? {}) };
   return {
     businessType,
     industryKey: module.key,

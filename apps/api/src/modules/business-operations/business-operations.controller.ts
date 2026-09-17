@@ -56,8 +56,13 @@ export class BusinessOperationsController {
 
   @Get()
   @Roles("owner", "manager", "cashier", "waiter", "receptionist", "stylist", "mechanic")
-  list(@CurrentUser() user: { businessId: string }, @Query("kind") kind?: string, @Query("status") status?: string) {
-    return this.operations.list(user.businessId, kind, status);
+  list(
+    @CurrentUser() user: { businessId: string; role?: string; branchId?: string | null },
+    @Query("kind") kind?: string,
+    @Query("status") status?: string,
+    @Query("branchId") branchId?: string
+  ) {
+    return this.operations.list(user.businessId, kind, status, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Post()

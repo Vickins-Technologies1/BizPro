@@ -3,6 +3,34 @@ import type { AccessPermission } from "./access";
 import type { IndustryKey } from "./industries";
 export type { IndustryKey } from "./industries";
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
+export type BusinessOperationKind = "order" | "appointment" | "work_order";
+export type BusinessOperationStatus = "draft" | "open" | "preparing" | "ready" | "confirmed" | "in_progress" | "completed" | "cancelled";
+export interface BusinessOperation {
+    id: string;
+    externalId?: string | null;
+    businessId: string;
+    branchId?: string | null;
+    kind: BusinessOperationKind;
+    status: BusinessOperationStatus;
+    title: string;
+    customerId?: string | null;
+    staffId?: string | null;
+    scheduledAt?: string | null;
+    durationMinutes?: number | null;
+    tableName?: string | null;
+    vehiclePlate?: string | null;
+    notes?: string | null;
+    items: Array<{
+        productId?: string | null;
+        name: string;
+        quantity: number;
+        unitPrice: number;
+    }>;
+    total: number;
+    deletedAt?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export type PlanTier = (typeof PLAN_TIERS)[number];
 export type UserRole = (typeof USER_ROLES)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -31,9 +59,141 @@ export interface Business {
     planTier: PlanTier;
     billingStatus: "trial" | "active" | "past_due" | "suspended";
     graceEndsAt?: string | null;
+    logoUrl?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    taxPin?: string | null;
+    vatRegistrationNumber?: string | null;
+    invoiceSettings?: InvoiceSettings | null;
+    taxSettings?: TaxSettings | null;
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null;
+}
+export type InvoiceNumberReset = "never" | "yearly" | "monthly";
+export type InvoiceLifecycleStatus = "draft" | "sent" | "viewed" | "partially_paid" | "paid" | "overdue" | "cancelled" | "void" | "refunded" | "archived";
+export type TaxCategory = "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+export interface InvoiceSettings {
+    prefix: string;
+    startingNumber: number;
+    nextNumber: number;
+    padding: number;
+    autoGenerate: boolean;
+    resetBehavior: InvoiceNumberReset;
+    defaultPaymentTermsDays: number;
+    publicSharingEnabled: boolean;
+    paymentMethods: string[];
+}
+export interface TaxSettings {
+    taxPin?: string | null;
+    vatRegistrationNumber?: string | null;
+    defaultTaxCategory: TaxCategory;
+    defaultTaxRate: number;
+    defaultTaxInclusive: boolean;
+    defaultTaxCode?: string | null;
+}
+export interface InvoiceTaxSnapshot {
+    taxCategory: TaxCategory;
+    taxCode?: string | null;
+    taxRate: number;
+    taxInclusive: boolean;
+    taxAmount: number;
+    taxableAmount: number;
+}
+export interface InvoiceLineItem {
+    id: string;
+    productId?: string | null;
+    productName?: string | null;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    discountType: "percentage" | "fixed";
+    discountValue: number;
+    lineDiscount: number;
+    lineSubtotal: number;
+    lineTax: number;
+    lineTotal: number;
+    tax: InvoiceTaxSnapshot;
+}
+export interface InvoicePaymentRecord {
+    id: string;
+    paymentId?: string | null;
+    amount: number;
+    method: PaymentMethod | string;
+    paymentDate: string;
+    reference?: string | null;
+    note?: string | null;
+}
+export interface InvoiceAuditEntry {
+    id: string;
+    action: string;
+    note?: string | null;
+    actorId?: string | null;
+    createdAt: string;
+    payload?: Record<string, unknown> | null;
+}
+export interface Invoice extends BaseEntity {
+    branchId?: string | null;
+    customerId?: string | null;
+    customerName?: string | null;
+    customerBusinessName?: string | null;
+    customerEmail?: string | null;
+    customerPhone?: string | null;
+    customerAddress?: string | null;
+    customerTaxPin?: string | null;
+    invoiceNumber: string;
+    externalId?: string | null;
+    referenceNumber?: string | null;
+    purchaseOrderNumber?: string | null;
+    issueDate: string;
+    dueDate: string;
+    paymentTerms: string;
+    currency: string;
+    status: InvoiceLifecycleStatus;
+    subtotal: number;
+    discountTotal: number;
+    taxableAmount: number;
+    taxTotal: number;
+    grandTotal: number;
+    amountPaid: number;
+    balanceDue: number;
+    notes?: string | null;
+    termsAndConditions?: string | null;
+    archivedAt?: string | null;
+    sentAt?: string | null;
+    viewedAt?: string | null;
+    paidAt?: string | null;
+    cancelledAt?: string | null;
+    voidedAt?: string | null;
+    refundedAt?: string | null;
+    shareToken?: string | null;
+    fiscalizationStatus?: string | null;
+    fiscalizationProvider?: string | null;
+    fiscalizationReference?: string | null;
+    fiscalizationRequestId?: string | null;
+    fiscalizationDocumentNumber?: string | null;
+    fiscalizationDate?: string | null;
+    fiscalizationResponse?: Record<string, unknown> | null;
+    fiscalizationError?: string | null;
+    fiscalizationPayloadReference?: string | null;
+    lineItems: InvoiceLineItem[];
+    payments?: InvoicePaymentRecord[];
+    history?: InvoiceAuditEntry[];
+    creditNotes?: CreditNote[];
+    debitNotes?: DebitNote[];
+}
+export interface DebitNote extends BaseEntity {
+    invoiceId: string;
+    customerId?: string | null;
+    reference: string;
+    reason: string;
+    amount: number;
+    taxAdjustment: number;
+    note?: string | null;
+    status: "draft" | "issued" | "void";
+    issuedAt: string;
 }
 export interface User extends BaseEntity {
     ownerId?: string | null;
@@ -104,8 +264,11 @@ export interface Customer extends BaseEntity {
     branchId?: string | null;
     groupId?: string | null;
     name: string;
+    businessName?: string | null;
     phone?: string | null;
     email?: string | null;
+    address?: string | null;
+    taxPin?: string | null;
     creditLimit: number;
     loyaltyPoints: number;
     notes?: string | null;
@@ -290,6 +453,7 @@ export interface Payment {
     branchId?: string | null;
     customerId?: string | null;
     saleId?: string | null;
+    invoiceId?: string | null;
     debtPaymentId?: string | null;
     method: PaymentMethod;
     status: PaymentStatus;
@@ -346,6 +510,7 @@ export interface PettyCashEntry extends BaseEntity {
 }
 export interface CreditNote extends BaseEntity {
     branchId?: string | null;
+    invoiceId?: string | null;
     reference: string;
     relatedSaleId?: string | null;
     customerId?: string | null;
@@ -357,10 +522,16 @@ export interface CreditNote extends BaseEntity {
 }
 export interface FinanceInvoice {
     id: string;
-    receiptNumber: string;
+    receiptNumber?: string;
+    invoiceNumber?: string;
     customerId?: string | null;
+    customerName?: string | null;
+    issueDate?: string;
+    dueDate?: string;
     grandTotal: number;
+    amountPaid?: number;
     balanceDue: number;
+    status?: InvoiceLifecycleStatus | PaymentStatus;
     paymentStatus: PaymentStatus;
     createdAt: string;
 }
@@ -370,6 +541,7 @@ export interface FinancePayment {
     branchId?: string | null;
     customerId?: string | null;
     saleId?: string | null;
+    invoiceId?: string | null;
     debtPaymentId?: string | null;
     method: PaymentMethod;
     status: PaymentStatus;

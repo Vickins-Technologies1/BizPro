@@ -48,15 +48,21 @@ type PushRegistrationResult =
   | { status: "registered"; token: string }
   | { status: "unavailable" | "not-requested" | "denied" | "error"; message: string };
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true
-  })
-});
+function configureNotificationHandler() {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true
+      })
+    });
+  } catch (error) {
+    console.warn("[notifications] Native notification handler unavailable", error);
+  }
+}
 
 function parseCache(raw: string | null): NotificationCache {
   if (!raw) return DEFAULT_CACHE;
@@ -221,7 +227,7 @@ async function registerPushNotificationsInternal(input: RegisterPushInput): Prom
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("biz-pro", {
-      name: "Biz Pro",
+      name: "Dira OS",
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#2563EB"
@@ -265,8 +271,9 @@ export function configureNotificationListeners() {
     return () => undefined;
   }
   listenersInstalled = true;
+  configureNotificationHandler();
 
-  const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+  const receivedSubscription = safeAddListener(() => Notifications.addNotificationReceivedListener((notification) => {
     const content = notification.request.content;
     const data = (content.data ?? {}) as Record<string, unknown>;
     void upsertStoredNotification(
@@ -274,7 +281,7 @@ export function configureNotificationListeners() {
         id: String(data.notificationId ?? createId()),
         businessId: String(data.businessId ?? ""),
         audienceUserId: data.audienceUserId ? String(data.audienceUserId) : null,
-        title: content.title ?? "Biz Pro alert",
+        title: content.title ?? "Dira OS alert",
         body: content.body ?? "",
         category: String(data.category ?? "general"),
         priority: (data.priority as AppInboxNotification["priority"]) ?? "normal",
@@ -288,9 +295,9 @@ export function configureNotificationListeners() {
         source: "remote"
       })
     );
-  });
+  }));
 
-  const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+  const responseSubscription = safeAddListener(() => Notifications.addNotificationResponseReceivedListener((response) => {
     const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
     const notificationId = data.notificationId ? String(data.notificationId) : null;
     if (notificationId) {
@@ -299,9 +306,9 @@ export function configureNotificationListeners() {
     if (data.routeName) {
       navigateFromNotification(String(data.routeName), (data.routeParams as Record<string, unknown> | undefined) ?? null);
     }
-  });
+  }));
 
-  const pushTokenSubscription = Notifications.addPushTokenListener((token) => {
+  const pushTokenSubscription = safeAddListener(() => Notifications.addPushTokenListener((token) => {
     const registration = activeRegistration;
     if (!registration || !token.data) return;
     void apiRegisterDevicePushToken({ ...registration, pushToken: token.data })
@@ -312,9 +319,9 @@ export function configureNotificationListeners() {
         pushToken: token.data
       } satisfies StoredPushRegistration)))
       .catch((error) => console.warn("[notifications] Push token refresh registration failed", error));
-  });
+  }));
 
-  void Notifications.getLastNotificationResponseAsync().then((response) => {
+  void safeGetLastNotificationResponse().then((response) => {
     if (!response) return;
     const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
     if (data.notificationId) {
@@ -331,4 +338,22 @@ export function configureNotificationListeners() {
     pushTokenSubscription.remove();
     listenersInstalled = false;
   };
+}
+
+function safeAddListener<T extends { remove: () => void }>(register: () => T): T {
+  try {
+    return register();
+  } catch (error) {
+    console.warn("[notifications] Native listener unavailable", error);
+    return { remove: () => undefined } as T;
+  }
+}
+
+async function safeGetLastNotificationResponse() {
+  try {
+    return await Notifications.getLastNotificationResponseAsync();
+  } catch (error) {
+    console.warn("[notifications] Could not read the last notification response", error);
+    return null;
+  }
 }

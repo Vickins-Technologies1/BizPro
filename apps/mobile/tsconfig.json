@@ -3,6 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "lib": ["ES2022", "DOM"],
     "moduleResolution": "Bundler",
     "types": ["react", "react-native"],
     "noEmit": true,

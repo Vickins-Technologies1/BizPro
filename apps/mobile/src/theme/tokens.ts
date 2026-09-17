@@ -97,46 +97,46 @@ const baseTheme = {
 const lightTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#F5F8FC",
-    backgroundAlt: "#E9EFF7",
+    background: "#F8FAFC",
+    backgroundAlt: "#F1F7FB",
     surface: "#FFFFFF",
-    surfaceAlt: "#F1F5FA",
+    surfaceAlt: "#F4F8FB",
     surfaceElevated: "#FFFFFF",
     input: "#FFFFFF",
-    border: "#D8E1EC",
-    divider: "#D8E1EC",
-    primary: "#2563EB",
-    primaryStrong: "#1D4ED8",
-    success: "#16A34A",
-    warning: "#D97706",
-    danger: "#EF4444",
-    text: "#0E1726",
-    textPrimary: "#0E1726",
-    textSecondary: "#415066",
-    textMuted: "#6D7A8B",
-    icon: "#5E6B7B",
+    border: "#D7E3EE",
+    divider: "#D7E3EE",
+    primary: "#155EEF",
+    primaryStrong: "#1245A8",
+    success: "#087F5B",
+    warning: "#B86A0A",
+    danger: "#C53D55",
+    text: "#0F172A",
+    textPrimary: "#0F172A",
+    textSecondary: "#334E68",
+    textMuted: "#52637A",
+    icon: "#31506D",
     disabled: "#94A3B8",
-    overlay: "rgba(15, 23, 42, 0.50)"
+    overlay: "rgba(15, 23, 42, 0.42)"
   },
   gradients: {
-    primary: ["#EFF6FF", "#DBEAFE"],
-    surface: ["#FFFFFF", "#F4F7FC"],
-    premium: ["rgba(37,99,235,0.14)", "rgba(14,165,233,0.08)"]
+    primary: ["#EAF4FF", "#D9F5F4"],
+    surface: ["#FFFFFF", "#F4F8FB"],
+    premium: ["rgba(21,94,239,0.14)", "rgba(8,127,91,0.10)"]
   },
   shadow: {
     card: {
-    shadowColor: "#0F172A",
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
+      shadowColor: "#0F172A",
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 5 },
       elevation: 2
     },
     modal: {
       shadowColor: "#0F172A",
-      shadowOpacity: 0.14,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 8 },
-      elevation: 5
+      shadowOpacity: 0.16,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6
     }
   }
 };

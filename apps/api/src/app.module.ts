@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BusinessesModule } from "./modules/businesses/businesses.module";
+import { BranchesModule } from "./modules/branches/branches.module";
 import { CategoriesModule } from "./modules/categories/categories.module";
 import { BrandsModule } from "./modules/brands/brands.module";
 import { CustomersModule } from "./modules/customers/customers.module";
@@ -44,6 +45,7 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     MongooseModule.forFeature([{ name: SystemState.name, schema: SystemStateSchema }]),
     AuthModule,
     BusinessesModule,
+    BranchesModule,
     CategoriesModule,
     BrandsModule,
     CustomersModule,

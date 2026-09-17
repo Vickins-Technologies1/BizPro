@@ -12,6 +12,7 @@ type DraftItem = { name: string; quantity: number; unitPrice: number };
 
 export function BusinessOperationsScreen() {
   const business = useAppStore((state) => state.business);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const config = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const operationKind = operationKindForConfig(config);
   const [operations, setOperations] = React.useState<BusinessOperation[]>([]);
@@ -35,7 +36,7 @@ export function BusinessOperationsScreen() {
 
   async function loadOperations(mode: "initial" | "refresh" = "initial") {
     if (mode === "refresh") setRefreshing(true); else setLoading(true);
-    try { setOperations(await listBusinessOperations({ kind: operationKind })); }
+    try { setOperations(await listBusinessOperations({ kind: operationKind, branchId: selectedBranchId })); }
     catch (error) { Alert.alert("Unable to load operations", error instanceof Error ? error.message : "Try again when connected."); }
     finally { setLoading(false); setRefreshing(false); }
   }
@@ -43,14 +44,14 @@ export function BusinessOperationsScreen() {
   React.useEffect(() => {
     void loadOperations();
     void Promise.all([listCustomers().then(setCustomers).catch(() => undefined), listEmployees().then(setEmployees).catch(() => undefined)]);
-  }, [operationKind]);
+  }, [operationKind, selectedBranchId]);
 
   async function saveOperation() {
     if (!title.trim()) { Alert.alert("Add a title", "Enter a " + config.terminology.transaction.toLowerCase() + " title first."); return; }
     setSaving(true);
     try {
       const created = await createBusinessOperationSafe({
-        externalId: createId(), businessId: business?.id ?? "", branchId: null, kind: operationKind,
+        externalId: createId(), businessId: business?.id ?? "", branchId: selectedBranchId, kind: operationKind,
         status: operationKind === "appointment" ? "confirmed" : "open", title: title.trim(), customerId, staffId,
         scheduledAt: scheduledAt.trim() ? new Date(scheduledAt.trim()).toISOString() : null,
         durationMinutes: operationKind === "appointment" ? 60 : null,

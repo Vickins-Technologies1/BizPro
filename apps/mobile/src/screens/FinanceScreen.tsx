@@ -165,7 +165,7 @@ export function FinanceScreen() {
         currency: business?.currency ?? "KES"
       });
       const file = await Print.printToFileAsync({ html });
-      const targetPath = `${FileSystem.cacheDirectory ?? ""}biz-pro-finance-${Date.now()}.pdf`;
+      const targetPath = `${FileSystem.cacheDirectory ?? ""}dira-os-finance-${Date.now()}.pdf`;
       await FileSystem.moveAsync({ from: file.uri, to: targetPath });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(targetPath, { mimeType: "application/pdf", dialogTitle: "Export finance report" });
@@ -192,7 +192,7 @@ export function FinanceScreen() {
         expenses,
         currency: business?.currency ?? "KES"
       });
-      const fileName = `biz-pro-finance-${Date.now()}.xls`;
+      const fileName = `dira-os-finance-${Date.now()}.xls`;
       const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ""}${fileName}`;
       await FileSystem.writeAsStringAsync(filePath, html, { encoding: FileSystem.EncodingType.UTF8 });
       if (await Sharing.isAvailableAsync()) {
@@ -358,7 +358,17 @@ export function FinanceScreen() {
                 {overview?.invoiceCount ?? 0} open invoices totaling {formatMoney(overview?.invoiceTotal ?? 0, business?.currency)}.
               </Text>
               {invoices.length ? (
-                invoices.map((invoice) => <FinanceRow key={invoice.id} title={invoice.receiptNumber} subtitle={invoice.customerId ?? "Walk-in invoice"} amount={invoice.balanceDue} currency={business?.currency ?? "KES"} tone="warning" badge={paymentStatusLabel(invoice.paymentStatus)} />)
+                invoices.map((invoice) => (
+                  <FinanceRow
+                    key={invoice.id}
+                    title={invoice.receiptNumber ?? invoice.id}
+                    subtitle={invoice.customerId ?? "Walk-in invoice"}
+                    amount={invoice.balanceDue}
+                    currency={business?.currency ?? "KES"}
+                    tone="warning"
+                    badge={paymentStatusLabel(invoice.paymentStatus)}
+                  />
+                ))
               ) : (
                 <Text style={{ color: tokens.colors.textSecondary }}>No open invoices in this period.</Text>
               )}
@@ -852,20 +862,23 @@ function formatRangeLabel(fromDate: string, toDate: string) {
   return `${format(from, "MMM d")} - ${format(to, "MMM d, yyyy")}`;
 }
 
-function formatPaymentLabel(value: string) {
+function formatPaymentLabel(value: string | undefined) {
   if (value === "mpesa") return "M-Pesa";
   if (value === "cash") return "Cash";
   if (value === "bank") return "Bank";
+  if (value === "card") return "Card";
+  if (value === "cheque") return "Cheque";
+  if (value === "other") return "Other";
   if (value === "credit") return "Credit";
-  return value.replaceAll("_", " ");
+  return String(value ?? "").replaceAll("_", " ");
 }
 
-function paymentStatusLabel(status: string) {
+function paymentStatusLabel(status: string | undefined) {
   if (status === "paid") return "paid";
   if (status === "partial") return "partial";
   if (status === "pending_confirmation") return "pending";
   if (status === "credit") return "credit";
-  return status.replaceAll("_", " ");
+  return String(status ?? "").replaceAll("_", " ");
 }
 
 function buildExportHtml(input: {
@@ -895,22 +908,40 @@ function buildExportHtml(input: {
   ].join("");
 
   const invoiceRows = input.invoices
-    .map((invoice) => `<tr><td>${escapeHtml(invoice.receiptNumber)}</td><td>${escapeHtml(invoice.customerId ?? "Walk-in")}</td><td>${escapeHtml(formatMoney(invoice.balanceDue, input.currency))}</td></tr>`)
+    .map(
+      (invoice) =>
+        `<tr><td>${escapeHtml(String(invoice.receiptNumber ?? invoice.id))}</td><td>${escapeHtml(String(invoice.customerId ?? "Walk-in"))}</td><td>${escapeHtml(formatMoney(invoice.balanceDue, input.currency))}</td></tr>`
+    )
     .join("");
   const paymentRows = input.payments
-    .map((payment) => `<tr><td>${escapeHtml(formatPaymentLabel(payment.method))}</td><td>${escapeHtml(payment.status)}</td><td>${escapeHtml(formatMoney(payment.amount, input.currency))}</td></tr>`)
+    .map(
+      (payment) =>
+        `<tr><td>${escapeHtml(formatPaymentLabel(payment.method ?? undefined))}</td><td>${escapeHtml(String(payment.status ?? ""))}</td><td>${escapeHtml(formatMoney(payment.amount, input.currency))}</td></tr>`
+    )
     .join("");
   const bankRows = input.bankAccounts
-    .map((account) => `<tr><td>${escapeHtml(account.accountName)}</td><td>${escapeHtml(account.bankName)}</td><td>${escapeHtml(formatMoney(account.currentBalance, account.currency ?? input.currency))}</td></tr>`)
+    .map(
+      (account) =>
+        `<tr><td>${escapeHtml(String(account.accountName ?? ""))}</td><td>${escapeHtml(String(account.bankName ?? ""))}</td><td>${escapeHtml(formatMoney(account.currentBalance, account.currency ?? input.currency))}</td></tr>`
+    )
     .join("");
   const pettyRows = input.pettyCash
-    .map((entry) => `<tr><td>${escapeHtml(entry.label)}</td><td>${escapeHtml(entry.direction)}</td><td>${escapeHtml(formatMoney(entry.direction === "in" ? entry.amount : -entry.amount, input.currency))}</td></tr>`)
+    .map(
+      (entry) =>
+        `<tr><td>${escapeHtml(String(entry.label ?? ""))}</td><td>${escapeHtml(String(entry.direction ?? ""))}</td><td>${escapeHtml(formatMoney(entry.direction === "in" ? entry.amount : -entry.amount, input.currency))}</td></tr>`
+    )
     .join("");
   const creditRows = input.creditNotes
-    .map((note) => `<tr><td>${escapeHtml(note.reference)}</td><td>${escapeHtml(note.reason)}</td><td>${escapeHtml(formatMoney(note.amount, input.currency))}</td></tr>`)
+    .map(
+      (note) =>
+        `<tr><td>${escapeHtml(String(note.reference ?? ""))}</td><td>${escapeHtml(String(note.reason ?? ""))}</td><td>${escapeHtml(formatMoney(note.amount, input.currency))}</td></tr>`
+    )
     .join("");
   const expenseRows = input.expenses
-    .map((expense) => `<tr><td>${escapeHtml(expense.note)}</td><td>${escapeHtml(expense.expenseDate)}</td><td>${escapeHtml(formatMoney(expense.amount, input.currency))}</td></tr>`)
+    .map(
+      (expense) =>
+        `<tr><td>${escapeHtml(String(expense.note ?? ""))}</td><td>${escapeHtml(String(expense.expenseDate ?? ""))}</td><td>${escapeHtml(formatMoney(expense.amount, input.currency))}</td></tr>`
+    )
     .join("");
 
   return `<!doctype html>

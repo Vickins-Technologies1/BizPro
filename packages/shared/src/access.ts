@@ -14,6 +14,7 @@ export const ACCESS_PERMISSIONS = [
   "manageCustomers",
   "manageSuppliers",
   "manageEmployees",
+  "manageBranches",
   "manageExpenses",
   "viewFinancialReports",
   "manageSettings",
@@ -58,6 +59,7 @@ export const ROLE_PRESETS: RolePreset[] = [
       "manageCustomers",
       "manageSuppliers",
       "manageExpenses",
+      "manageBranches",
       "viewFinancialReports",
       "manageSettings",
       "manageOperations"

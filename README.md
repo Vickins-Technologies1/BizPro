@@ -1,8 +1,8 @@
-# BizPro
+# Dira OS
 
-BizPro is an offline-first business operating system for Kenyan SMEs. It combines point of sale, inventory, finance, reporting, team access, and support tooling into one system so businesses can keep selling even when connectivity is unreliable.
+Dira OS is an offline-first business operating system for Kenyan SMEs. It combines point of sale, inventory, finance, reporting, team access, and support tooling into one system so businesses can keep selling even when connectivity is unreliable.
 
-## What BizPro Solves
+## What Dira OS Solves
 
 - Sell quickly at the counter with a mobile POS built for daily operations.
 - Keep stock, customers, expenses, and sales in one place.
@@ -12,7 +12,7 @@ BizPro is an offline-first business operating system for Kenyan SMEs. It combine
 
 ## Product Overview
 
-BizPro is made up of three connected apps plus shared business logic:
+Dira OS is made up of three connected apps plus shared business logic:
 
 - `apps/mobile` - the Android-first React Native workspace used by staff in the field or at the counter
 - `apps/admin` - a Next.js support console for operational oversight
@@ -58,7 +58,7 @@ BizPro is made up of three connected apps plus shared business logic:
 
 ## Supported Business Types
 
-BizPro is designed to adapt to several SME categories, including:
+Dira OS is designed to adapt to several SME categories, including:
 
 - Retail shops, boutiques, cosmetics, accessories, wines and spirits, and hardware
 - Agrovet, farm, and feed store businesses
@@ -200,13 +200,13 @@ eas build -p android --profile production
 - Core actions are written to SQLite first, then queued for sync.
 - The API includes sync push/pull endpoints, reports, devices, subscriptions, analytics, finance, audit, employees, suppliers, and webhook reconciliation support.
 - Receipt actions support copy, share, and optional Bluetooth printing when the native printer module is installed.
-- BizPro uses KES by default and includes plan tiers for lite, standard, and pro.
+- Dira OS uses KES by default and includes plan tiers for lite, standard, and pro.
 
 ## Landing Page Summary
 
 If you want a short homepage message, this is a strong starting point:
 
-> BizPro is an offline-first business operating system for Kenyan SMEs. Sell faster, manage stock, track money, and keep your team in sync from one mobile-first platform.
+> Dira OS is an offline-first business operating system for Kenyan SMEs. Sell faster, manage stock, track money, and keep your team in sync from one mobile-first platform.
 
 Suggested hero bullets:
 

@@ -13,7 +13,7 @@ import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receipt
 import { clearPosDrafts, listPosDrafts, removePosDraft, savePosDraft, type PosDraft, type PosMode, type PosPaymentLine } from "@/services/posDrafts";
 import { createId } from "@/utils/id";
 
-type PaymentMode = "cash" | "mpesa" | "bank" | "credit";
+type PaymentMode = "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
 
 type CartLine = {
   productId: string;
@@ -31,6 +31,7 @@ export function PosScreen() {
   const sales = useAppStore((state) => state.sales);
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncMessage = useAppStore((state) => state.syncMessage);
   const createSale = useAppStore((state) => state.createSale);
@@ -238,11 +239,11 @@ export function PosScreen() {
     setLookupCode(barcode);
     const match = findProductByCode(products, barcode);
     if (!match) {
-      throw new Error("No product matches this barcode.");
+      return { status: "not-found" as const, message: "No product was found for this barcode." };
     }
     addToCart(match.id);
-    setScannerVisible(false);
     setLookupCode("");
+    return { status: "accepted" as const, message: `${match.name} added. Ready for the next item.` };
   }
 
   function buildPaymentSummary() {
@@ -298,7 +299,7 @@ export function PosScreen() {
     const sale = {
       id: currentDraftId ?? "preview",
       businessId: business?.id ?? "preview",
-      branchId: null,
+      branchId: selectedBranchId,
       customerId: null,
       receiptNumber: `PREVIEW-${Date.now().toString().slice(-6)}`,
       subtotal,
@@ -316,7 +317,7 @@ export function PosScreen() {
       updatedAt: new Date().toISOString(),
       deletedAt: null
     } as any;
-    return buildReceiptArtifacts(sale, lines, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Biz Pro");
+    return buildReceiptArtifacts(sale, lines, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Dira OS");
   }
 
   async function refreshDrafts() {
@@ -546,7 +547,7 @@ export function PosScreen() {
                       title="Preview"
                       variant="secondary"
                       onPress={() => {
-                        const receiptArtifacts = buildReceiptArtifacts(sale as any, sale.items as any, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Biz Pro");
+                        const receiptArtifacts = buildReceiptArtifacts(sale as any, sale.items as any, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Dira OS");
                         setPreviewReceipt(receiptArtifacts);
                         setPreviewVisible(true);
                       }}
@@ -985,15 +986,9 @@ export function PosScreen() {
 
       <BarcodeScannerModal
         visible={scannerVisible}
+        closeOnScan={false}
         onClose={() => setScannerVisible(false)}
-        onBarcodeScanned={async (barcode) => {
-          try {
-            await handleScannedBarcode(barcode);
-          } catch (error) {
-            Alert.alert("Product not found", error instanceof Error ? error.message : "No product matches this barcode.");
-            throw error instanceof Error ? error : new Error("No product matches this barcode.");
-          }
-        }}
+        onBarcodeScanned={handleScannedBarcode}
       />
 
       <SimpleModal visible={previewVisible} title="Receipt preview" onClose={() => setPreviewVisible(false)}>

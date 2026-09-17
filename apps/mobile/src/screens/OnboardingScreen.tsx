@@ -141,7 +141,7 @@ export function OnboardingScreen() {
 
   return (
     <Screen hideFooter>
-      <GradientHeader title="Biz Pro" subtitle="Set up your workspace" />
+      <GradientHeader title="Dira OS" subtitle="Set up your workspace" />
       <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
         <Card style={{ gap: 9, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
@@ -193,7 +193,11 @@ export function OnboardingScreen() {
                 <View style={{ gap: 8 }}>
                   <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "800", letterSpacing: 0.55, textTransform: "uppercase" }}>Phone number</Text>
                   <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-                    <Pressable onPress={() => setCountryPickerVisible(true)} style={{ minHeight: 50, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, justifyContent: "center" }}>
+                    <Pressable
+                      onPress={() => setCountryPickerVisible(true)}
+                      focusable={false}
+                      style={{ minHeight: 50, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, justifyContent: "center" }}
+                    >
                       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{country.flag} {country.callingCode}</Text>
                     </Pressable>
                     <View style={{ flex: 1 }}>
@@ -359,7 +363,7 @@ export function OnboardingScreen() {
             <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Subscription plan</Text>
             <View style={{ padding: 12, borderRadius: 16, backgroundColor: `${tokens.colors.success}18`, borderWidth: 1, borderColor: tokens.colors.success, gap: 4 }}>
               <Text style={{ color: tokens.colors.success, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>30 DAYS FREE - NO CARD REQUIRED</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Use BizPro normally during your trial. Your selected plan only starts billing after the trial ends.</Text>
+              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Use Dira OS normally during your trial. Your selected plan only starts billing after the trial ends.</Text>
             </View>
             <View style={{ gap: 10 }}>
               {planOptions.map((plan) => {

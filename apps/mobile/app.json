@@ -1,20 +1,21 @@
 {
   "expo": {
-    "name": "Biz Pro",
-    "owner": "vickins360s-team",
+    "name": "Dira OS",
+    "owner": "vickins",
     "slug": "biz-pro",
     "scheme": "vickinsbos",
     "version": "0.1.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "orientation": "default",
+    "icon": "./assets/brand/dira-os-mobile-icon-safe.png",
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.bizpro.vickins",
+      "edgeToEdgeEnabled": true,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/brand/dira-os-adaptive-foreground.png",
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "CAMERA",
@@ -23,7 +24,8 @@
         "BLUETOOTH_CONNECT",
         "BLUETOOTH_SCAN",
         "ACCESS_FINE_LOCATION",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.CAMERA"
       ]
     },
     "ios": {
@@ -38,7 +40,7 @@
       }
     },
     "splash": {
-      "image": "./assets/brand/biz-pro-mark-light.png",
+      "image": "./assets/brand/dira-os-logo.png",
       "backgroundColor": "#F5F8FC",
       "resizeMode": "contain"
     },
@@ -47,7 +49,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "c6be096e-f89f-4d50-b827-6f1cba595385"
+        "projectId": "a1608b80-e48e-4bb6-ab68-999353b0d243"
       }
     },
     "plugins": [
@@ -59,6 +61,13 @@
       ],
       "expo-secure-store",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Biz Pro to use your camera to scan product barcodes.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
@@ -68,6 +77,8 @@
           }
         }
       ],
+      "expo-asset",
+      "expo-font",
       "./plugins/withPatchedBluetoothEscpos"
     ]
   }

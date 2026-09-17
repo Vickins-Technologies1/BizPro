@@ -327,7 +327,7 @@ async function testBusinessesService(BusinessesService: any) {
   const businessDoc = {
     _id: "db-business-id",
     externalId: "JBs-VOAjsYEjB9bb",
-    name: "Biz Pro",
+    name: "Dira OS",
     slug: "biz-pro",
     businessType: "retail",
     currency: "KES",
@@ -379,14 +379,14 @@ async function testBusinessesService(BusinessesService: any) {
   });
 
   calls.length = 0;
-  await service.update("JBs-VOAjsYEjB9bb", { name: "Biz Pro Updated" });
+  await service.update("JBs-VOAjsYEjB9bb", { name: "Dira OS Updated" });
   assert.deepEqual(calls[0], {
     method: "business.findOneAndUpdate",
     query: {
       deletedAt: null,
       $or: [{ externalId: "JBs-VOAjsYEjB9bb" }]
     },
-    update: { name: "Biz Pro Updated" },
+    update: { name: "Dira OS Updated" },
     options: { new: true }
   });
 }
@@ -407,7 +407,7 @@ async function testJwtStrategyBusinessLookup(JwtStrategy: any) {
   const businessDoc = {
     _id: "db-business-id",
     externalId: "JBs-VOAjsYEjB9bb",
-    name: "Biz Pro",
+    name: "Dira OS",
     slug: "biz-pro",
     businessType: "retail",
     currency: "KES",
@@ -429,7 +429,7 @@ async function testJwtStrategyBusinessLookup(JwtStrategy: any) {
     }
   };
 
-  const strategy = new JwtStrategy({ get: () => "secret" } as any, userModel as any, businessModel as any);
+  const strategy = new JwtStrategy({ get: () => "secret", getOrThrow: () => "secret" } as any, userModel as any, businessModel as any);
   const result = await strategy.validate({
     sub: "64b3e9f0d8e4c5a123456789",
     businessId: "JBs-VOAjsYEjB9bb",

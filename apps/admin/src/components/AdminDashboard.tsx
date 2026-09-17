@@ -103,11 +103,11 @@ export function AdminDashboard() {
     <main style={{ maxWidth: 1360, margin: "0 auto", padding: 16 }}>
       <header style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "end", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <div style={{ textTransform: "uppercase", letterSpacing: 1.8, color: "var(--text-muted)", fontSize: 11 }}>Biz Pro Support Console</div>
+          <div style={{ textTransform: "uppercase", letterSpacing: 1.8, color: "var(--text-muted)", fontSize: 11 }}>Dira OS Support Console</div>
           <h1 style={{ margin: "5px 0 0", fontSize: 27, lineHeight: 1.05, fontFamily: "var(--font-grotesk)" }}>Executive operations dashboard</h1>
           <p style={{ margin: "6px 0 0", color: "var(--text-secondary)", maxWidth: 640, fontSize: 13 }}>Business coverage, subscription posture, sync health, and payment reconciliation.</p>
         </div>
-        <div style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 11, background: "rgba(17,24,39,0.7)" }}>
+        <div style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 11, background: "var(--dashboard-inset)" }}>
           <div style={{ color: "var(--text-muted)", fontSize: 11 }}>Business types supported</div>
           <div style={{ color: "var(--text)", fontWeight: 700 }}>{BUSINESS_TYPES.length}</div>
         </div>
@@ -137,8 +137,8 @@ export function AdminDashboard() {
                   gap: 8,
                   padding: 14,
                   borderRadius: 16,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.08)"
+                  background: "var(--dashboard-row)",
+                  border: "1px solid var(--dashboard-row-border)"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -189,7 +189,7 @@ export function AdminDashboard() {
               {rows
                 .flatMap((row) => row.logs.slice(0, 3).map((log) => ({ ...log, businessName: row.business.name })))
                 .map((log) => (
-                  <div key={log._id} style={{ padding: 11, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, background: "rgba(255,255,255,0.02)" }}>
+                  <div key={log._id} style={{ padding: 11, border: "1px solid var(--dashboard-row-border)", borderRadius: 12, background: "var(--dashboard-row)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                       <strong>{log.reference || "Unmatched"}</strong>
                       <span style={{ color: "var(--text-muted)" }}>{log.status}</span>

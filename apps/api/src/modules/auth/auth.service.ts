@@ -26,6 +26,13 @@ type AuthTokenResponse = {
     businessId: string;
     name: string;
     code: string;
+    location?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    description?: string | null;
+    managerId?: string | null;
+    managerName?: string | null;
+    status: "active" | "inactive";
     isDefault: boolean;
   }>;
   business: {
@@ -211,6 +218,13 @@ export class AuthService {
             businessId: effectiveBusinessId,
             name: branch.name,
             code: branch.code,
+            location: branch.location ?? null,
+            phone: branch.phone ?? null,
+            email: branch.email ?? null,
+            description: branch.description ?? null,
+            managerId: branch.managerId ?? null,
+            managerName: branch.managerName ?? null,
+            status: branch.status ?? "active",
             isDefault: branch.isDefault
           }
         ],
@@ -278,7 +292,7 @@ export class AuthService {
       );
       return {
         ...response,
-        branches: await this.loadBranches(user.businessId)
+        branches: await this.loadBranches(user.businessId, { role: user.role, branchId: user.branchId ?? null })
       };
     } catch (error) {
       this.logger.error(
@@ -297,7 +311,7 @@ export class AuthService {
     return {
       user: this.normalizeUser(user),
       business: this.normalizeBusiness(business),
-      branches: await this.loadBranches(user.businessId)
+      branches: await this.loadBranches(user.businessId, { role: user.role, branchId: user.branchId ?? null })
     };
   }
 
@@ -426,13 +440,21 @@ export class AuthService {
     return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).select("+passwordHash +pinHash").lean();
   }
 
-  private async loadBranches(businessId: string) {
+  private async loadBranches(businessId: string, scope: { role?: string | null; branchId?: string | null } = {}) {
     const branches = await this.branchModel.find({ businessId, deletedAt: null }).sort({ isDefault: -1, createdAt: 1 }).lean();
-    return branches.map((branch) => ({
+    const visibleBranches = scope.role === "owner" ? branches : branches.filter((branch) => String(branch._id) === scope.branchId);
+    return visibleBranches.map((branch) => ({
       id: String(branch._id),
       businessId: branch.businessId,
       name: branch.name,
       code: branch.code,
+      location: branch.location ?? null,
+      phone: branch.phone ?? null,
+      email: branch.email ?? null,
+      description: branch.description ?? null,
+      managerId: branch.managerId ?? null,
+      managerName: branch.managerName ?? null,
+      status: branch.status ?? "active",
       isDefault: Boolean(branch.isDefault)
     }));
   }

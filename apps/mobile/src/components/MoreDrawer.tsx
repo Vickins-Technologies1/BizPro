@@ -25,21 +25,22 @@ const DRAWER_GROUPS: Array<{ title: string; items: DrawerItem[] }> = [
   {
     title: "Workspace",
     items: [
-      { label: "Choose workspace", icon: "layers-outline", routeName: "Launchpad" },
+      { label: "Switch branch", icon: "layers-outline", routeName: "Launchpad" },
       { label: "Notifications", icon: "notifications-outline", routeName: "Notifications" }
     ]
   },
   {
     title: "Business",
     items: [
-      { label: "Reports", icon: "bar-chart-outline", routeName: "Reports", permission: "viewReports" },
+      { label: "Customers", icon: "people-outline", routeName: "Customers", permission: "manageCustomers" },
       { label: "Finance", icon: "cash-outline", routeName: "Finance", permission: "manageExpenses" },
       { label: "Expenses", icon: "receipt-outline", routeName: "Expenses", permission: "manageExpenses" },
       { label: "Brands", icon: "color-palette-outline", routeName: "Brands", permission: "manageInventory" },
       { label: "Suppliers", icon: "briefcase-outline", routeName: "Suppliers", permission: "manageSuppliers" },
       { label: "Purchase orders", icon: "document-text-outline", routeName: "PurchaseOrders", permission: "manageInventory" },
-      { label: "Stock transfers", icon: "swap-horizontal-outline", routeName: "StockTransfers", permission: "manageInventory" }
-      ,{ label: "Operations", icon: "briefcase-outline", routeName: "Operations", permission: "manageOperations" }
+      { label: "Stock transfers", icon: "swap-horizontal-outline", routeName: "StockTransfers", permission: "manageInventory" },
+      { label: "Branches", icon: "business-outline", routeName: "Branches", permission: "manageBranches" },
+      { label: "Operations", icon: "briefcase-outline", routeName: "Operations", permission: "manageOperations" }
     ]
   },
   {
@@ -59,6 +60,8 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
   const theme = useThemeTokens();
   const user = useAppStore((state) => state.user);
   const business = useAppStore((state) => state.business);
+  const themeMode = useAppStore((state) => state.themeMode);
+  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -121,7 +124,10 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
         <View style={styles.rule} />
         <View style={styles.groups}>
           {DRAWER_GROUPS.map((group) => {
-            const items = group.items.filter((item) => (!item.permission || hasPermission(user, item.permission)) && (item.routeName !== "Operations" || businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders));
+            const items = group.items.filter((item) => (
+              (!item.permission || hasPermission(user, item.permission)) &&
+              isDrawerItemAvailable(item.routeName, businessConfig.capabilities)
+            ));
             if (!items.length) return null;
             return (
               <View key={group.title} style={styles.group}>
@@ -151,8 +157,52 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
             );
           })}
         </View>
+        <MobileThemeToggle
+          themeMode={themeMode}
+          onToggle={() => void setThemeMode(themeMode === "dark" ? "light" : "dark")}
+        />
       </Animated.View>
     </View>
+  );
+}
+
+function isDrawerItemAvailable(routeName: string, capabilities: Readonly<Record<string, boolean>>) {
+  if (routeName === "Customers") return capabilities.customers;
+  if (["Brands", "PurchaseOrders", "StockTransfers"].includes(routeName)) return capabilities.inventory || capabilities.purchasing;
+  if (routeName === "Branches") return true;
+  if (routeName === "Operations") return capabilities.orders || capabilities.appointments || capabilities.workOrders;
+  return true;
+}
+
+function MobileThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dark"; onToggle: () => void }) {
+  const theme = useThemeTokens();
+  const isDark = themeMode === "dark";
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: isDark }}
+      accessibilityLabel="Toggle light and dark theme"
+      style={({ pressed }) => ({
+        marginTop: "auto",
+        minHeight: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surfaceAlt,
+        opacity: pressed ? 0.82 : 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 12
+      })}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Ionicons name={isDark ? "moon-outline" : "sunny-outline"} size={17} color={theme.colors.primaryStrong} />
+        <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "900" }}>{isDark ? "Dark mode" : "Light mode"}</Text>
+      </View>
+      <Text style={{ color: theme.colors.primaryStrong, fontSize: 11, fontWeight: "900" }}>Switch</Text>
+    </Pressable>
   );
 }
 

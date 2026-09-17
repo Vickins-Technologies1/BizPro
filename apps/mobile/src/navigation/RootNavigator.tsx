@@ -12,6 +12,7 @@ import { ReportsScreen } from "@/screens/ReportsScreen";
 import { SuppliersScreen } from "@/screens/SuppliersScreen";
 import { PurchaseOrdersScreen } from "@/screens/PurchaseOrdersScreen";
 import { StockTransfersScreen } from "@/screens/StockTransfersScreen";
+import { BranchesScreen } from "@/screens/BranchesScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { TeamAccessScreen } from "@/screens/TeamAccessScreen";
 import { EmployeesScreen } from "@/screens/EmployeesScreen";
@@ -34,6 +35,7 @@ type RootStackParamList = {
   Suppliers: undefined;
   PurchaseOrders: undefined;
   StockTransfers: undefined;
+  Branches: undefined;
   TeamAccess: undefined;
   Employees: undefined;
   Operations: undefined;
@@ -102,6 +104,7 @@ export function RootNavigator() {
           <RootStack.Screen name="Suppliers" component={SuppliersScreen} />
           <RootStack.Screen name="PurchaseOrders" component={PurchaseOrdersScreen} />
           <RootStack.Screen name="StockTransfers" component={StockTransfersScreen} />
+          <RootStack.Screen name="Branches" component={BranchesScreen} />
           <RootStack.Screen name="Expenses" component={ExpensesScreen} />
           <RootStack.Screen name="Finance" component={FinanceScreen} />
           <RootStack.Screen name="Reports" component={ReportsScreen} />

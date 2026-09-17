@@ -199,11 +199,12 @@ export class InvoicesController {
   @Patch(":id")
   @Roles("owner", "manager", "cashier")
   update(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Body() dto: PatchInvoiceDto) {
+    const { issueDate, dueDate, lineItems, ...restDto } = dto;
     return this.invoices.update(
       user.businessId,
       id,
       {
-        ...dto,
+        ...restDto,
         customerId: dto.customerId ?? null,
         customerName: dto.customerName ?? null,
         customerBusinessName: dto.customerBusinessName ?? null,
@@ -211,13 +212,13 @@ export class InvoicesController {
         customerPhone: dto.customerPhone ?? null,
         customerAddress: dto.customerAddress ?? null,
         customerTaxPin: dto.customerTaxPin ?? null,
-        issueDate: dto.issueDate ? new Date(dto.issueDate) : undefined,
-        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        ...(issueDate ? { issueDate: new Date(issueDate) } : {}),
+        ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
         referenceNumber: dto.referenceNumber ?? null,
         purchaseOrderNumber: dto.purchaseOrderNumber ?? null,
         notes: dto.notes ?? null,
         termsAndConditions: dto.termsAndConditions ?? null,
-        lineItems: dto.lineItems
+        ...(lineItems ? { lineItems } : {})
       },
       { role: user.role ?? null, branchId: user.branchId ?? null }
     );

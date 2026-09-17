@@ -6,18 +6,18 @@ export declare const businessSetupSchema: z.ZodObject<{
     businessName: z.ZodString;
     industryKey: z.ZodOptional<z.ZodEnum<["retail", "food_beverage", "beauty", "hospitality", "healthcare", "agriculture", "automotive", "services", "professional_services"]>>;
     businessType: z.ZodEnum<["retail_shop", "boutique", "cosmetics", "accessories", "wines_spirits", "hardware", "agrovet", "restaurant", "cafe", "bakery", "bar", "salon", "spa", "hotel", "lodge", "clinic", "pharmacy", "dental_clinic", "farm", "feed_store", "garage", "auto_parts", "service_center", "general_service", "consultancy", "agency", "law_firm", "accounting_firm"]>;
-    planTier: z.ZodEnum<["lite", "standard", "pro"]>;
+    planTier: z.ZodEnum<["command", "pro", "elite", "enterprise"]>;
     currency: z.ZodDefault<z.ZodString>;
     branchName: z.ZodString;
     cashierPin: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
 }, "strip", z.ZodTypeAny, {
+    currency: string;
     ownerName: string;
     phone: string;
     password: string;
     businessName: string;
     businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
-    planTier: "lite" | "standard" | "pro";
-    currency: string;
+    planTier: "command" | "pro" | "elite" | "enterprise";
     branchName: string;
     industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
     cashierPin?: string | undefined;
@@ -27,10 +27,10 @@ export declare const businessSetupSchema: z.ZodObject<{
     password: string;
     businessName: string;
     businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
-    planTier: "lite" | "standard" | "pro";
+    planTier: "command" | "pro" | "elite" | "enterprise";
     branchName: string;
-    industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
     currency?: string | undefined;
+    industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
     cashierPin?: string | undefined;
 }>;
 export declare const loginSchema: z.ZodObject<{
@@ -70,7 +70,7 @@ export declare const saleCreateSchema: z.ZodObject<{
     branchId: z.ZodOptional<z.ZodString>;
     customerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     cashierId: z.ZodOptional<z.ZodString>;
-    paymentMethod: z.ZodEnum<["cash", "mpesa", "bank", "credit"]>;
+    paymentMethod: z.ZodEnum<["cash", "mpesa", "bank", "card", "cheque", "other", "credit"]>;
     paymentStatus: z.ZodEnum<["paid", "partial", "pending_confirmation", "credit", "unpaid", "reconciled", "manual_mpesa"]>;
     items: z.ZodArray<z.ZodObject<{
         productId: z.ZodString;
@@ -97,7 +97,7 @@ export declare const saleCreateSchema: z.ZodObject<{
     amountPaid: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     businessId: string;
-    paymentMethod: "cash" | "mpesa" | "bank" | "credit";
+    paymentMethod: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
     paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa";
     items: {
         productId: string;
@@ -115,7 +115,7 @@ export declare const saleCreateSchema: z.ZodObject<{
     notes?: string | undefined;
 }, {
     businessId: string;
-    paymentMethod: "cash" | "mpesa" | "bank" | "credit";
+    paymentMethod: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
     paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa";
     items: {
         productId: string;
@@ -218,13 +218,14 @@ export declare const creditNoteCreateSchema: z.ZodObject<{
     reference: z.ZodString;
     amount: z.ZodNumber;
     reason: z.ZodString;
+    invoiceId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     relatedSaleId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     customerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     note: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     creditDate: z.ZodString;
     status: z.ZodDefault<z.ZodEnum<["draft", "issued", "void"]>>;
 }, "strip", z.ZodTypeAny, {
-    status: "draft" | "issued" | "void";
+    status: "draft" | "void" | "issued";
     businessId: string;
     amount: number;
     reference: string;
@@ -232,6 +233,7 @@ export declare const creditNoteCreateSchema: z.ZodObject<{
     creditDate: string;
     customerId?: string | null | undefined;
     note?: string | null | undefined;
+    invoiceId?: string | null | undefined;
     relatedSaleId?: string | null | undefined;
 }, {
     businessId: string;
@@ -239,10 +241,220 @@ export declare const creditNoteCreateSchema: z.ZodObject<{
     reference: string;
     reason: string;
     creditDate: string;
-    status?: "draft" | "issued" | "void" | undefined;
+    status?: "draft" | "void" | "issued" | undefined;
     customerId?: string | null | undefined;
     note?: string | null | undefined;
+    invoiceId?: string | null | undefined;
     relatedSaleId?: string | null | undefined;
+}>;
+export declare const invoiceLineItemSchema: z.ZodObject<{
+    productId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    productName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    description: z.ZodString;
+    quantity: z.ZodNumber;
+    unit: z.ZodString;
+    unitPrice: z.ZodNumber;
+    discountType: z.ZodDefault<z.ZodEnum<["percentage", "fixed"]>>;
+    discountValue: z.ZodDefault<z.ZodNumber>;
+    taxCategory: z.ZodDefault<z.ZodEnum<["vat", "zero_rated", "exempt", "non_taxable", "custom"]>>;
+    taxCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    taxRate: z.ZodDefault<z.ZodNumber>;
+    taxInclusive: z.ZodDefault<z.ZodBoolean>;
+}, "strip", z.ZodTypeAny, {
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    description: string;
+    discountType: "percentage" | "fixed";
+    discountValue: number;
+    taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+    taxRate: number;
+    taxInclusive: boolean;
+    productId?: string | null | undefined;
+    productName?: string | null | undefined;
+    taxCode?: string | null | undefined;
+}, {
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    description: string;
+    productId?: string | null | undefined;
+    productName?: string | null | undefined;
+    discountType?: "percentage" | "fixed" | undefined;
+    discountValue?: number | undefined;
+    taxCategory?: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom" | undefined;
+    taxCode?: string | null | undefined;
+    taxRate?: number | undefined;
+    taxInclusive?: boolean | undefined;
+}>;
+export declare const invoiceCreateSchema: z.ZodObject<{
+    businessId: z.ZodString;
+    branchId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerBusinessName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerEmail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerPhone: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerAddress: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    customerTaxPin: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    invoiceNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    issueDate: z.ZodString;
+    dueDate: z.ZodString;
+    paymentTerms: z.ZodString;
+    currency: z.ZodString;
+    referenceNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    purchaseOrderNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    termsAndConditions: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    status: z.ZodDefault<z.ZodEnum<["draft", "sent", "viewed", "partially_paid", "paid", "overdue", "cancelled", "void", "refunded", "archived"]>>;
+    lineItems: z.ZodArray<z.ZodObject<{
+        productId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        productName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodString;
+        quantity: z.ZodNumber;
+        unit: z.ZodString;
+        unitPrice: z.ZodNumber;
+        discountType: z.ZodDefault<z.ZodEnum<["percentage", "fixed"]>>;
+        discountValue: z.ZodDefault<z.ZodNumber>;
+        taxCategory: z.ZodDefault<z.ZodEnum<["vat", "zero_rated", "exempt", "non_taxable", "custom"]>>;
+        taxCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        taxRate: z.ZodDefault<z.ZodNumber>;
+        taxInclusive: z.ZodDefault<z.ZodBoolean>;
+    }, "strip", z.ZodTypeAny, {
+        unit: string;
+        quantity: number;
+        unitPrice: number;
+        description: string;
+        discountType: "percentage" | "fixed";
+        discountValue: number;
+        taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+        taxRate: number;
+        taxInclusive: boolean;
+        productId?: string | null | undefined;
+        productName?: string | null | undefined;
+        taxCode?: string | null | undefined;
+    }, {
+        unit: string;
+        quantity: number;
+        unitPrice: number;
+        description: string;
+        productId?: string | null | undefined;
+        productName?: string | null | undefined;
+        discountType?: "percentage" | "fixed" | undefined;
+        discountValue?: number | undefined;
+        taxCategory?: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom" | undefined;
+        taxCode?: string | null | undefined;
+        taxRate?: number | undefined;
+        taxInclusive?: boolean | undefined;
+    }>, "many">;
+    amountPaid: z.ZodDefault<z.ZodNumber>;
+    discountTotal: z.ZodDefault<z.ZodNumber>;
+    taxTotal: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    currency: string;
+    status: "paid" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "refunded" | "archived";
+    businessId: string;
+    discountTotal: number;
+    taxTotal: number;
+    amountPaid: number;
+    issueDate: string;
+    dueDate: string;
+    paymentTerms: string;
+    lineItems: {
+        unit: string;
+        quantity: number;
+        unitPrice: number;
+        description: string;
+        discountType: "percentage" | "fixed";
+        discountValue: number;
+        taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
+        taxRate: number;
+        taxInclusive: boolean;
+        productId?: string | null | undefined;
+        productName?: string | null | undefined;
+        taxCode?: string | null | undefined;
+    }[];
+    branchId?: string | null | undefined;
+    customerId?: string | null | undefined;
+    notes?: string | null | undefined;
+    customerName?: string | null | undefined;
+    customerBusinessName?: string | null | undefined;
+    customerEmail?: string | null | undefined;
+    customerPhone?: string | null | undefined;
+    customerAddress?: string | null | undefined;
+    customerTaxPin?: string | null | undefined;
+    invoiceNumber?: string | null | undefined;
+    referenceNumber?: string | null | undefined;
+    purchaseOrderNumber?: string | null | undefined;
+    termsAndConditions?: string | null | undefined;
+}, {
+    currency: string;
+    businessId: string;
+    issueDate: string;
+    dueDate: string;
+    paymentTerms: string;
+    lineItems: {
+        unit: string;
+        quantity: number;
+        unitPrice: number;
+        description: string;
+        productId?: string | null | undefined;
+        productName?: string | null | undefined;
+        discountType?: "percentage" | "fixed" | undefined;
+        discountValue?: number | undefined;
+        taxCategory?: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom" | undefined;
+        taxCode?: string | null | undefined;
+        taxRate?: number | undefined;
+        taxInclusive?: boolean | undefined;
+    }[];
+    status?: "paid" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "refunded" | "archived" | undefined;
+    branchId?: string | null | undefined;
+    customerId?: string | null | undefined;
+    notes?: string | null | undefined;
+    discountTotal?: number | undefined;
+    taxTotal?: number | undefined;
+    amountPaid?: number | undefined;
+    customerName?: string | null | undefined;
+    customerBusinessName?: string | null | undefined;
+    customerEmail?: string | null | undefined;
+    customerPhone?: string | null | undefined;
+    customerAddress?: string | null | undefined;
+    customerTaxPin?: string | null | undefined;
+    invoiceNumber?: string | null | undefined;
+    referenceNumber?: string | null | undefined;
+    purchaseOrderNumber?: string | null | undefined;
+    termsAndConditions?: string | null | undefined;
+}>;
+export declare const debitNoteCreateSchema: z.ZodObject<{
+    businessId: z.ZodString;
+    invoiceId: z.ZodString;
+    reference: z.ZodString;
+    reason: z.ZodString;
+    amount: z.ZodNumber;
+    taxAdjustment: z.ZodDefault<z.ZodNumber>;
+    note: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    issuedAt: z.ZodString;
+    status: z.ZodDefault<z.ZodEnum<["draft", "issued", "void"]>>;
+}, "strip", z.ZodTypeAny, {
+    status: "draft" | "void" | "issued";
+    businessId: string;
+    amount: number;
+    reference: string;
+    reason: string;
+    invoiceId: string;
+    taxAdjustment: number;
+    issuedAt: string;
+    note?: string | null | undefined;
+}, {
+    businessId: string;
+    amount: number;
+    reference: string;
+    reason: string;
+    invoiceId: string;
+    issuedAt: string;
+    status?: "draft" | "void" | "issued" | undefined;
+    note?: string | null | undefined;
+    taxAdjustment?: number | undefined;
 }>;
 export declare const productCreateSchema: z.ZodObject<{
     businessId: z.ZodString;
@@ -262,35 +474,35 @@ export declare const productCreateSchema: z.ZodObject<{
     lowStockThreshold: z.ZodDefault<z.ZodNumber>;
     isActive: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
+    unit: string;
     businessId: string;
     name: string;
-    unit: string;
     buyingPrice: number;
     sellingPrice: number;
     stockOnHand: number;
     lowStockThreshold: number;
     isActive: boolean;
-    categoryId?: string | null | undefined;
-    brandId?: string | null | undefined;
-    supplierId?: string | null | undefined;
-    sku?: string | null | undefined;
     barcode?: string | null | undefined;
     batchNumber?: string | null | undefined;
     expiryDate?: string | null | undefined;
+    sku?: string | null | undefined;
+    categoryId?: string | null | undefined;
+    brandId?: string | null | undefined;
+    supplierId?: string | null | undefined;
     serialNumber?: string | null | undefined;
 }, {
+    unit: string;
     businessId: string;
     name: string;
-    unit: string;
     buyingPrice: number;
     sellingPrice: number;
-    categoryId?: unknown;
-    brandId?: unknown;
-    supplierId?: unknown;
-    sku?: unknown;
     barcode?: unknown;
     batchNumber?: unknown;
     expiryDate?: unknown;
+    sku?: unknown;
+    categoryId?: unknown;
+    brandId?: unknown;
+    supplierId?: unknown;
     serialNumber?: unknown;
     stockOnHand?: number | undefined;
     lowStockThreshold?: number | undefined;
@@ -354,8 +566,8 @@ export declare const supplierCategoryCreateSchema: z.ZodObject<{
 }, {
     businessId: string;
     name: string;
-    isActive?: boolean | undefined;
     description?: string | null | undefined;
+    isActive?: boolean | undefined;
     color?: string | null | undefined;
     sortOrder?: number | undefined;
 }>;
@@ -420,7 +632,7 @@ export declare const supplierPaymentCreateSchema: z.ZodObject<{
     supplierId: z.ZodString;
     purchaseOrderId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     amount: z.ZodNumber;
-    method: z.ZodEnum<["cash", "mpesa", "bank", "credit"]>;
+    method: z.ZodEnum<["cash", "mpesa", "bank", "card", "cheque", "other", "credit"]>;
     reference: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     note: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     paymentDate: z.ZodString;
@@ -429,7 +641,7 @@ export declare const supplierPaymentCreateSchema: z.ZodObject<{
     businessId: string;
     amount: number;
     supplierId: string;
-    method: "cash" | "mpesa" | "bank" | "credit";
+    method: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
     paymentDate: string;
     note?: string | null | undefined;
     recordedById?: string | null | undefined;
@@ -439,7 +651,7 @@ export declare const supplierPaymentCreateSchema: z.ZodObject<{
     businessId: string;
     amount: number;
     supplierId: string;
-    method: "cash" | "mpesa" | "bank" | "credit";
+    method: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
     paymentDate: string;
     note?: string | null | undefined;
     recordedById?: string | null | undefined;
@@ -503,7 +715,7 @@ export declare const purchaseOrderCreateSchema: z.ZodObject<{
         expiryDate?: string | null | undefined;
     }>, "many">>;
 }, "strip", z.ZodTypeAny, {
-    status: "draft" | "ordered" | "partially_received" | "received" | "cancelled";
+    status: "draft" | "cancelled" | "ordered" | "partially_received" | "received";
     businessId: string;
     items: {
         productId: string;
@@ -526,7 +738,7 @@ export declare const purchaseOrderCreateSchema: z.ZodObject<{
     businessId: string;
     orderNumber: string;
     orderDate: string;
-    status?: "draft" | "ordered" | "partially_received" | "received" | "cancelled" | undefined;
+    status?: "draft" | "cancelled" | "ordered" | "partially_received" | "received" | undefined;
     items?: {
         productId: string;
         quantity: number;
@@ -591,7 +803,7 @@ export declare const stockTransferCreateSchema: z.ZodObject<{
         serialNumbers?: string[] | undefined;
     }>, "many">>;
 }, "strip", z.ZodTypeAny, {
-    status: "draft" | "received" | "cancelled" | "in_transit";
+    status: "draft" | "cancelled" | "received" | "in_transit";
     businessId: string;
     items: {
         productId: string;
@@ -610,7 +822,7 @@ export declare const stockTransferCreateSchema: z.ZodObject<{
     businessId: string;
     transferNumber: string;
     transferDate: string;
-    status?: "draft" | "received" | "cancelled" | "in_transit" | undefined;
+    status?: "draft" | "cancelled" | "received" | "in_transit" | undefined;
     items?: {
         productId: string;
         quantity: number;

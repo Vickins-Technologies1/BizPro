@@ -15,14 +15,16 @@ export function RoleLaunchpadScreen() {
   const branches = useAppStore((state) => state.branches);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const setSelectedBranchId = useAppStore((state) => state.setSelectedBranchId);
+  const canManageBranches = user?.role === "owner";
+  const activeBranches = branches.filter((branch) => branch.status !== "inactive");
   const [savingBranchId, setSavingBranchId] = React.useState<string | null | undefined>(undefined);
 
-  const canChooseConsolidated = user?.role === "owner" && branches.length > 1;
+  const canChooseConsolidated = user?.role === "owner" && activeBranches.length > 1;
   const selectedLabel = selectedBranchId
     ? branches.find((branch) => branch.id === selectedBranchId)?.name ?? "Selected branch"
     : canChooseConsolidated
       ? "All branches"
-      : branches[0]?.name ?? "Workspace";
+      : activeBranches[0]?.name ?? branches[0]?.name ?? "Workspace";
 
   async function chooseBranch(branchId: string | null) {
     setSavingBranchId(branchId);
@@ -43,7 +45,7 @@ export function RoleLaunchpadScreen() {
           </View>
           <View style={styles.summaryCopy}>
             <Text style={styles.eyebrow}>Current business</Text>
-            <Text style={styles.businessName}>{business?.name ?? "Biz Pro"}</Text>
+            <Text style={styles.businessName}>{business?.name ?? "Dira OS"}</Text>
             <Text style={styles.summaryText}>{user?.fullName ?? "Team member"} · {selectedLabel}</Text>
           </View>
           <Badge label={user?.roleLabel ?? user?.role ?? "Member"} tone="primary" />
@@ -57,7 +59,7 @@ export function RoleLaunchpadScreen() {
           <Badge label={`${branches.length} ${branches.length === 1 ? "branch" : "branches"}`} tone="success" />
         </View>
 
-        <View style={styles.options}>
+          <View style={styles.options}>
           {canChooseConsolidated ? (
             <WorkspaceOption
               icon="layers-outline"
@@ -68,7 +70,7 @@ export function RoleLaunchpadScreen() {
               onPress={() => void chooseBranch(null)}
             />
           ) : null}
-          {branches.map((branch) => (
+          {activeBranches.map((branch) => (
             <WorkspaceOption
               key={branch.id}
               icon="storefront-outline"
@@ -82,6 +84,7 @@ export function RoleLaunchpadScreen() {
         </View>
 
         <PrimaryButton title="Continue to workspace" onPress={() => navigation.navigate("Main", { screen: "Dashboard" })} />
+        {canManageBranches ? <PrimaryButton title="Manage branches" variant="secondary" onPress={() => navigation.navigate("Branches")} /> : null}
       </AppScrollView>
     </Screen>
   );

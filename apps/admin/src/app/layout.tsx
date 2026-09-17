@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Biz Pro Admin",
-  description: "Executive support dashboard for Biz Pro"
+  title: "Dira OS Admin",
+  description: "Executive support dashboard for Dira OS"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

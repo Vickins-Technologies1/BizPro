@@ -8,6 +8,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useNavigation } from "@react-navigation/native";
 import type { Customer, Invoice, Payment, Product } from "@shared";
+import { tokens } from "@/theme/tokens";
 import {
   AppScrollView,
   Badge,
@@ -315,8 +316,8 @@ export function InvoicesScreen() {
           page: nextPage,
           pageSize,
           search: deferredSearch,
-          status: statusFilter === "all" ? undefined : statusFilter,
-          customerId: customerFilter || undefined
+          ...(statusFilter === "all" ? {} : { status: statusFilter }),
+          ...(customerFilter ? { customerId: customerFilter } : {})
         })
       ]);
       if (requestId !== requestIdRef.current) return;
@@ -403,7 +404,7 @@ export function InvoicesScreen() {
         businessId: business.id,
         branchId: selectedBranchId ?? null,
         customerId,
-        customerName: editor.customerMode === "new" ? editor.customerName.trim() : customer?.name ?? editor.customerName.trim() || null,
+        customerName: editor.customerMode === "new" ? editor.customerName.trim() : (customer?.name ?? editor.customerName.trim()) || null,
         customerBusinessName: editor.customerMode === "new" ? editor.customerBusinessName.trim() || null : customer?.businessName ?? null,
         customerEmail: editor.customerMode === "new" ? editor.customerEmail.trim() || null : customer?.email ?? null,
         customerPhone: editor.customerMode === "new" ? editor.customerPhone.trim() || null : customer?.phone ?? null,
@@ -462,7 +463,7 @@ export function InvoicesScreen() {
     try {
       const html = await getInvoicePdfHtml(selectedInvoice.id, selectedBranchId);
       const file = await Print.printToFileAsync({ html: html.html });
-      const targetPath = `${FileSystem.cacheDirectory ?? ""}biz-pro-invoice-${selectedInvoice.invoiceNumber}-${Date.now()}.pdf`;
+      const targetPath = `${FileSystem.cacheDirectory ?? ""}dira-os-invoice-${selectedInvoice.invoiceNumber}-${Date.now()}.pdf`;
       await FileSystem.moveAsync({ from: file.uri, to: targetPath });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(targetPath, { mimeType: "application/pdf", dialogTitle: "Share invoice" });
@@ -509,7 +510,7 @@ export function InvoicesScreen() {
         subtitle="Invoice creation, lifecycle, payments, and PDF sharing"
         right={
           <Pressable onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back-outline" size={24} color="#fff" />
+            <Ionicons name="arrow-back-outline" size={24} color={tokens.colors.text} />
           </Pressable>
         }
       />
@@ -631,7 +632,7 @@ export function InvoicesScreen() {
             <Card style={{ gap: 10 }}>
               <Text style={{ color: "#fff", fontWeight: "900" }}>Line items</Text>
               {selectedInvoice.lineItems.map((line) => (
-                <View key={line.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#223044", gap: 4 }}>
+                <View key={line.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tokens.colors.border, gap: 4 }}>
                   <Text style={{ color: "#fff", fontWeight: "800" }}>{line.description}</Text>
                   <Text style={{ color: "#cbd5e1", fontSize: 12 }}>
                     {line.quantity} {line.unit} • {formatMoney(line.unitPrice, selectedInvoice.currency)} • tax {formatMoney(line.lineTax, selectedInvoice.currency)}
@@ -657,7 +658,7 @@ export function InvoicesScreen() {
               <Card style={{ gap: 8 }}>
                 <Text style={{ color: "#fff", fontWeight: "900" }}>Activity</Text>
                 {selectedInvoice.history.map((entry) => (
-                  <View key={entry.id} style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#223044" }}>
+                  <View key={entry.id} style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
                     <Text style={{ color: "#fff", fontWeight: "800" }}>{entry.action}</Text>
                     <Text style={{ color: "#94a3b8", fontSize: 12 }}>{entry.note ?? "Invoice event"}</Text>
                   </View>
@@ -753,7 +754,13 @@ export function InvoicesScreen() {
               <Dropdown
                 label="Customer"
                 value={editor.customerId}
-                options={[{ label: "No customer", value: "" }, ...customers.map((customer) => ({ label: customer.name, value: customer.id, description: customer.businessName ?? customer.email ?? undefined }))]}
+                options={[
+                  { label: "No customer", value: "" },
+                  ...customers.map((customer) => {
+                    const description = customer.businessName ?? customer.email;
+                    return description ? { label: customer.name, value: customer.id, description } : { label: customer.name, value: customer.id };
+                  })
+                ]}
                 onChange={(value) => setEditor((state) => (state ? { ...state, customerId: value } : state))}
               />
             ) : (
@@ -791,11 +798,11 @@ export function InvoicesScreen() {
               {editor.lineItems.map((line, index) => {
                 const preview = linePreview(line);
                 return (
-                  <Card key={line.id} style={{ gap: 10, padding: 12, backgroundColor: "#0f172a" }}>
+                  <Card key={line.id} style={{ gap: 10, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                       <Text style={{ color: "#fff", fontWeight: "800" }}>Item {index + 1}</Text>
                       <Pressable onPress={() => setEditor((state) => (state ? { ...state, lineItems: state.lineItems.filter((candidate) => candidate.id !== line.id) } : state))}>
-                        <Ionicons name="close-circle-outline" size={20} color="#94a3b8" />
+                        <Ionicons name="close-circle-outline" size={20} color={tokens.colors.textMuted} />
                       </Pressable>
                     </View>
                     <Dropdown

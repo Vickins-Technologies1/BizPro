@@ -1,0 +1,60 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { Resvg } from '@resvg/resvg-js';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '..');
+const outDir = path.join(here, 'output');
+const framesDir = path.join(here, '.frames-premium');
+const ffmpeg = path.join(here, 'node_modules', '.pnpm', '@ffmpeg-installer+win32-x64@4.1.0', 'node_modules', '@ffmpeg-installer', 'win32-x64', 'ffmpeg.exe');
+const preview = process.argv.includes('--preview');
+const fps = 30, frames = 240;
+const logo = (await fs.readFile(path.join(root, 'apps', 'desktop', 'public', 'dira-os-logo.png'))).toString('base64');
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const smooth = (v) => { v = clamp(v); return v * v * (3 - 2 * v); };
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function dataCard(x, y, w, h, i, t, portrait) {
+  const z = 0.72 + 0.28 * smooth((t - i * .07) / .6);
+  const drift = Math.sin(t * .8 + i) * 10;
+  const alpha = clamp((t - .12 - i * .07) / .55) * clamp((2.1 - t) / .65 + .2);
+  const labels = ['SALES', 'STOCK', 'CASHFLOW', 'TEAM', 'ORDERS', 'INSIGHTS'];
+  const accent = i % 2 ? '#16d6a5' : '#168dff';
+  const spark = Array.from({ length: 5 }, (_, j) => `${24 + j * (w - 48) / 4},${h - 28 - ((j * 17 + i * 9) % 54)}`).join(' ');
+  return `<g opacity="${alpha}" transform="translate(${x + drift} ${y}) scale(${z})" style="filter:url(#glassShadow)"><rect width="${w}" height="${h}" rx="${portrait ? 22 : 16}" fill="#102d4b" fill-opacity=".72" stroke="#77b9df" stroke-opacity=".24"/><circle cx="24" cy="25" r="5" fill="${accent}"/><text x="38" y="30" font-family="Arial" font-size="11" font-weight="700" letter-spacing="2" fill="#d8efff">${labels[i]}</text><text x="22" y="64" font-family="Arial" font-size="24" font-weight="700" fill="#f5fbff">${['24.8K','1,284','KES 8.4M','32','94.2%','+18.6%'][i]}</text><polyline points="${spark}" fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><rect x="22" y="${h - 14}" width="${w * .38}" height="3" rx="2" fill="#b4d8ed" opacity=".25"/></g>`;
+}
+
+function appSurface(cx, y, w, h, alpha, scale, portrait) {
+  const nav = portrait ? 84 : 105;
+  return `<g opacity="${alpha}" transform="translate(${cx - w / 2} ${y}) scale(${scale})" style="filter:url(#deepShadow)"><rect width="${w}" height="${h}" rx="${portrait ? 32 : 26}" fill="#0d2948" stroke="#91c9e8" stroke-opacity=".35"/><rect x="18" y="18" width="${nav}" height="${h - 36}" rx="18" fill="#071c36"/><circle cx="${nav / 2 + 18}" cy="52" r="22" fill="#143d66"/><circle cx="${nav / 2 + 18}" cy="52" r="10" fill="#16d6a5" opacity=".9"/>${[0,1,2,3,4].map((n) => `<rect x="${nav / 2 - 20}" y="${112 + n * 38}" width="40" height="7" rx="4" fill="${n === 1 ? '#16d6a5' : '#5d89aa'}" opacity="${n === 1 ? .9 : .45}"/>`).join('')}<rect x="${nav + 38}" y="28" width="${w - nav - 64}" height="${h - 56}" rx="20" fill="#edf7fb"/><text x="${nav + 66}" y="70" font-family="Arial" font-size="${portrait ? 18 : 20}" font-weight="700" fill="#06224a">Business overview</text><text x="${nav + 66}" y="96" font-family="Arial" font-size="11" fill="#63849c">Connected operations · Today</text><rect x="${nav + 66}" y="122" width="${(w - nav - 110) * .32}" height="58" rx="12" fill="#d9f5ed"/><text x="${nav + 82}" y="148" font-family="Arial" font-size="10" fill="#3c7580">REVENUE</text><text x="${nav + 82}" y="169" font-family="Arial" font-size="19" font-weight="700" fill="#062b4f">KES 842K</text><path d="M ${nav + 66} ${h - 64} C ${nav + 130} ${h - 145} ${nav + 175} ${h - 50} ${nav + 245} ${h - 100} S ${w - 84} ${h - 162} ${w - 50} ${h - 120}" fill="none" stroke="#1188ff" stroke-width="4" stroke-linecap="round"/><path d="M ${nav + 66} ${h - 62} C ${nav + 134} ${h - 44} ${nav + 172} ${h - 86} ${nav + 240} ${h - 66} S ${w - 90} ${h - 108} ${w - 50} ${h - 84}" fill="none" stroke="#16d6a5" stroke-width="2" stroke-linecap="round"/></g>`;
+}
+
+function scene(t, portrait = false) {
+  const w = portrait ? 1080 : (preview ? 960 : 1920), h = portrait ? 1920 : (preview ? 540 : 1080), cx = w / 2;
+  const dark = '#06152d';
+  const connect = smooth((t - 1.15) / 1.0), reveal = smooth((t - 2.0) / 1.0), product = smooth((t - 3.05) / .9);
+  const orbital = smooth((t - 4.55) / .5) * (1 - smooth((t - 6.0) / .55));
+  const lock = smooth((t - 6.25) / .55), final = smooth((t - 6.72) / .42);
+  const camera = 1 + .035 * Math.sin(t * .55);
+  const logoScale = portrait ? 250 : 190, logoY = portrait ? 380 : 315;
+  const portal = clamp((t - 2.03) / .42) * clamp((3.55 - t) / .8);
+  const trail = Array.from({ length: 16 }, (_, i) => { const yy = h * (.1 + i * .058), phase = Math.sin(t * .65 + i * .7) * 18; return `<path d="M ${-100 + phase} ${yy} C ${w * .28} ${yy - 60} ${w * .58} ${yy + 70} ${w + 100 - phase} ${yy - 14}" fill="none" stroke="${i % 3 ? '#168dff' : '#16d6a5'}" stroke-width="${i % 3 ? 1 : 2}" opacity="${.035 + connect * .12}"/>`; }).join('');
+  const particles = Array.from({ length: 48 }, (_, i) => { const a = i * 2.399 + t * (.12 + i % 4 * .015), r = 150 + (i % 12) * 42, x = cx + Math.cos(a) * r, y = logoY + Math.sin(a) * r * (portrait ? 1.35 : .62), x2 = cx + (x - cx) * (1 - connect * .88), y2 = logoY + (y - logoY) * (1 - connect * .88); return `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="${i % 5 === 0 ? 2.2 : 1.1}" fill="${i % 2 ? '#168dff' : '#16d6a5'}" opacity="${.10 + .18 * connect}"/>`; }).join('');
+  const cards = Array.from({ length: 6 }, (_, i) => { const angle = -1.8 + i * .72 + t * .08, r = portrait ? 330 : 480, x = cx + Math.cos(angle) * r - (portrait ? 150 : 125), y = (portrait ? 1120 : 700) + Math.sin(angle) * (portrait ? 250 : 90); return dataCard(x, y, portrait ? 300 : 250, portrait ? 132 : 118, i, t, portrait); }).join('');
+  const connections = Array.from({ length: 6 }, (_, i) => { const angle = -1.8 + i * .72 + t * .08, r = portrait ? 330 : 480, x = cx + Math.cos(angle) * r, y = (portrait ? 1120 : 700) + Math.sin(angle) * (portrait ? 250 : 90); return `<path d="M ${cx} ${portrait ? 1120 : 700} L ${x} ${y}" stroke="#4ddcdb" stroke-width="1" stroke-dasharray="4 12" opacity="${orbital * .36}"/>`; }).join('');
+  const appY = portrait ? 855 : 500, appW = portrait ? 720 : 735, appH = portrait ? 420 : 360;
+  const app = appSurface(cx, appY, appW, appH, product * (1 - final * .92), .85 + product * .15, portrait);
+  const logoOpacity = reveal * (1 - product * .92) * (1 - lock) * .98;
+  const logoMarkup = `<g opacity="${logoOpacity}" transform="translate(${cx - logoScale / 2} ${logoY - logoScale / 2}) scale(${logoScale / 1254})"><image href="data:image/png;base64,${logo}" width="1254" height="1254"/></g>`;
+  const wordmark = `<g opacity="${logoOpacity}" transform="translate(${cx} ${logoY + logoScale * .68})"><text text-anchor="middle" font-family="Arial" font-size="${portrait ? 52 : 48}" font-weight="700" fill="#f5fbff">Dira OS</text></g>`;
+  const finalLock = `<g opacity="${final}" transform="translate(${cx} ${portrait ? 1390 : 830})"><g transform="translate(${-logoScale/2} ${-logoScale-26}) scale(${logoScale/1254})"><image href="data:image/png;base64,${logo}" width="1254" height="1254"/></g><text text-anchor="middle" font-family="Arial" font-size="${portrait ? 60 : 54}" font-weight="700" letter-spacing=".8" fill="#f5fbff">Dira OS</text><text y="${portrait ? 78 : 68}" text-anchor="middle" font-family="Arial" font-size="${portrait ? 32 : 34}" font-weight="700" letter-spacing="1.4" fill="#f5fbff">Run Smarter. Grow Faster.</text><text y="${portrait ? 128 : 112}" text-anchor="middle" font-family="Arial" font-size="${portrait ? 15 : 14}" letter-spacing="4" fill="#81a7c1">ALL-IN-ONE BUSINESS MANAGEMENT APP</text></g>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><radialGradient id="halo"><stop stop-color="#0f5da1" stop-opacity=".58"/><stop offset="1" stop-color="${dark}" stop-opacity="0"/></radialGradient><linearGradient id="portal" x1="0" x2="1"><stop stop-color="#16d6a5"/><stop offset=".5" stop-color="#a6ffff"/><stop offset="1" stop-color="#168dff"/></linearGradient><filter id="deepShadow"><feDropShadow dx="0" dy="30" stdDeviation="22" flood-color="#000814" flood-opacity=".68"/></filter><filter id="glassShadow"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#000814" flood-opacity=".48"/></filter><filter id="soft"><feGaussianBlur stdDeviation="18"/></filter></defs><rect width="100%" height="100%" fill="${dark}"/><ellipse cx="${cx}" cy="${logoY}" rx="${portrait ? 480 : 700}" ry="${portrait ? 620 : 360}" fill="url(#halo)" opacity=".9"/><g transform="scale(${camera}) translate(${(1-camera)*cx} ${(1-camera)*h/2})">${trail}<g>${particles}</g><g opacity="${clamp((1.8-t)/.7)}">${Array.from({length:6},(_,i)=>dataCard((i%3)*(portrait?310:270)+(portrait?60:270), (portrait?730:270)+Math.floor(i/3)*(portrait?155:150), portrait?250:240, portrait?112:105, i, t, portrait)).join('')}</g><g>${connections}</g>${app}${cards}${logoMarkup}${wordmark}<circle cx="${cx}" cy="${logoY}" r="${45 + 170 * portal}" fill="none" stroke="url(#portal)" stroke-width="${2 + 5 * portal}" opacity="${portal * .7}"/><ellipse cx="${cx}" cy="${logoY}" rx="${170 + 260 * portal}" ry="${55 + 100 * portal}" fill="none" stroke="#b7ffff" stroke-width="2" opacity="${portal * .22}" filter="url(#soft)"/><g opacity="${lock}">${logoMarkup}<circle cx="${cx}" cy="${logoY}" r="${120 + 70 * (1-lock)}" fill="none" stroke="#8df5e0" stroke-width="2" opacity="${(1-lock)*.35}"/></g>${finalLock}</g><rect x="${-w + clamp((t-7.3)/.4)*w*2}" y="0" width="${w*.14}" height="${h}" fill="url(#portal)" opacity="${clamp((t-7.3)/.4)*.10}" transform="skewX(-20)"/></svg>`;
+}
+
+function writeWav() { const rate=44100, n=rate*8, data=Buffer.alloc(n*2), notes=[{t:.7,f:196,a:.08,d:.22},{t:2.24,f:392,a:.22,d:.65},{t:3.7,f:494,a:.18,d:.58},{t:5.2,f:587,a:.16,d:.5},{t:7.4,f:784,a:.22,d:.8}], pulses=[.7,1.32,1.9,3.2,4.8,5.2,6.25,7.75]; for(let i=0;i<n;i++){const t=i/rate;let v=.012*Math.sin(2*Math.PI*(84+t*16)*t)*Math.max(0,1-t/1.8);for(const q of notes){const d=t-q.t;if(d>=0&&d<q.d){const e=Math.exp(-d*4.6)*Math.min(1,d/.012);v+=q.a*e*(Math.sin(2*Math.PI*q.f*t)+.22*Math.sin(2*Math.PI*q.f*2*t));}}for(const p of pulses){const d=t-p;if(d>=0&&d<.14)v+=.025*Math.exp(-d*32)*Math.sin(2*Math.PI*880*t);}data.writeInt16LE(Math.max(-1,Math.min(1,v))*32767,i*2);}const h=Buffer.alloc(44);h.write('RIFF');h.writeUInt32LE(36+data.length,4);h.write('WAVE',8);h.write('fmt ',12);h.writeUInt32LE(16,16);h.writeUInt16LE(1,20);h.writeUInt16LE(1,22);h.writeUInt32LE(rate,24);h.writeUInt32LE(rate*2,28);h.writeUInt16LE(2,32);h.writeUInt16LE(16,34);h.write('data',36);h.writeUInt32LE(data.length,40);return Buffer.concat([h,data]); }
+
+async function renderOne(name, portrait) { const w=portrait?1080:(preview?960:1920),h=portrait?1920:(preview?540:1080),dir=path.join(framesDir,portrait?'v':'h');await fs.rm(dir,{recursive:true,force:true});await fs.mkdir(dir,{recursive:true});await fs.mkdir(outDir,{recursive:true});for(let i=0;i<frames;i++){const png=new Resvg(scene(i/fps,portrait),{fitTo:{mode:'width',value:w}}).render().asPng();await fs.writeFile(path.join(dir,`frame-${String(i).padStart(4,'0')}.png`),png);}await new Promise((resolve,reject)=>{const p=spawn(ffmpeg,['-y','-framerate','30','-i',path.join(dir,'frame-%04d.png'),'-i',path.join(here,'audio','dira-os-premium-jingle.wav'),'-s',`${w}x${h}`,'-r','30','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-shortest',path.join(outDir,name)],{stdio:['ignore','ignore','pipe']});let e='';p.stderr.on('data',d=>e+=d);p.on('close',c=>c?reject(new Error(e)):resolve());}); }
+
+await fs.mkdir(path.join(here,'audio'),{recursive:true});await fs.writeFile(path.join(here,'audio','dira-os-premium-jingle.wav'),writeWav());await renderOne('dira-os-premium-jingle-16x9.mp4',false);await renderOne('dira-os-premium-jingle-9x16.mp4',true);

@@ -29,7 +29,8 @@ import {
   Tag
 } from "@/components/Primitives";
 import { BrandLogo } from "@/components/BrandLogo";
-import { tokens } from "@/theme/tokens";
+import { lightTokens, tokens, type ThemeTokens } from "@/theme/tokens";
+import { useThemeMode, useThemeTokens } from "@/theme";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
 import { getEnterpriseAnalytics, getPaymentBreakdown, getReportsSummary, getTopProducts, listEmployees, listNotificationsPage } from "@/services/apiClient";
@@ -41,10 +42,22 @@ type Filter = "today" | "week" | "month" | "year" | "custom";
 type RangeState = { from: string; to: string };
 
 const DASHBOARD_TREND_WINDOW = 6;
+const DashboardStylesContext = React.createContext<ReturnType<typeof createStyles> | null>(null);
+
+function useDashboardStyles() {
+  const styles = React.useContext(DashboardStylesContext);
+  if (!styles) throw new Error("Dashboard styles are unavailable outside DashboardScreen");
+  return styles;
+}
+
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { openMore } = useMoreDrawer();
   const { width } = useWindowDimensions();
+  const isLightTheme = useThemeMode() === "light";
+  const theme = useThemeTokens();
+  const dashboardStyles = React.useMemo(() => createStyles(theme), [theme]);
+  const styles = dashboardStyles;
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
   const branches = useAppStore((state) => state.branches);
@@ -208,7 +221,8 @@ export function DashboardScreen() {
   }
 
   return (
-    <Screen>
+    <DashboardStylesContext.Provider value={dashboardStyles}>
+      <Screen>
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.scrollContent}>
         <View style={styles.topBar}>
           <Pressable
@@ -223,7 +237,7 @@ export function DashboardScreen() {
           <View style={styles.brandCluster}>
             <BrandLogo style={styles.brandLogo} />
             <View style={{ alignItems: "center" }}>
-              <Text style={styles.brandTitle}>Biz Pro</Text>
+              <Text style={styles.brandTitle}>Dira OS</Text>
               <Text style={styles.brandSubtitle}>Business OS</Text>
             </View>
           </View>
@@ -243,7 +257,7 @@ export function DashboardScreen() {
           </Pressable>
         </View>
 
-        <Card style={styles.heroCard}>
+        <Card style={[styles.heroCard, isLightTheme && styles.lightCard]}>
           <View style={styles.heroGlowOne} />
           <View style={styles.heroGlowTwo} />
           <View style={styles.heroCopy}>
@@ -348,7 +362,7 @@ export function DashboardScreen() {
               ))}
             </View>
 
-            <Card style={styles.chartCard}>
+            <Card style={[styles.chartCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Revenue Overview</Text>
@@ -372,6 +386,7 @@ export function DashboardScreen() {
                 data={trendValues.length ? trendValues : [0]}
                 labels={trendLabels.length ? trendLabels : ["No data"]}
                 tone={tokens.colors.primaryStrong}
+                currency={business?.currency ?? "KES"}
               />
 
               <View style={styles.chartFooter}>
@@ -381,7 +396,7 @@ export function DashboardScreen() {
               </View>
             </Card>
 
-            <Card style={styles.quickCard}>
+            <Card style={[styles.quickCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -408,7 +423,7 @@ export function DashboardScreen() {
               </View>
             </Card>
 
-            <Card style={styles.productsCard}>
+            <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Top Products</Text>
@@ -435,7 +450,7 @@ export function DashboardScreen() {
               )}
             </Card>
 
-            <Card style={styles.statusCard}>
+            <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Tasks Overview</Text>
@@ -516,7 +531,8 @@ export function DashboardScreen() {
           onBranchChange={(branchId) => void setSelectedBranchId(branchId === "all" ? null : branchId)}
         />
       </BottomSheet>
-    </Screen>
+      </Screen>
+    </DashboardStylesContext.Provider>
   );
 }
 
@@ -532,13 +548,15 @@ function DashboardFilters({
 }: {
   activeFilter: Filter;
   selectedBranchId: string | null;
-  branches: Array<{ id: string; name: string }>;
+  branches: Array<{ id: string; name: string; status?: string | null }>;
   canChooseBranch: boolean;
   currentRange: RangeState | null;
   compact?: boolean;
   onFilterChange: (filter: Filter) => void;
   onBranchChange: (branchId: string) => void;
 }) {
+  const styles = useDashboardStyles();
+  const isLightTheme = useThemeMode() === "light";
   const periodOptions = [
     { label: "Today", value: "today" },
     { label: "This week", value: "week" },
@@ -546,18 +564,19 @@ function DashboardFilters({
     { label: "This year", value: "year" },
     { label: "Custom range", value: "custom" }
   ];
+  const activeBranches = branches.filter((branch) => branch.status !== "inactive");
   const branchOptions = [
     { label: "All branches", value: "all" },
-    ...branches.map((branch) => ({ label: branch.name, value: branch.id }))
+    ...activeBranches.map((branch) => ({ label: branch.name, value: branch.id }))
   ];
   const selectedBranchValue = selectedBranchId ?? "all";
 
   return (
-    <View style={[styles.filterControls, compact && styles.filterControlsCompact]}>
+    <View style={[styles.filterControls, isLightTheme && styles.lightCard, compact && styles.filterControlsCompact]}>
       {compact ? (
         <View style={styles.filterControlGroup}>
           <View style={styles.filterLabelRow}>
-            <Text style={styles.filterLabel}>Period</Text>
+            <Text style={[styles.filterLabel, isLightTheme && styles.lightTextSecondary]}>Period</Text>
             <InfoIcon message="Choose the date window used for dashboard metrics and reports." />
           </View>
           <View style={styles.filterTagRow}>
@@ -584,7 +603,7 @@ function DashboardFilters({
             <Dropdown label="Branch" value={selectedBranchValue} options={branchOptions} onChange={onBranchChange} />
           ) : null}
           <View style={styles.filterRangeBadge}>
-            <Text style={styles.filterRangeLabel}>Showing</Text>
+            <Text style={[styles.filterRangeLabel, isLightTheme && styles.lightTextSecondary]}>Showing</Text>
             <Badge label={currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading"} tone="primary" />
           </View>
         </View>
@@ -592,7 +611,7 @@ function DashboardFilters({
       {compact && canChooseBranch ? (
         <View style={styles.filterControlGroup}>
           <View style={styles.filterLabelRow}>
-            <Text style={styles.filterLabel}>Branch</Text>
+            <Text style={[styles.filterLabel, isLightTheme && styles.lightTextSecondary]}>Branch</Text>
             <InfoIcon message="Limit dashboard data to one branch or view the consolidated business." />
           </View>
           <View style={styles.filterTagRow}>
@@ -619,16 +638,18 @@ function MetricCard({
   icon: keyof typeof Ionicons.glyphMap;
   tone: "primary" | "success" | "warning" | "danger";
 }) {
+  const styles = useDashboardStyles();
   const accent = toneColor(tone);
+  const isLightTheme = useThemeMode() === "light";
   return (
-    <Card style={styles.metricCard}>
+    <Card style={[styles.metricCard, isLightTheme && styles.lightCard]}>
       <View style={styles.metricTopRow}>
         <View style={[styles.metricIconWrap, { backgroundColor: withAlpha(accent, 0.14) }]}>
           <Ionicons name={icon} size={18} color={accent} />
         </View>
         <View style={[styles.metricAccent, { backgroundColor: accent }]} />
       </View>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricLabel, isLightTheme && styles.lightTextSecondary]}>{label}</Text>
       <Text style={styles.metricValue}>{value}</Text>
       {hint ? <Text style={styles.metricHint}>{hint}</Text> : null}
     </Card>
@@ -646,6 +667,7 @@ function QuickAction({
   tone: "primary" | "success" | "warning" | "danger";
   onPress: () => void;
 }) {
+  const styles = useDashboardStyles();
   const accent = toneColor(tone);
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.actionTile, pressed && styles.actionTilePressed]}>
@@ -664,6 +686,7 @@ function StatusRing({
   total: number;
   items: Array<{ label: string; value: number; tone: string }>;
 }) {
+  const styles = useDashboardStyles();
   const [completed, inProgress, pending, overdue] = items;
   return (
     <View style={styles.ringShell}>
@@ -697,6 +720,7 @@ function StatusRow({
   total: number;
   tone: "primary" | "success" | "warning" | "danger";
 }) {
+  const styles = useDashboardStyles();
   const accent = toneColor(tone);
   const percent = Math.round((value / Math.max(total, 1)) * 100);
   return (
@@ -721,9 +745,11 @@ function InfoPill({
   value: string;
   tone: "primary" | "success" | "warning" | "danger";
 }) {
+  const styles = useDashboardStyles();
+  const isLightTheme = useThemeMode() === "light";
   return (
     <View style={styles.infoPill}>
-      <Text style={styles.infoPillLabel}>{label}</Text>
+      <Text style={[styles.infoPillLabel, isLightTheme && styles.lightTextSecondary]}>{label}</Text>
       <Text style={[styles.infoPillValue, { color: toneColor(tone) }]} numberOfLines={1}>
         {value}
       </Text>
@@ -734,13 +760,18 @@ function InfoPill({
 function MiniLineChart({
   data,
   labels,
-  tone
+  tone,
+  currency
 }: {
   data: number[];
   labels: string[];
   tone: string;
+  currency: string;
 }) {
+  const styles = useDashboardStyles();
   const { width } = useWindowDimensions();
+  const isLightTheme = useThemeMode() === "light";
+  const [selectedIndex, setSelectedIndex] = React.useState(Math.max(data.length - 1, 0));
   const chartWidth = Math.max(280, width - 64);
   const plotWidth = chartWidth - 20;
   const plotHeight = 118;
@@ -752,13 +783,14 @@ function MiniLineChart({
     const y = plotHeight - ((value - min) / denominator) * (plotHeight - 6);
     return { x: x + 10, y: y + 12, value };
   });
+  const selectedLabel = labels[selectedIndex] ?? "Selected period";
   const yValues = [max, Math.round(max * 0.66), Math.round(max * 0.33), 0].map((value) => formatCompactValue(value));
 
   return (
     <View style={[styles.chartShell, { width: chartWidth }]}>
       <View style={styles.chartYAxis}>
         {yValues.map((label, index) => (
-          <Text key={`${label}-${index}`} style={styles.chartYAxisLabel}>
+          <Text key={`${label}-${index}`} style={[styles.chartYAxisLabel, isLightTheme && styles.lightTextSecondary]}>
             {label}
           </Text>
         ))}
@@ -769,6 +801,14 @@ function MiniLineChart({
           <View style={styles.chartGridLine} />
           <View style={[styles.chartGridLine, { top: "33%" }]} />
           <View style={[styles.chartGridLine, { top: "66%" }]} />
+
+          {points[selectedIndex] && selectedLabel !== "No data" ? (
+            <View style={[styles.chartTooltip, isLightTheme && styles.lightCard]}>
+              <Text style={[styles.chartTooltipLabel, isLightTheme && styles.lightTextSecondary]}>{formatTrendLabel(selectedLabel)}</Text>
+              <Text style={styles.chartTooltipMetric}>Revenue</Text>
+              <Text style={styles.chartTooltipValue}>{formatMoney(data[selectedIndex] ?? 0, currency)}</Text>
+            </View>
+          ) : null}
 
           {points.slice(1).map((current, index) => {
             const previous = points[index];
@@ -795,15 +835,19 @@ function MiniLineChart({
           })}
 
           {points.map((point, index) => (
-            <View
+            <Pressable
               key={`point-${index}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Show revenue for ${formatTrendLabel(labels[index] ?? "selected period")}`}
+              onPress={() => setSelectedIndex(index)}
               style={[
                 styles.chartPoint,
                 {
                   left: point.x - 5,
                   top: point.y - 5,
                   borderColor: "#FFFFFF",
-                  backgroundColor: tone
+                  backgroundColor: tone,
+                  transform: [{ scale: selectedIndex === index ? 1.35 : 1 }]
                 }
               ]}
             />
@@ -812,7 +856,7 @@ function MiniLineChart({
 
         <View style={styles.chartLabelsRow}>
           {labels.map((label) => (
-            <Text key={label} style={styles.chartLabel}>
+            <Text key={label} style={[styles.chartLabel, isLightTheme && styles.lightTextSecondary]}>
               {formatTrendLabel(label)}
             </Text>
           ))}
@@ -891,7 +935,7 @@ function getFirstName(fullName?: string | null) {
 }
 
 function resolveBranchLabel(
-  branches: Array<{ id: string; name: string; isDefault?: boolean }>,
+  branches: Array<{ id: string; name: string; isDefault?: boolean; status?: string | null }>,
   selectedBranchId: string | null,
   role?: string | null
 ) {
@@ -989,7 +1033,16 @@ function withAlpha(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const styles = StyleSheet.create({
+function createStyles(theme: ThemeTokens) {
+  const tokens = theme;
+  return StyleSheet.create({
+    lightCard: {
+      backgroundColor: lightTokens.colors.surface,
+      borderColor: lightTokens.colors.border
+    },
+    lightTextSecondary: {
+      color: lightTokens.colors.textSecondary
+    },
   scrollContent: {
     paddingHorizontal: 12,
     paddingTop: 6,
@@ -1010,8 +1063,8 @@ const styles = StyleSheet.create({
     gap: 10
   },
   brandLogo: {
-    width: 44,
-    height: 34
+    width: 32,
+    height: 32
   },
   brandTitle: {
     color: tokens.colors.text,
@@ -1364,6 +1417,37 @@ const styles = StyleSheet.create({
     borderColor: tokens.colors.border,
     overflow: "hidden"
   },
+  chartTooltip: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    minWidth: 116,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: tokens.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    ...tokens.shadow.card
+  },
+  chartTooltipLabel: {
+    color: tokens.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700"
+  },
+  chartTooltipMetric: {
+    color: tokens.colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 2
+  },
+  chartTooltipValue: {
+    color: tokens.colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 2
+  },
   chartGridLine: {
     position: "absolute",
     left: 12,
@@ -1562,4 +1646,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: tokens.colors.border
   }
-});
+  });
+}

@@ -28,18 +28,18 @@ import { FiscalizationService, type FiscalizationOutcome } from "./fiscalization
 import type { DebitNote as DebitNoteView, Invoice as InvoiceView, InvoiceLineItem, InvoicePaymentRecord, InvoiceTaxSnapshot, InvoiceLifecycleStatus, FinanceInvoice } from "@vbo/shared";
 
 type InvoiceListQuery = {
-  search?: string;
-  status?: string;
-  customerId?: string;
-  from?: string;
-  to?: string;
-  sortBy?: "invoiceNumber" | "issueDate" | "dueDate" | "grandTotal" | "balanceDue" | "createdAt";
-  sortOrder?: "asc" | "desc";
-  page?: number;
-  pageSize?: number;
+  search?: string | undefined;
+  status?: string | undefined;
+  customerId?: string | undefined;
+  from?: string | undefined;
+  to?: string | undefined;
+  sortBy?: "invoiceNumber" | "issueDate" | "dueDate" | "grandTotal" | "balanceDue" | "createdAt" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
+  page?: number | undefined;
+  pageSize?: number | undefined;
 };
 
-type InvoiceLineInput = Omit<InvoiceLineItem, "id" | "lineSubtotal" | "lineDiscount" | "lineTax" | "lineTotal" | "tax"> & {
+type InvoiceLineInput = Omit<InvoiceLineItem, "id" | "lineSubtotal" | "lineDiscount" | "lineTax" | "lineTotal" | "tax" | "discountType" | "discountValue"> & {
   discountType?: "percentage" | "fixed";
   discountValue?: number;
   taxCategory?: InvoiceTaxSnapshot["taxCategory"];
@@ -412,7 +412,7 @@ export class InvoicesService {
         invoiceId: String(invoice._id),
         businessId,
         invoiceNumber: invoice.invoiceNumber,
-        payload: this.serializeInvoice(invoice.toObject())
+        payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown>
       });
       this.applyFiscalization(invoice, fiscalization);
       const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId(scope, scope.branchId ?? null)) }).session(session) : null;
@@ -662,7 +662,7 @@ export class InvoicesService {
       if (nextStatus === "void") invoice.voidedAt = new Date();
       if (nextStatus === "archived") invoice.archivedAt = new Date();
       invoice.history.push(this.createHistoryEntry(action, `Invoice ${action}`, null, {}));
-      const fiscalization = nextStatus === "cancelled" ? await this.fiscalization.cancelInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) }) : nextStatus === "void" ? await this.fiscalization.voidInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) }) : { status: "not_configured" as const };
+      const fiscalization = nextStatus === "cancelled" ? await this.fiscalization.cancelInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown> }) : nextStatus === "void" ? await this.fiscalization.voidInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown> }) : { status: "not_configured" as const };
       this.applyFiscalization(invoice, fiscalization);
       const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
       if (customer && (nextStatus === "cancelled" || nextStatus === "void")) {
@@ -878,6 +878,8 @@ export class InvoicesService {
     return {
       id: String(rest.externalId ?? _id),
       businessId: String(rest.businessId),
+      createdAt: toSafeIsoString(rest.createdAt ?? new Date()),
+      updatedAt: toSafeIsoString(rest.updatedAt ?? new Date()),
       branchId: rest.branchId ?? null,
       customerId: rest.customerId ?? null,
       customerName: rest.customerName ?? null,
@@ -976,6 +978,7 @@ export class InvoicesService {
       method: payment.method,
       status: payment.status,
       amount: Number(payment.amount ?? 0),
+      paymentDate: payment.paymentDate ? toSafeIsoString(payment.paymentDate) : toSafeIsoString(payment.createdAt ?? new Date()),
       reference: payment.reference ?? null,
       note: payment.note ?? null,
       provider: payment.provider ?? null,
@@ -988,14 +991,21 @@ export class InvoicesService {
   private serializeCreditNote(note: Record<string, any>) {
     const { _id, ...rest } = note;
     return {
-      ...rest,
       id: String(rest.externalId ?? _id),
+      businessId: String(rest.businessId ?? ""),
+      createdAt: toSafeIsoString(rest.createdAt ?? new Date()),
+      updatedAt: toSafeIsoString(rest.updatedAt ?? new Date()),
+      deletedAt: rest.deletedAt ?? null,
+      branchId: rest.branchId ?? null,
       invoiceId: rest.invoiceId ?? null,
+      reference: String(rest.reference ?? ""),
       relatedSaleId: rest.relatedSaleId ?? null,
       customerId: rest.customerId ?? null,
+      amount: Number(rest.amount ?? 0),
+      reason: String(rest.reason ?? ""),
       note: rest.note ?? null,
-      deletedAt: rest.deletedAt ?? null,
-      creditDate: toSafeIsoDateString(rest.creditDate ?? null)
+      creditDate: toSafeIsoDateString(rest.creditDate ?? null),
+      status: rest.status ?? "draft"
     };
   }
 
@@ -1110,7 +1120,7 @@ function buildInvoiceHtml(invoice: InvoiceView, business: Record<string, any>) {
         <div class="hero">
           <div>
             <p class="muted">Commercial invoice</p>
-            <h1 class="title">${escapeHtml(business.name ?? "Biz Pro")}</h1>
+            <h1 class="title">${escapeHtml(business.name ?? "Dira OS")}</h1>
             <div>${escapeHtml(business.address ?? "")}</div>
             <div>${escapeHtml(business.phone ?? "")} ${business.email ? `• ${escapeHtml(business.email)}` : ""}</div>
             <div>${business.taxPin ? `Tax PIN: ${escapeHtml(business.taxPin)}` : ""}</div>
@@ -1168,7 +1178,7 @@ function buildInvoiceHtml(invoice: InvoiceView, business: Record<string, any>) {
           ${invoice.termsAndConditions ? `<div class="card"><div class="muted">Terms & conditions</div><div>${escapeHtml(invoice.termsAndConditions)}</div></div>` : ""}
         </div>
         <div class="footer">
-          ${business.vatRegistrationNumber ? `VAT registration: ${escapeHtml(business.vatRegistrationNumber)} • ` : ""}Generated by Biz Pro
+          ${business.vatRegistrationNumber ? `VAT registration: ${escapeHtml(business.vatRegistrationNumber)} • ` : ""}Generated by Dira OS
         </div>
       </div>
     </body>

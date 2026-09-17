@@ -17,10 +17,10 @@ export function DashboardCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: "linear-gradient(180deg, rgba(17,24,39,0.94), rgba(15,23,42,0.92))",
+        background: "var(--card-background)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
-        boxShadow: hovered ? "0 12px 28px rgba(0,0,0,0.24)" : "0 8px 22px rgba(0,0,0,0.18)",
+        boxShadow: hovered ? "var(--card-shadow-hover)" : "var(--card-shadow)",
         transform: hovered ? "translateY(-1px)" : "translateY(0)",
         transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
         padding: 14,

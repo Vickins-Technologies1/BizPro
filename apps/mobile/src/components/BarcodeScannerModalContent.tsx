@@ -4,13 +4,15 @@ import { CameraView, type BarcodeScanningResult, type BarcodeType, useCameraPerm
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeTokens } from "@/theme";
 import { PrimaryButton } from "@/components/Primitives";
+import type { BarcodeScanResult } from "./BarcodeScannerModal";
 
 type BarcodeScannerModalContentProps = {
   visible: boolean;
   title?: string;
   subtitle?: string;
   onClose: () => void;
-  onBarcodeScanned: (barcode: string, raw?: BarcodeScanningResult) => void | Promise<void>;
+  closeOnScan?: boolean;
+  onBarcodeScanned: (barcode: string, raw?: BarcodeScanningResult) => BarcodeScanResult | void | Promise<BarcodeScanResult | void>;
 };
 
 const SUPPORTED_BARCODE_TYPES = [
@@ -28,18 +30,21 @@ const SUPPORTED_BARCODE_TYPES = [
   "qr"
 ] as const satisfies readonly BarcodeType[];
 
-export function BarcodeScannerModalContent({ visible, title = "Scan barcode", subtitle = "Point the camera at a product barcode", onClose, onBarcodeScanned }: BarcodeScannerModalContentProps) {
+export function BarcodeScannerModalContent({ visible, title = "Scan barcode", subtitle = "Point the camera at a product barcode", onClose, closeOnScan = true, onBarcodeScanned }: BarcodeScannerModalContentProps) {
   const theme = useThemeTokens();
   const styles = createStyles(theme);
   const [permission, requestPermission] = useCameraPermissions();
   const [permissionRequested, setPermissionRequested] = React.useState(false);
   const [scannerReady, setScannerReady] = React.useState(false);
   const [cameraSessionKey, setCameraSessionKey] = React.useState(0);
+  const [appIsActive, setAppIsActive] = React.useState(AppState.currentState === "active");
+  const [cameraAvailable, setCameraAvailable] = React.useState<boolean | null>(null);
   const [scanStatus, setScanStatus] = React.useState<string>("Align the barcode inside the frame.");
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const lastScanRef = React.useRef<{ value: string; at: number } | null>(null);
   const busyRef = React.useRef(false);
   const mountedRef = React.useRef(true);
+  const visibleRef = React.useRef(visible);
   const resetTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -51,11 +56,16 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
   }, []);
 
   React.useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
+
+  React.useEffect(() => {
     if (!visible) {
       setPermissionRequested(false);
       setScannerReady(false);
       setScanStatus("Align the barcode inside the frame.");
       setCameraError(null);
+      setCameraAvailable(null);
       lastScanRef.current = null;
       busyRef.current = false;
       setCameraSessionKey((current) => current + 1);
@@ -64,7 +74,9 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
 
   React.useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (!visible || !mountedRef.current) return;
+      if (!mountedRef.current) return;
+      setAppIsActive(state === "active");
+      if (!visible) return;
       if (state !== "active") {
         setScannerReady(false);
         busyRef.current = false;
@@ -72,9 +84,16 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
       }
       setCameraError(null);
       setScannerReady(false);
+      setCameraAvailable(null);
       setCameraSessionKey((current) => current + 1);
     });
     return () => subscription.remove();
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (visible) {
+      setAppIsActive(AppState.currentState === "active");
+    }
   }, [visible]);
 
   React.useEffect(() => {
@@ -90,8 +109,35 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
     });
   }, [permission?.granted, permissionRequested, requestPermission, visible]);
 
+  React.useEffect(() => {
+    if (!visible || !appIsActive || permission?.granted !== true) {
+      return;
+    }
+
+    let cancelled = false;
+    setCameraAvailable(null);
+    CameraView.isAvailableAsync()
+      .then((available) => {
+        if (cancelled || !mountedRef.current || !visibleRef.current) return;
+        setCameraAvailable(available);
+        if (!available) {
+          setCameraError("Unable to access the camera. Please try again.");
+        }
+      })
+      .catch((error: unknown) => {
+        if (cancelled || !mountedRef.current || !visibleRef.current) return;
+        console.warn("[scanner] Camera availability check failed", error);
+        setCameraAvailable(false);
+        setCameraError("Unable to access the camera. Please try again.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appIsActive, cameraSessionKey, permission?.granted, visible]);
+
   const permissionDenied = permission?.granted === false && permission?.canAskAgain === false;
-  const readyToScan = visible && permission?.granted === true && !cameraError;
+  const readyToScan = visible && appIsActive && permission?.granted === true && cameraAvailable === true && !cameraError;
 
   function handleBarcode(result: BarcodeScanningResult) {
     const value = String(result.data ?? "").trim();
@@ -107,8 +153,14 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
     busyRef.current = true;
     if (mountedRef.current) setScanStatus(`Read ${value}`);
     Promise.resolve(onBarcodeScanned(value, result))
-      .then(() => {
-        if (mountedRef.current) onClose();
+      .then((outcome) => {
+        if (!mountedRef.current || !visibleRef.current) return;
+        if (outcome?.status === "not-found" || outcome?.status === "rejected") {
+          setScanStatus(outcome.message ?? "No product was found for this barcode.");
+          return;
+        }
+        setScanStatus(outcome?.message ?? (closeOnScan ? "Barcode captured." : "Product added. Ready for the next item."));
+        if (closeOnScan) onClose();
       })
       .catch((error) => {
         console.warn("[scanner] Scanned barcode handling failed", error);
@@ -121,7 +173,7 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
         if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
         resetTimerRef.current = setTimeout(() => {
           busyRef.current = false;
-        }, 1200);
+        }, outcomeDelay(closeOnScan));
       });
   }
 
@@ -172,12 +224,14 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
           <View style={styles.permissionCard}>
             {permission?.granted && !cameraError && !scannerReady ? <ActivityIndicator size="large" color={theme.colors.primaryStrong} /> : <Ionicons name="camera-outline" size={34} color={theme.colors.primaryStrong} />}
             <Text style={styles.permissionTitle}>
-              {cameraError ? "Camera unavailable" : permissionDenied ? "Camera permission disabled" : permission?.granted ? "Starting camera" : "Requesting camera access"}
+              {cameraError ? "Camera unavailable" : permissionDenied ? "Camera permission disabled" : permission?.granted ? appIsActive ? "Starting camera" : "Scanner paused" : "Requesting camera access"}
             </Text>
             <Text style={styles.permissionText}>
               {cameraError
                 ? cameraError
-                : "Camera access is required to scan barcodes. Enable camera permission in Settings if it was denied."}
+                : !appIsActive
+                  ? "Return to the app to start the camera."
+                  : "Camera access is required to scan barcodes. Enable camera permission in Settings if it was denied."}
             </Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
@@ -186,6 +240,7 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
                   onPress={async () => {
                     if (cameraError) {
                       setCameraError(null);
+                      setCameraAvailable(null);
                       setPermissionRequested(false);
                       setScannerReady(false);
                       setCameraSessionKey((current) => current + 1);
@@ -228,6 +283,10 @@ export function BarcodeScannerModalContent({ visible, title = "Scan barcode", su
       </View>
     </View>
   );
+}
+
+function outcomeDelay(closeOnScan: boolean) {
+  return closeOnScan ? 1200 : 850;
 }
 
 function createStyles(theme: ReturnType<typeof useThemeTokens>) {

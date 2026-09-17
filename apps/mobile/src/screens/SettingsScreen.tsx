@@ -26,6 +26,8 @@ export function SettingsScreen() {
   const canManageEmployees = hasPermission(user, "manageEmployees");
   const roleLabel = user?.roleLabel ?? formatRoleLabel(user?.role);
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const activeBranches = branches.filter((branch) => branch.status !== "inactive");
+  const canManageBranches = hasPermission(user, "manageBranches");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -82,10 +84,10 @@ export function SettingsScreen() {
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Choose the workspace data scope.</Text>
           {user?.role === "owner" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {branches.length > 1 ? (
+              {activeBranches.length > 1 ? (
                 <Tag label="Consolidated view" tone="primary" selected={selectedBranchId === null} onPress={() => void setSelectedBranchId(null)} />
               ) : null}
-              {branches.map((branch) => (
+              {activeBranches.map((branch) => (
                 <Tag
                   key={branch.id}
                   label={branch.name}
@@ -96,9 +98,18 @@ export function SettingsScreen() {
               ))}
             </View>
           ) : (
-            <Badge label={branches.find((branch) => branch.id === selectedBranchId)?.name ?? branches[0]?.name ?? "Assigned branch"} tone="primary" />
+            <Badge label={branches.find((branch) => branch.id === selectedBranchId)?.name ?? activeBranches[0]?.name ?? branches[0]?.name ?? "Assigned branch"} tone="primary" />
           )}
         </Card>
+        {canManageBranches ? (
+          <Card style={{ gap: 10, padding: 14 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Branch administration</Text>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+              Create new branches, adjust branch settings, and control active locations.
+            </Text>
+            <PrimaryButton title="Open branch management" variant="secondary" onPress={() => navigation.navigate("Branches")} />
+          </Card>
+        ) : null}
         <Card style={{ gap: 9, padding: 14 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Account access</Text>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>

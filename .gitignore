@@ -12,6 +12,9 @@ apps/mobile/.expo-shared
 apps/mobile/ios
 apps/mobile/android
 apps/admin/.next
+apps/desktop/.next
+apps/desktop/tsconfig.tsbuildinfo
+apps/desktop/release
 apps/api/dist
 apps/api/node_modules
 apps/admin/node_modules

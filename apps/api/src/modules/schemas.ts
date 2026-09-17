@@ -119,6 +119,27 @@ export class Branch {
   @Prop({ required: true })
   code!: string;
 
+  @Prop({ type: String, default: null })
+  location?: string | null;
+
+  @Prop({ type: String, default: null })
+  phone?: string | null;
+
+  @Prop({ type: String, default: null })
+  email?: string | null;
+
+  @Prop({ type: String, default: null })
+  description?: string | null;
+
+  @Prop({ type: String, default: null, index: true })
+  managerId?: string | null;
+
+  @Prop({ type: String, default: null })
+  managerName?: string | null;
+
+  @Prop({ required: true, enum: ["active", "inactive"], default: "active" })
+  status!: "active" | "inactive";
+
   @Prop({ default: false })
   isDefault!: boolean;
 
@@ -127,6 +148,8 @@ export class Branch {
 }
 export type BranchDocument = HydratedDocument<Branch>;
 export const BranchSchema = SchemaFactory.createForClass(Branch);
+BranchSchema.index({ businessId: 1, code: 1 }, { unique: true });
+BranchSchema.index({ businessId: 1, status: 1 });
 
 @Schema({ timestamps: true, collection: "users" })
 export class User {

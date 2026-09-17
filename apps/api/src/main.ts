@@ -27,10 +27,10 @@ async function bootstrap() {
 
   const port = resolvePort();
   await app.listen(port, HOST);
-  bootstrapLogger.log(`BizPro API running on ${HOST}:${port}`);
+  bootstrapLogger.log(`Dira OS API running on ${HOST}:${port}`);
 
   const shutdown = async (signal: NodeJS.Signals) => {
-    bootstrapLogger.log(`${signal} received. Shutting down BizPro API...`);
+    bootstrapLogger.log(`${signal} received. Shutting down Dira OS API...`);
     await app.close();
   };
 
@@ -40,7 +40,7 @@ async function bootstrap() {
 
 bootstrap().catch((error: unknown) => {
   bootstrapLogger.error(
-    `Failed to start BizPro API: ${error instanceof Error ? error.message : String(error)}`,
+    `Failed to start Dira OS API: ${error instanceof Error ? error.message : String(error)}`,
     error instanceof Error ? error.stack : undefined
   );
   process.exit(1);

@@ -37,7 +37,7 @@ export function TeamAccessScreen() {
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Badge label={`${currentPermissions.length} permissions`} tone="success" />
-            <Badge label={business?.name ?? "Biz Pro"} tone="primary" />
+            <Badge label={business?.name ?? "Dira OS"} tone="primary" />
             <Badge label={roleLabel} tone="warning" />
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

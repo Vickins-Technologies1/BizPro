@@ -230,6 +230,26 @@ function normalizeCustomerGroup(group: RawEntity): CustomerGroup {
   } as CustomerGroup;
 }
 
+function normalizeBranch(branch: RawEntity): Branch {
+  const normalized = withId(branch);
+  return {
+    ...normalized,
+    location: normalized.location ?? null,
+    phone: normalized.phone ?? null,
+    email: normalized.email ?? null,
+    description: normalized.description ?? null,
+    managerId: normalized.managerId ?? null,
+    managerName: normalized.managerName ?? null,
+    status: normalized.status ?? "active",
+    isDefault: Boolean(normalized.isDefault),
+    salesTotal: Number(normalized.salesTotal ?? 0),
+    salesCount: Number(normalized.salesCount ?? 0),
+    inventoryCount: Number(normalized.inventoryCount ?? 0),
+    lowStockCount: Number(normalized.lowStockCount ?? 0),
+    staffCount: Number(normalized.staffCount ?? 0)
+  } as Branch;
+}
+
 function normalizeCustomerAnalytics(analytics: RawEntity): CustomerAnalytics {
   return {
     totalCustomers: Number(analytics.totalCustomers ?? 0),
@@ -406,7 +426,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) })
   });
   if (!response.ok) {
     if (options.auth !== false && response.status === 401) {
@@ -460,6 +480,42 @@ export async function createCategory(input: { businessId: string; externalId?: s
 export async function listBrands() {
   const brands = await apiRequest<RawEntity[]>("/brands");
   return brands.map((brand) => withId(brand)) as Brand[];
+}
+
+export async function listBranches() {
+  const branches = await apiRequest<RawEntity[]>("/branches");
+  return branches.map((branch) => normalizeBranch(branch));
+}
+
+export async function createBranch(input: {
+  businessId: string;
+  name: string;
+  code: string;
+  location?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  managerId?: string | null;
+  description?: string | null;
+  status?: Branch["status"];
+  isDefault?: boolean;
+}) {
+  const branch = await apiRequest<RawEntity>("/branches", { method: "POST", body: input });
+  return normalizeBranch(branch);
+}
+
+export async function updateBranch(id: string, patch: Partial<Branch>) {
+  const branch = await apiRequest<RawEntity>(`/branches/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+  return normalizeBranch(branch);
+}
+
+export async function deactivateBranch(id: string) {
+  const branch = await apiRequest<RawEntity>(`/branches/${encodeURIComponent(id)}/deactivate`, { method: "POST" });
+  return normalizeBranch(branch);
+}
+
+export async function activateBranch(id: string) {
+  const branch = await apiRequest<RawEntity>(`/branches/${encodeURIComponent(id)}/activate`, { method: "POST" });
+  return normalizeBranch(branch);
 }
 
 export async function createBrand(input: { businessId: string; externalId?: string | null; name: string; description?: string | null }) {
@@ -1116,10 +1172,11 @@ export async function listSales(branchId?: string | null) {
   return sales.map((sale) => withSaleItems(sale)) as Sale[];
 }
 
-export async function listBusinessOperations(input: { kind?: BusinessOperationKind; status?: BusinessOperationStatus } = {}) {
+export async function listBusinessOperations(input: { kind?: BusinessOperationKind; status?: BusinessOperationStatus; branchId?: string | null } = {}) {
   const query = new URLSearchParams();
   if (input.kind) query.set("kind", input.kind);
   if (input.status) query.set("status", input.status);
+  if (input.branchId) query.set("branchId", input.branchId);
   const suffix = query.toString() ? `?${query.toString()}` : "";
   const rows = await apiRequest<RawEntity[]>(`/business-operations${suffix}`);
   return rows.map(normalizeBusinessOperation);

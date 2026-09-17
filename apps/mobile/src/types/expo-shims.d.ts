@@ -47,7 +47,9 @@ declare module "expo-camera" {
     barcodeScannerSettings?: {
       barcodeTypes?: BarcodeType[];
     };
-  }>;
+  }> & {
+    isAvailableAsync(): Promise<boolean>;
+  };
 }
 
 declare module "expo-device" {

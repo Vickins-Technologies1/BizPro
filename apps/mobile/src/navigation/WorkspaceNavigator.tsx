@@ -11,7 +11,7 @@ import { MoreDrawerProvider } from "@/navigation/moreDrawerContext";
 import { tokens } from "@/theme/tokens";
 import { useThemeTokens } from "@/theme";
 import { useAppStore } from "@/store/useAppStore";
-import { getEffectivePermissions, resolveBusinessTypeConfig } from "@shared";
+import { getEffectivePermissions, resolveBusinessTypeConfig, type WorkspaceRoute } from "@shared";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PosScreen } from "@/screens/PosScreen";
 import { ProductsScreen } from "@/screens/ProductsScreen";
@@ -22,6 +22,7 @@ import { ReportsScreen } from "@/screens/ReportsScreen";
 import { ExpensesScreen } from "@/screens/ExpensesScreen";
 import { FinanceScreen } from "@/screens/FinanceScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { BusinessOperationsScreen } from "@/screens/BusinessOperationsScreen";
 
 type WorkspaceTabParamList = {
   Dashboard: undefined;
@@ -33,24 +34,11 @@ type WorkspaceTabParamList = {
   Finance: undefined;
   Insights: undefined;
   Settings: undefined;
+  Operations: undefined;
 };
 
 const WorkspaceTabs = createBottomTabNavigator<WorkspaceTabParamList>();
-type WorkspaceNavItem = keyof WorkspaceTabParamList | "More";
-
-const MOBILE_PRIMARY_ROUTES: WorkspaceNavItem[] = ["Dashboard", "POS", "Catalog", "Reports", "More"];
-const DESKTOP_SIDEBAR_ROUTES: WorkspaceNavItem[] = [
-  "Dashboard",
-  "POS",
-  "Catalog",
-  "Customers",
-  "Employees",
-  "Reports",
-  "Finance",
-  "Insights",
-  "Settings",
-  "More"
-];
+type WorkspaceNavItem = WorkspaceRoute;
 
 export function AdaptiveWorkspaceNavigator() {
   useThemeTokens();
@@ -149,6 +137,14 @@ export function AdaptiveWorkspaceNavigator() {
         }}
       />
       <WorkspaceTabs.Screen
+        name="Operations"
+        component={BusinessOperationsScreen}
+        options={{
+          tabBarLabel: "Operations",
+          tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" color={color} size={size} />
+        }}
+      />
+      <WorkspaceTabs.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
@@ -182,9 +178,12 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
     () => resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey }),
     [business?.businessType, business?.industryKey]
   );
-  const visibleRoutes = (isDesktop ? DESKTOP_SIDEBAR_ROUTES : MOBILE_PRIMARY_ROUTES).filter((routeName) => {
+  const configuredRoutes = isDesktop ? businessConfig.navigation.sidebarRoutes : businessConfig.navigation.primaryRoutes;
+  const visibleRoutes = configuredRoutes.filter((routeName) => {
     if (routeName === "Catalog") return businessConfig.capabilities.catalog;
     if (routeName === "Customers") return businessConfig.capabilities.customers;
+    if (routeName === "Operations") return businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders;
+    if (routeName === "Finance") return businessConfig.capabilities.payments;
     return true;
   });
 
@@ -240,7 +239,7 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }} numberOfLines={1}>
-                  {business?.name ?? "Biz Pro"}
+                  {business?.name ?? "Dira OS"}
                 </Text>
                 <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }} numberOfLines={1}>
                   {user?.roleLabel ?? "Workspace"} • {permissions.length} permissions
@@ -341,9 +340,9 @@ function SidebarThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dar
       accessibilityState={{ checked: isDark }}
       accessibilityLabel="Toggle light and dark theme"
       style={({ pressed }) => ({
-        minHeight: 62,
-        borderRadius: 20,
-        padding: 6,
+        minHeight: 66,
+        borderRadius: 16,
+        padding: 5,
         borderWidth: 1,
         borderColor: theme.colors.border,
         backgroundColor: theme.colors.surfaceElevated,
@@ -351,7 +350,7 @@ function SidebarThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dar
         transform: [{ scale: pressed ? 0.985 : 1 }]
       })}
     >
-      <View style={{ flex: 1, borderRadius: 15, overflow: "hidden", justifyContent: "center" }}>
+      <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", justifyContent: "center" }}>
         <LinearGradient
           colors={isDark ? ["#172A45", "#0D1728"] : ["#EEF5FF", "#F7FAFF"]}
           start={{ x: 0, y: 0 }}
@@ -366,9 +365,9 @@ function SidebarThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dar
             bottom: 2,
             width: 108,
             borderRadius: 13,
-            backgroundColor: isDark ? "#203A60" : "#FFFFFF",
+            backgroundColor: isDark ? theme.colors.surfaceElevated : theme.colors.surface,
             borderWidth: 1,
-            borderColor: isDark ? "#385A83" : "#DCE8F7",
+            borderColor: theme.colors.primaryStrong,
             shadowColor: isDark ? "#000" : theme.colors.primaryStrong,
             shadowOpacity: isDark ? 0.24 : 0.12,
             shadowRadius: 8,
@@ -421,7 +420,9 @@ function renderWorkspaceItem({
         ? businessConfig.navigation.posLabel
         : routeName === "Customers"
           ? businessConfig.navigation.customersLabel
-          : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
+          : routeName === "Operations"
+            ? businessConfig.capabilities.appointments ? "Appointments" : businessConfig.capabilities.workOrders ? "Jobs" : "Orders"
+            : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
   const icon = routeName === "More" ? (
     <Ionicons name="apps-outline" color={tokens.colors.textMuted} size={isDesktop ? 22 : 20} />
   ) : options?.tabBarIcon?.({
@@ -494,6 +495,8 @@ function routeDescription(routeName: WorkspaceNavItem, businessConfig: ReturnTyp
       return businessConfig.navigation.catalogDescription;
     case "Customers":
       return `${businessConfig.terminology.customers} and payments`;
+    case "Operations":
+      return businessConfig.workflow.headline;
     case "Employees":
       return "Team access";
     case "Reports":

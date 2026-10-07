@@ -1,22 +1,23 @@
 import React from "react";
-import { Alert, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { loginSchema } from "@shared";
-import { AppScrollView, Card, InputField, PrimaryButton, Screen } from "@/components/Primitives";
-import { tokens } from "@/theme/tokens";
+import { InputField, PrimaryButton } from "@/components/Primitives";
+import { AuthLink, AuthLayout, AuthMessage, AuthSectionLabel } from "@/components/AuthComponents";
+import { useThemeTokens } from "@/theme";
 import { useAppStore } from "@/store/useAppStore";
-import { BrandLogo } from "@/components/BrandLogo";
 import { z } from "zod";
 
 type FormValues = z.infer<typeof loginSchema>;
 
 export function LoginScreen() {
   const navigation = useNavigation<any>();
+  const theme = useThemeTokens();
   const authLoading = useAppStore((state) => state.authLoading);
   const login = useAppStore((state) => state.login);
-  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -28,61 +29,75 @@ export function LoginScreen() {
   });
 
   return (
-    <Screen hideFooter>
-      <AppScrollView contentContainerStyle={{ gap: 14, paddingTop: 26, paddingBottom: 26 }}>
-        <View style={{ alignItems: "center", gap: 8, paddingHorizontal: 20 }}>
-          <BrandLogo style={{ width: 92, height: 32 }} />
-          <Text style={{ color: tokens.colors.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 }}>Welcome back</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17, textAlign: "center" }}>Sign in to continue to Dira OS.</Text>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to pick up where your team left off."
+      footer={
+        <View style={{ alignItems: "center", gap: 4 }}>
+          <Text style={{ color: theme.colors.textMuted, fontSize: 11 }}>New to Dira OS?</Text>
+          <AuthLink label="Create an owner account" onPress={() => navigation.navigate("Onboarding")} />
         </View>
-        <Card style={{ gap: 12, padding: 14 }}>
-          <Controller
-            control={control}
-            name="identifier"
-            render={({ field: { value, onChange } }) => (
-              <InputField
-                label="Phone or name"
-                value={value}
-                onChangeText={onChange}
-                placeholder="07..."
-                error={errors.identifier?.message}
-                helperText="Phone number or owner name."
-              />
-            )}
+      }
+    >
+      <AuthSectionLabel>Secure workspace sign in</AuthSectionLabel>
+      <Controller
+        control={control}
+        name="identifier"
+        render={({ field: { value, onChange } }) => (
+          <InputField
+            label="Phone or account name"
+            value={value}
+            onChangeText={(next) => {
+              setSubmitError(null);
+              onChange(next);
+            }}
+            placeholder="07… or your account name"
+            error={errors.identifier?.message}
+            helperText="Use the same phone number or name you used during setup."
+            autoCapitalize="words"
+            returnKeyType="next"
           />
-          <Controller
-            control={control}
-            name="passwordOrPin"
-            render={({ field: { value, onChange } }) => (
-              <InputField
-                label="Password or PIN"
-                value={value}
-                onChangeText={onChange}
-                placeholder="••••"
-                secureTextEntry
-                error={errors.passwordOrPin?.message}
-                helperText="Owner password or team PIN."
-              />
-            )}
+        )}
+      />
+      <Controller
+        control={control}
+        name="passwordOrPin"
+        render={({ field: { value, onChange } }) => (
+          <InputField
+            label="Password or PIN"
+            value={value}
+            onChangeText={(next) => {
+              setSubmitError(null);
+              onChange(next);
+            }}
+            placeholder="Enter your password"
+            secureTextEntry
+            error={errors.passwordOrPin?.message}
+            helperText="Your password stays private on this device."
+            returnKeyType="done"
+            onSubmitEditing={() => void handleSubmit(submit)()}
           />
-          <PrimaryButton
-            title="Sign In"
-            loading={authLoading || submitting}
-            onPress={handleSubmit(async (values) => {
-              setSubmitting(true);
-              try {
-                await login(values);
-              } catch (error) {
-                Alert.alert("Login failed", error instanceof Error ? error.message : "Invalid credentials");
-              } finally {
-                setSubmitting(false);
-              }
-            })}
-          />
-          <PrimaryButton title="Create owner account" variant="secondary" onPress={() => navigation.navigate("Onboarding")} />
-        </Card>
-        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 28 }}>New to Dira OS? Set up an owner account with a 30-day free trial.</Text>
-      </AppScrollView>
-    </Screen>
+        )}
+      />
+
+      <View style={{ alignItems: "flex-end", marginTop: -3 }}>
+        <Pressable onPress={() => navigation.navigate("ForgotPassword")} accessibilityRole="link" hitSlop={8}>
+          <Text style={{ color: theme.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Forgot password?</Text>
+        </Pressable>
+      </View>
+
+      {submitError ? <AuthMessage tone="error">{submitError}</AuthMessage> : null}
+
+      <PrimaryButton title="Sign in" iconRight="arrow-forward-outline" fullWidth loading={authLoading} onPress={handleSubmit(submit)} />
+    </AuthLayout>
   );
+
+  async function submit(values: FormValues) {
+    setSubmitError(null);
+    try {
+      await login(values);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "We could not sign you in. Check your details and try again.");
+    }
+  }
 }

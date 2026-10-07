@@ -22,6 +22,7 @@ const REACT_NATIVE_SCREENS_STACK = path.join(
   "ScreenStack.kt",
 );
 const ANDROID_MANIFEST = path.join("android", "app", "src", "main", "AndroidManifest.xml");
+const ANDROID_APP_BUILD_GRADLE = path.join("android", "app", "build.gradle");
 const ANDROID_GRADLE_PROPERTIES = path.join("android", "gradle.properties");
 const ANDROID_STYLES = path.join("android", "app", "src", "main", "res", "values", "styles.xml");
 const ANDROID_STRINGS = path.join("android", "app", "src", "main", "res", "values", "strings.xml");
@@ -88,10 +89,25 @@ function patchAndroidStrings(contents) {
   return contents.replace(/\s*<string name="expo_splash_screen_status_bar_translucent"[^>]*>[^<]*<\/string>\r?\n/g, "");
 }
 
+function patchAndroidAppBuildGradle(contents) {
+  if (/abiFilters\.addAll\(\(findProperty\('reactNativeArchitectures'\)/.test(contents)) return contents;
+
+  const marker = '        versionName "0.1.0"';
+  if (!contents.includes(marker)) return contents;
+
+  return contents.replace(
+    marker,
+    `${marker}\n        // Use the production ARM ABIs by default; local emulator builds may override this property.\n        ndk {\n            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a').split(',') as List)\n        }`
+  );
+}
+
 function patchAndroidGradleProperties(contents) {
   const required = [
-    "android.enableProguardInReleaseBuilds=true",
-    "android.enableShrinkResourcesInReleaseBuilds=true",
+    "android.enableProguardInReleaseBuilds=false",
+    "android.enableShrinkResourcesInReleaseBuilds=false",
+    "android.ndkVersion=28.1.13356709",
+    "reactNativeArchitectures=armeabi-v7a,arm64-v8a",
+    "versionCode=9",
   ];
 
   let patched = contents;
@@ -146,6 +162,7 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
       for (const [relativePath, patchFile] of [
         [ANDROID_MANIFEST, patchAndroidWindowConfiguration],
+        [ANDROID_APP_BUILD_GRADLE, patchAndroidAppBuildGradle],
         [ANDROID_GRADLE_PROPERTIES, patchAndroidGradleProperties],
         [ANDROID_STYLES, patchAndroidStyles],
         [ANDROID_STRINGS, patchAndroidStrings]

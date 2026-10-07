@@ -1,5 +1,10 @@
+const path = require("path");
+
 module.exports = function (api) {
   api.cache(true);
+  const sharedRoot = process.env.DIRAOS_REAL_WORKSPACE_ROOT
+    ? path.join(process.env.DIRAOS_REAL_WORKSPACE_ROOT, "packages/shared/src")
+    : "../../packages/shared/src";
   return {
     presets: ["babel-preset-expo"],
     plugins: [
@@ -8,11 +13,10 @@ module.exports = function (api) {
         {
           alias: {
             "@": "./src",
-            "@shared": "../../packages/shared/src"
+            "@shared": sharedRoot
           }
         }
-      ],
-      "react-native-reanimated/plugin"
+      ]
     ]
   };
 };

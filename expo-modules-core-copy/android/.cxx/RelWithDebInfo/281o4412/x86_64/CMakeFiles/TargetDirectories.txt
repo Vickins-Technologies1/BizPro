@@ -1,0 +1,3 @@
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/281o4412/x86_64/CMakeFiles/expo-modules-core.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/281o4412/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/281o4412/x86_64/CMakeFiles/rebuild_cache.dir

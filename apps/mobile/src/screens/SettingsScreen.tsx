@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { AppScrollView, Badge, Card, GradientHeader, PrimaryButton, Screen, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
+import type { ThemePreference } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { listQueuedActions, type OfflineQueueEntry } from "@/services/offlineQueue";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +20,8 @@ export function SettingsScreen() {
   const syncNow = useAppStore((state) => state.syncNow);
   const setSelectedBranchId = useAppStore((state) => state.setSelectedBranchId);
   const logout = useAppStore((state) => state.logout);
+  const themePreference = useAppStore((state) => state.themePreference);
+  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const [queuedActions, setQueuedActions] = React.useState<OfflineQueueEntry[]>([]);
   const [syncing, setSyncing] = React.useState(false);
   const [loggingOut, setLoggingOut] = React.useState(false);
@@ -77,6 +80,29 @@ export function SettingsScreen() {
             <Badge label={`Currency ${business?.currency}`} tone="success" />
             <Badge label={`Sync ${pendingSync}`} tone={pendingSync ? "warning" : "success"} />
             <Badge label={roleLabel} tone="primary" />
+          </View>
+        </Card>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
+              <Ionicons name="contrast-outline" size={20} color={tokens.colors.primaryStrong} />
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Appearance</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Choose how Dira OS looks on this device.</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {(["light", "dark", "system"] as ThemePreference[]).map((option) => (
+              <Tag
+                key={option}
+                label={option === "system" ? "System" : option === "dark" ? "Dark" : "Light"}
+                tone="primary"
+                selected={themePreference === option}
+                onPress={() => void setThemeMode(option)}
+                style={{ flex: 1, justifyContent: "center", paddingVertical: 10 }}
+              />
+            ))}
           </View>
         </Card>
         <Card style={{ gap: 9, padding: 14 }}>

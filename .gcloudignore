@@ -16,6 +16,13 @@
 **/*.log
 **/*.pem
 **/*.jks
+builds
+expo
+expo-modules-core
+expo-modules-core-copy
+vector-icons
+coverage
+tmp
 .agents
 .codex
 apps/mobile/credentials

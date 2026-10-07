@@ -1,0 +1,88 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"jsonFile" : "directory-.-RelWithDebInfo-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "src/fabric",
+					"jsonFile" : "directory-src.fabric-RelWithDebInfo-1d0d1ee8408532e247d5.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.13"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src/fabric",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "RelWithDebInfo",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "expo-modules-core",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "expo-modules-core::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-expo-modules-core-RelWithDebInfo-08553bc1ffb0366ff965.json",
+					"name" : "expo-modules-core",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "fabric::@3c04bbf757b97f4dae7c",
+					"jsonFile" : "target-fabric-RelWithDebInfo-865e7adfa136ade0970a.json",
+					"name" : "fabric",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64",
+		"source" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

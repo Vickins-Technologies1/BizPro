@@ -1,0 +1,253 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "src/fabric/libfabric.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"target_compile_options",
+			"target_link_libraries",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"src/fabric/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 7,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 14,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 39,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 33,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 46,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -DREACT_NATIVE_TARGET_VERSION=79 -O2 -g -DNDEBUG -fPIC"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-std=c++20"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_NO_CONFIG=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_HAVE_CLOCK_GETTIME=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_USE_LIBCPP=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_CFG_NO_COROUTINES=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_MOBILE=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_HAVE_RECVMMSG=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_HAVE_PTHREAD=1"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-DFOLLY_HAVE_XSI_STRERROR_R=1"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-O2"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-frtti"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-fexceptions"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-Wall"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-fstack-protector-all"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-DUSE_HERMES=0"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-DUNIT_TEST=0"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-DIS_NEW_ARCHITECTURE_ENABLED=1"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-DRN_FABRIC_ENABLED=1"
+				},
+				{
+					"fragment" : "-std=gnu++20"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 4,
+					"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/node_modules/.pnpm/react-native@0.79.6_@babel+core@7.29.7_@react-native-community+cli@13.6.9_encoding@0.1.13__@t_5ozt5yhtskglwdjxy2s7ys53bq/node_modules/react-native/ReactCommon"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/../common/cpp/fabric"
+				},
+				{
+					"backtrace" : 4,
+					"path" : "C:/Users/ABCD/.gradle/caches/8.13/transforms/0b4d493c06a8cc9a1e94de656f7c8286/transformed/react-android-0.79.6-release/prefab/modules/reactnative/include/react/fabric"
+				},
+				{
+					"backtrace" : 3,
+					"isSystem" : true,
+					"path" : "C:/Users/ABCD/.gradle/caches/8.13/transforms/fc48a1eaf3bc2c7d18d587f5247afe86/transformed/fbjni-0.7.0/prefab/modules/fbjni/include"
+				},
+				{
+					"backtrace" : 3,
+					"isSystem" : true,
+					"path" : "C:/Users/ABCD/.gradle/caches/8.13/transforms/0b4d493c06a8cc9a1e94de656f7c8286/transformed/react-android-0.79.6-release/prefab/modules/jsi/include"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "C:/Users/ABCD/.gradle/caches/8.13/transforms/0b4d493c06a8cc9a1e94de656f7c8286/transformed/react-android-0.79.6-release/prefab/modules/reactnative/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4
+			],
+			"sysroot" : 
+			{
+				"path" : "C:/Users/ABCD/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot"
+			}
+		}
+	],
+	"id" : "fabric::@3c04bbf757b97f4dae7c",
+	"name" : "fabric",
+	"nameOnDisk" : "libfabric.a",
+	"paths" : 
+	{
+		"build" : "src/fabric",
+		"source" : "src/fabric"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/common/cpp/fabric/ExpoViewComponentDescriptor.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/common/cpp/fabric/ExpoViewEventEmitter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/common/cpp/fabric/ExpoViewProps.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/common/cpp/fabric/ExpoViewShadowNode.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/fabric/FabricComponentsRegistry.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

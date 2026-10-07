@@ -1,0 +1,6 @@
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/CMakeFiles/expo-modules-core.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/CMakeFiles/rebuild_cache.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/src/fabric/CMakeFiles/fabric.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/src/fabric/CMakeFiles/edit_cache.dir
+C:/Users/ABCD/OneDrive/Documentos/BizPro/expo-modules-core-copy/android/.cxx/RelWithDebInfo/o66r184m/x86_64/src/fabric/CMakeFiles/rebuild_cache.dir

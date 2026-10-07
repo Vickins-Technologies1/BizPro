@@ -98,3 +98,28 @@ export class LoginDto {
   @IsIn(USER_ROLES)
   role?: UserRole;
 }
+
+export class ForgotPasswordDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  @Transform(({ value }) => trimString(value))
+  identifier!: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  @Transform(({ value }) => trimString(value))
+  identifier!: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "Enter the 6-digit reset code." })
+  code!: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(128)
+  password!: string;
+}

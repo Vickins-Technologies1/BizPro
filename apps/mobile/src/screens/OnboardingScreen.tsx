@@ -4,7 +4,8 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveBusinessTypeConfig, resolveIndustryModule } from "@shared";
-import { AppScrollView, Badge, Card, GradientHeader, InputField, PrimaryButton, Screen } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, InputField, PrimaryButton, Screen } from "@/components/Primitives";
+import { AuthCompactHeader } from "@/components/AuthComponents";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
@@ -26,12 +27,12 @@ const countryOptions: CountryOption[] = getCountries()
 const defaultCountry = countryOptions.find((country) => country.code === "KE") ?? countryOptions[0]!;
 
 const steps: Array<{ key: SetupStepKey; title: string; subtitle: string }> = [
-  { key: "business", title: "Business Information", subtitle: "Owner details and the core business profile." },
-  { key: "industry", title: "Industry", subtitle: "Choose the industry your business belongs to." },
-  { key: "type", title: "Business Type", subtitle: "Pick the operating style that fits the selected industry." },
-  { key: "plan", title: "Subscription Plan", subtitle: "Select the starting subscription for this business." },
-  { key: "security", title: "Security", subtitle: "Set the password and optional cashier PIN." },
-  { key: "finish", title: "Finish", subtitle: "Review everything before creating the account." },
+  { key: "business", title: "Business information", subtitle: "Owner & business details" },
+  { key: "industry", title: "Industry", subtitle: "Choose your industry" },
+  { key: "type", title: "Business type", subtitle: "Choose a business type" },
+  { key: "plan", title: "Subscription plan", subtitle: "Choose a starting plan" },
+  { key: "security", title: "Security", subtitle: "Set up your login" },
+  { key: "finish", title: "Finish", subtitle: "Review and create" },
 ];
 
 const stepFieldMap: Record<Exclude<SetupStepKey, "finish">, Array<keyof FormValues>> = {
@@ -141,36 +142,31 @@ export function OnboardingScreen() {
 
   return (
     <Screen hideFooter>
-      <GradientHeader title="Dira OS" subtitle="Set up your workspace" />
-      <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 9, padding: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{activeStep.title}</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 11 }}>{activeStep.subtitle}</Text>
+      <AppScrollView contentContainerStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 28 }}>
+        <AuthCompactHeader eyebrow="Setup" />
+        <View style={{ gap: 10, paddingHorizontal: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900", letterSpacing: -0.6 }}>Set up your business</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{activeStep.subtitle}</Text>
             </View>
-            <Badge label={`Step ${stepIndex + 1} of ${steps.length}`} tone="primary" />
+            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "900", letterSpacing: 0.7 }}>STEP {stepIndex + 1} OF {steps.length}</Text>
           </View>
-          <View style={{ height: 4, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
-            <View style={{ width: `${progress}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.success }} />
+          <View accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: stepIndex + 1 }} style={{ height: 4, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
+            <View style={{ width: `${progress}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.primaryStrong }} />
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <View style={{ flexDirection: "row", gap: 5 }}>
             {steps.map((step, index) => (
-              <View key={step.key} style={{ flex: 1, height: 3, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.success : tokens.colors.border }} />
+              <View key={step.key} style={{ flex: 1, height: 2, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.primaryStrong : tokens.colors.border }} />
             ))}
           </View>
-        </Card>
+        </View>
 
         {stepIndex === 0 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Business information</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              We&apos;ll create the owner login, set up the business profile, and prepare the first branch for daily operations.
-            </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              <Badge label="Owner account" tone="success" />
-              <Badge label="Business profile" tone="primary" />
-              <Badge label="Offline ready" tone="warning" />
+          <Card style={{ gap: 14, padding: 16, borderRadius: 18 }}>
+            <View style={{ gap: 3 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>Business information</Text>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Owner & business details</Text>
             </View>
             <Controller
               control={control}
@@ -182,7 +178,6 @@ export function OnboardingScreen() {
                   onChangeText={onChange}
                   placeholder="John Mwangi"
                   error={errors.ownerName?.message}
-                  helperText="This is the person who owns the business."
                 />
               )}
             />
@@ -195,8 +190,9 @@ export function OnboardingScreen() {
                   <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
                     <Pressable
                       onPress={() => setCountryPickerVisible(true)}
-                      focusable={false}
-                      style={{ minHeight: 50, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, justifyContent: "center" }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Country code ${country.name} ${country.callingCode}`}
+                      style={{ minHeight: 44, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, justifyContent: "center" }}
                     >
                       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{country.flag} {country.callingCode}</Text>
                     </Pressable>
@@ -208,7 +204,6 @@ export function OnboardingScreen() {
                         placeholder="712 345 678"
                         keyboardType="phone-pad"
                         error={errors.phone?.message}
-                        helperText="Used for account security and important business updates."
                       />
                     </View>
                   </View>
@@ -225,7 +220,7 @@ export function OnboardingScreen() {
                   onChangeText={onChange}
                   placeholder="Your business name"
                   error={errors.businessName?.message}
-                  helperText="The name customers will see on receipts and reports."
+                  helperText="Shown on receipts"
                 />
               )}
             />
@@ -234,12 +229,12 @@ export function OnboardingScreen() {
               name="branchName"
               render={({ field: { value, onChange } }) => (
                 <InputField
-                  label="First branch"
+                  label="Branch"
                   value={value}
                   onChangeText={onChange}
                   placeholder="Main shop"
                   error={errors.branchName?.message}
-                  helperText="You can add more branches later."
+                  helperText="Add more later"
                 />
               )}
             />
@@ -253,7 +248,7 @@ export function OnboardingScreen() {
                   onChangeText={onChange}
                   placeholder="KES"
                   error={errors.currency?.message}
-                  helperText="Use a 3-letter code such as KES or UGX."
+                  helperText="3-letter currency code"
                 />
               )}
             />
@@ -462,30 +457,20 @@ export function OnboardingScreen() {
           </Card>
         ) : null}
 
-        <Card style={{ gap: 9, padding: 12 }}>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title={stepIndex === 0 ? "Continue" : "Back"}
-                variant={stepIndex === 0 ? "primary" : "secondary"}
-                onPress={() => {
-                  if (stepIndex === 0) {
-                    void handleAdvance();
-                    return;
-                  }
-                  setStepIndex((current) => Math.max(0, current - 1));
-                }}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              {stepIndex < steps.length - 1 ? (
-                <PrimaryButton title="Next" onPress={() => void handleAdvance()} />
-              ) : (
-                <PrimaryButton title="Create owner account" loading={loading || submitting} onPress={handleSubmit(submit, onInvalid)} />
-              )}
-            </View>
-          </View>
-          <PrimaryButton title="I already have an account" variant="secondary" onPress={() => navigation.navigate("Login")} />
+        <Card style={{ gap: 10, padding: 12, borderRadius: 18 }}>
+          {stepIndex > 0 ? (
+            <Pressable onPress={() => setStepIndex((current) => Math.max(0, current - 1))} hitSlop={8} style={{ alignSelf: "center", paddingVertical: 2 }}>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "800" }}>Back</Text>
+            </Pressable>
+          ) : null}
+          {stepIndex < steps.length - 1 ? (
+            <PrimaryButton title="Continue" iconRight="arrow-forward" fullWidth onPress={() => void handleAdvance()} />
+          ) : (
+            <PrimaryButton title="Create owner account" iconRight="arrow-forward" fullWidth loading={loading || submitting} onPress={handleSubmit(submit, onInvalid)} />
+          )}
+          <Pressable onPress={() => navigation.navigate("Login")} hitSlop={8} style={{ alignSelf: "center", paddingVertical: 2 }}>
+            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>I already have an account</Text>
+          </Pressable>
         </Card>
       </AppScrollView>
       <Modal visible={countryPickerVisible} transparent animationType="slide" onRequestClose={() => setCountryPickerVisible(false)}>

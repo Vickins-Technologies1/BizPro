@@ -89,21 +89,22 @@ export function Screen({ children, hideFooter = true }: { children: React.ReactN
   const styles = usePrimitiveStyles();
   useAppStore((state) => state.themeMode);
   const motion = useAppearMotion();
-  // Android already resizes the edge-to-edge window via adjustResize. Applying a
-  // second height transform here can fight the IME insets while text is composing.
-  return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
-        <View pointerEvents="none" style={styles.screenBackdrop}>
-          <LinearGradient colors={tokens.gradients.surface} style={StyleSheet.absoluteFillObject} />
-          <LinearGradient colors={tokens.gradients.premium} style={styles.screenGlowPrimary} />
-          <View style={styles.screenGlowSecondary} />
-        </View>
-    <Animated.View style={[styles.screenContent, motion as any]}>{children}</Animated.View>
-        {hideFooter ? null : <AppFooter />}
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+  const content = (
+    <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
+      <View pointerEvents="none" style={styles.screenBackdrop}>
+        <LinearGradient colors={tokens.gradients.surface} style={StyleSheet.absoluteFillObject} />
+        <LinearGradient colors={tokens.gradients.premium} style={styles.screenGlowPrimary} />
+        <View style={styles.screenGlowSecondary} />
+      </View>
+      <Animated.View style={[styles.screenContent, motion as any]}>{children}</Animated.View>
+      {hideFooter ? null : <AppFooter />}
+    </SafeAreaView>
   );
+
+  // Android already resizes the edge-to-edge window via adjustResize. An extra
+  // KeyboardAvoidingView causes repeated layout/focus churn while the IME is
+  // composing text, so only use it on iOS where it is needed.
+  return Platform.OS === "ios" ? <KeyboardAvoidingView style={styles.screen} behavior="padding">{content}</KeyboardAvoidingView> : content;
 }
 
 export function AppScrollView({
@@ -211,17 +212,16 @@ export function SkeletonBlock({
 export function GradientHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
   const styles = usePrimitiveStyles();
   return (
-    <LinearGradient colors={tokens.gradients.surface} style={styles.header}>
-      <View style={styles.headerPill}>
-        <Ionicons name="sparkles-outline" size={11} color={tokens.colors.primaryStrong} />
-        <Text style={styles.headerPillText}>Dira OS</Text>
+    <View style={styles.header}>
+      <View style={styles.headerBrandMark}>
+        <Text style={styles.headerBrand}>D</Text>
       </View>
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {right}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -604,9 +604,6 @@ export function EmptyState({
           <Ionicons name={icon} size={26} color={tokens.colors.primaryStrong} />
         </View>
       ) : null}
-      <View style={styles.emptyBadge}>
-        <Text style={styles.emptyBadgeText}>Dira OS</Text>
-      </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
       {action ? <View style={{ marginTop: 10 }}>{action}</View> : null}
@@ -775,15 +772,18 @@ export const Input = React.memo(function Input({
   const styles = usePrimitiveStyles();
   const isSecureEntry = secureTextEntry ? !passwordVisible : false;
   const nativeValueRef = React.useRef(value);
+  const focusedRef = React.useRef(false);
 
   // Keep the native editor's text buffer independent from the form rerender.
   // On Android/Fabric, feeding every keystroke straight back through `value`
   // can replace the served input connection and move focus to another view.
+  // Do not synchronize while the IME owns the composing buffer; this is
+  // especially important for transformed auth fields such as reset codes.
   React.useEffect(() => {
-    if (value === nativeValueRef.current) return;
+    if (value === nativeValueRef.current || focusedRef.current) return;
     nativeValueRef.current = value;
     inputRef.current?.setNativeProps({ text: value });
-  }, [value]);
+  }, [value, focused]);
 
   return (
     <View style={{ gap: 8 }}>
@@ -835,8 +835,14 @@ export const Input = React.memo(function Input({
           autoFocus={autoFocus}
           editable={!disabled}
           accessibilityState={{ disabled }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            focusedRef.current = true;
+            setFocused(true);
+          }}
+          onBlur={() => {
+            focusedRef.current = false;
+            setFocused(false);
+          }}
           style={[
             styles.input,
             { flex: 1 },
@@ -867,32 +873,33 @@ export function Dialog({
 }) {
   const styles = usePrimitiveStyles();
   const insets = useSafeAreaInsets();
+  const modalContent = (
+    <View style={styles.modalCard}>
+      <View style={styles.modalHeader}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+        </View>
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog">
+          <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
+        </Pressable>
+      </View>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
+      >
+        {children}
+        {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
+      </ScrollView>
+    </View>
+  );
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.modalTitle}>{title}</Text>
-                {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
-              </View>
-              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog">
-                <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-              automaticallyAdjustKeyboardInsets
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
-            >
-              {children}
-              {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+        {Platform.OS === "ios" ? <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior="padding">{modalContent}</KeyboardAvoidingView> : modalContent}
       </View>
     </Modal>
   );
@@ -915,49 +922,50 @@ export function BottomSheet({
 }) {
   const styles = usePrimitiveStyles();
   const insets = useSafeAreaInsets();
+  const sheetContent = (
+    <View
+      style={[
+        styles.modalCard,
+        {
+          alignSelf: "stretch",
+          marginTop: "auto",
+          maxHeight: "86%",
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          borderBottomLeftRadius: 16,
+          borderBottomRightRadius: 16
+        }
+      ]}
+    >
+      <View style={{ alignItems: "center", marginBottom: 10 }}>
+        <View style={{ width: 44, height: 4, borderRadius: 99, backgroundColor: withAlpha(tokens.colors.textMuted, 0.28) }} />
+      </View>
+      <View style={styles.modalHeader}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
+        </View>
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet">
+          <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
+        </Pressable>
+      </View>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
+      >
+        {children}
+        {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
+      </ScrollView>
+    </View>
+  );
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
-        <KeyboardAvoidingView style={{ width: "100%", marginTop: "auto" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                alignSelf: "stretch",
-                marginTop: "auto",
-                maxHeight: "86%",
-                borderTopLeftRadius: 22,
-                borderTopRightRadius: 22,
-                borderBottomLeftRadius: 16,
-                borderBottomRightRadius: 16
-              }
-            ]}
-          >
-            <View style={{ alignItems: "center", marginBottom: 10 }}>
-              <View style={{ width: 44, height: 4, borderRadius: 99, backgroundColor: withAlpha(tokens.colors.textMuted, 0.28) }} />
-            </View>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.modalTitle}>{title}</Text>
-                {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
-              </View>
-              <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet">
-                <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-              automaticallyAdjustKeyboardInsets
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
-            >
-              {children}
-              {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+        {Platform.OS === "ios" ? <KeyboardAvoidingView style={{ width: "100%", marginTop: "auto" }} behavior="padding">{sheetContent}</KeyboardAvoidingView> : sheetContent}
       </View>
     </Modal>
   );
@@ -1655,7 +1663,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: 220,
       height: 220,
       borderRadius: 999,
-      opacity: 0.07
+      opacity: 0.035
     },
     screenGlowSecondary: {
       position: "absolute",
@@ -1664,49 +1672,39 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: 220,
       height: 220,
       borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.primary, 0.05)
+      backgroundColor: withAlpha(tokens.colors.primary, 0.025)
     },
     screenContent: {
       flex: 1
     },
     header: {
-      marginHorizontal: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 13,
-      borderWidth: 1,
-      borderColor: tokens.colors.border,
+      marginHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 8,
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
       overflow: "hidden"
     },
-    headerPill: {
-      flexDirection: "row",
+    headerBrandMark: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
       alignItems: "center",
-      gap: 6,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.08),
+      justifyContent: "center",
+      backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.14),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.primaryStrong, 0.18)
+      borderColor: withAlpha(tokens.colors.primaryStrong, 0.26)
     },
-    headerPillText: {
-      color: tokens.colors.primaryStrong,
-      fontSize: 11,
-      fontWeight: "800",
-      letterSpacing: 0.5,
-      textTransform: "uppercase"
-    },
-    title: { color: tokens.colors.text, fontSize: 19, fontWeight: "900", letterSpacing: -0.25, lineHeight: 23 },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 11, lineHeight: 16 },
+    headerBrand: { color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
+    title: { color: tokens.colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.45, lineHeight: 25 },
+    subtitle: { color: tokens.colors.textSecondary, marginTop: 1, fontSize: 11, lineHeight: 15 },
     card: {
-      backgroundColor: tokens.colors.surfaceElevated,
-      borderRadius: 13,
+      backgroundColor: tokens.colors.surfaceCard,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      padding: 12,
+      padding: 14,
       overflow: "hidden",
       ...tokens.shadow.card
     },
@@ -1719,7 +1717,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     iconWrap: {
       width: 30,
       height: 30,
-      borderRadius: 10,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center"
     },
@@ -1727,7 +1725,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     statValue: { color: tokens.colors.text, fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
     statHint: { color: tokens.colors.textSecondary, fontSize: 11 },
     button: {
-      minHeight: 42,
+      minHeight: 44,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
@@ -1764,12 +1762,12 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       fontSize: 13
     },
     inputShell: {
-      minHeight: 42,
+      minHeight: 44,
       borderRadius: 12,
       backgroundColor: tokens.colors.input,
       borderWidth: 1,
       borderColor: tokens.colors.border,
-      paddingHorizontal: 12,
+      paddingHorizontal: 11,
       flexDirection: "row",
       alignItems: "center",
       gap: 8
@@ -1797,7 +1795,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       alignSelf: "flex-start"
     },
     badgeText: { fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.4 },
-    empty: { alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12 },
+    empty: { alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 10 },
     emptyIcon: {
       width: 42,
       height: 42,
@@ -1825,7 +1823,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       textTransform: "uppercase"
     },
     emptyTitle: { color: tokens.colors.text, fontSize: 15, fontWeight: "900", textAlign: "center", letterSpacing: -0.1 },
-    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 17, maxWidth: 360, fontSize: 11 },
+    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 16, maxWidth: 340, fontSize: 11 },
     helperText: { color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 },
     helperError: { color: tokens.colors.danger, fontSize: 11, lineHeight: 16, fontWeight: "700" },
     successBadge: {
@@ -1954,7 +1952,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: "100%",
       maxHeight: "90%",
       backgroundColor: tokens.colors.surfaceElevated,
-      borderRadius: 16,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: tokens.colors.border,
       padding: 14,

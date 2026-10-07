@@ -2,12 +2,14 @@ import { Appearance } from "react-native";
 import { theme as sharedTheme } from "@shared";
 
 export type ThemeMode = "light" | "dark";
+export type ThemePreference = ThemeMode | "system";
 
 type ThemeColors = {
   background: string;
   backgroundAlt: string;
   surface: string;
   surfaceAlt: string;
+  surfaceCard: string;
   surfaceElevated: string;
   input: string;
   border: string;
@@ -97,39 +99,40 @@ const baseTheme = {
 const lightTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#F8FAFC",
-    backgroundAlt: "#F1F7FB",
+    background: "#F5F7FA",
+    backgroundAlt: "#EEF2F6",
     surface: "#FFFFFF",
-    surfaceAlt: "#F4F8FB",
+    surfaceAlt: "#F7F8FA",
+    surfaceCard: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
     input: "#FFFFFF",
-    border: "#D7E3EE",
-    divider: "#D7E3EE",
+    border: "#E1E7EF",
+    divider: "#E1E7EF",
     primary: "#155EEF",
-    primaryStrong: "#1245A8",
-    success: "#087F5B",
-    warning: "#B86A0A",
-    danger: "#C53D55",
-    text: "#0F172A",
-    textPrimary: "#0F172A",
-    textSecondary: "#334E68",
-    textMuted: "#52637A",
-    icon: "#31506D",
+    primaryStrong: "#155EEF",
+    success: "#079455",
+    warning: "#DC6803",
+    danger: "#D92D20",
+    text: "#111827",
+    textPrimary: "#111827",
+    textSecondary: "#596579",
+    textMuted: "#98A2B3",
+    icon: "#667085",
     disabled: "#94A3B8",
     overlay: "rgba(15, 23, 42, 0.42)"
   },
   gradients: {
-    primary: ["#EAF4FF", "#D9F5F4"],
-    surface: ["#FFFFFF", "#F4F8FB"],
-    premium: ["rgba(21,94,239,0.14)", "rgba(8,127,91,0.10)"]
+    primary: ["#155EEF", "#155EEF"],
+    surface: ["#FFFFFF", "#F5F7FA"],
+    premium: ["rgba(21,94,239,0.035)", "rgba(21,94,239,0.005)"]
   },
   shadow: {
     card: {
       shadowColor: "#0F172A",
-      shadowOpacity: 0.05,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 2
+      shadowOpacity: 0.035,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1
     },
     modal: {
       shadowColor: "#0F172A",
@@ -144,46 +147,47 @@ const lightTheme: ThemeTokens = {
 const darkTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#050B16",
-    backgroundAlt: "#0A1324",
-    surface: "#0E1727",
-    surfaceAlt: "#132033",
-    surfaceElevated: "#18263B",
-    input: "#101A2B",
-    border: "#24344D",
-    divider: "#24344D",
-    primary: "#2E7BFF",
-    primaryStrong: "#46B3FF",
-    success: "#22C55E",
-    warning: "#F59E0B",
-    danger: "#F87171",
-    text: "#F8FAFC",
-    textPrimary: "#F8FAFC",
-    textSecondary: "#CBD5E1",
-    textMuted: "#94A3B8",
-    icon: "#B6C4D6",
-    disabled: "#64748B",
-    overlay: "rgba(3, 7, 18, 0.74)"
+    background: "#08111F",
+    backgroundAlt: "#0D1929",
+    surface: "#0D1929",
+    surfaceAlt: "#132238",
+    surfaceCard: "#102035",
+    surfaceElevated: "#172943",
+    input: "#0C1A2D",
+    border: "#223A57",
+    divider: "#223A57",
+    primary: "#3B82F6",
+    primaryStrong: "#3B82F6",
+    success: "#32D583",
+    warning: "#FDB022",
+    danger: "#F97066",
+    text: "#F5F7FA",
+    textPrimary: "#F5F7FA",
+    textSecondary: "#A9B8CA",
+    textMuted: "#737D8C",
+    icon: "#A8B0BC",
+    disabled: "#505966",
+    overlay: "rgba(0, 0, 0, 0.55)"
   },
   gradients: {
-    primary: ["#2E7BFF", "#1048A5"],
-    surface: ["#0E1727", "#050B16"],
-    premium: ["rgba(46,123,255,0.24)", "rgba(70,179,255,0.08)"]
+    primary: ["#3B82F6", "#2563EB"],
+    surface: ["#11161D", "#0B0F14"],
+    premium: ["rgba(59,130,246,0.07)", "rgba(59,130,246,0.01)"]
   },
   shadow: {
     card: {
       shadowColor: "#000",
-      shadowOpacity: 0.16,
-      shadowRadius: 9,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 3
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2
     },
     modal: {
       shadowColor: "#000",
-      shadowOpacity: 0.3,
-      shadowRadius: 20,
-      shadowOffset: { width: 0, height: 9 },
-      elevation: 8
+      shadowOpacity: 0.34,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 7
     }
   }
 };
@@ -195,6 +199,10 @@ const themeByMode = {
 
 export function resolvePreferredThemeMode(): ThemeMode {
   return Appearance.getColorScheme() === "dark" ? "dark" : "light";
+}
+
+export function resolveThemeMode(preference: ThemePreference): ThemeMode {
+  return preference === "system" ? resolvePreferredThemeMode() : preference;
 }
 
 export const initialThemeMode = resolvePreferredThemeMode();

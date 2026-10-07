@@ -47,7 +47,19 @@ export interface BaseEntity {
 export interface Branch extends BaseEntity {
     name: string;
     code: string;
+    location?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    description?: string | null;
+    managerId?: string | null;
+    managerName?: string | null;
+    status: "active" | "inactive";
     isDefault: boolean;
+    salesTotal?: number;
+    salesCount?: number;
+    inventoryCount?: number;
+    lowStockCount?: number;
+    staffCount?: number;
 }
 export interface Business {
     id: string;

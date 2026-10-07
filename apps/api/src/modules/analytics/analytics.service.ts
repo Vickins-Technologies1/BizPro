@@ -2,7 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { addMonths, eachMonthOfInterval, endOfDay, format, startOfDay, startOfMonth, subMonths } from "date-fns";
-import { Customer, CustomerDocument, Expense, ExpenseDocument, Product, ProductDocument, Sale, SaleDocument, User, UserDocument } from "../schemas";
+import { Customer, CustomerDocument, Expense, ExpenseDocument, Invoice, InvoiceDocument, Payment, PaymentDocument, Product, ProductDocument, Sale, SaleDocument, User, UserDocument } from "../schemas";
+import { calculateCustomerOutstanding } from "../customers/customer-balance";
+import { calculateNetProfit } from "@vbo/shared";
 import type { EnterpriseAnalytics } from "@vbo/shared";
 import { buildBranchMatch, resolveReadBranchId, type BranchScope } from "../../common/branch-scope";
 
@@ -13,7 +15,9 @@ export class AnalyticsService {
     @InjectModel(Expense.name) private readonly expenseModel: Model<ExpenseDocument>,
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>,
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Invoice.name) private readonly invoiceModel: Model<InvoiceDocument>,
+    @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>
   ) {}
 
   async enterprise(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
@@ -25,7 +29,7 @@ export class AnalyticsService {
     const saleMatch: Record<string, unknown> = { businessId, deletedAt: null, ...buildBranchMatch(branchId), createdAt: { $gte: start, $lte: end } };
     const expenseMatch: Record<string, unknown> = { businessId, deletedAt: null, ...buildBranchMatch(branchId), expenseDate: { $gte: start, $lte: end } };
 
-    const [monthlySales, monthlyCosts, monthlyExpenses, peakHours, topProducts, topCustomers, staffPerformance, products, customers, users] = await Promise.all([
+    const [monthlySales, monthlyCosts, monthlyExpenses, peakHours, topProducts, topCustomers, staffPerformance, products, customers, users, allCustomerSales, allCustomerInvoices, allCustomerPayments] = await Promise.all([
       this.saleModel.aggregate([
         { $match: saleMatch },
         {
@@ -115,6 +119,9 @@ export class AnalyticsService {
       this.productModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
       this.customerModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
       this.userModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean()
+      ,this.saleModel.find({ businessId, deletedAt: null, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean()
+      ,this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] }, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean()
+      ,this.paymentModel.find({ businessId, deletedAt: null, customerId: { $ne: null }, saleId: null, invoiceId: null, ...buildBranchMatch(branchId) }).select({ customerId: 1, amount: 1 }).lean()
     ]);
 
     const monthRevenue = new Map(monthlySales.map((row: any) => [String(row._id), { revenue: Number(row.revenue ?? 0), salesCount: Number(row.salesCount ?? 0) }]));
@@ -126,7 +133,7 @@ export class AnalyticsService {
       const revenue = monthRevenue.get(key)?.revenue ?? 0;
       const salesCount = monthRevenue.get(key)?.salesCount ?? 0;
       const expenses = monthExpenseMap.get(key) ?? 0;
-      const profit = revenue - (monthCosts.get(key) ?? 0) - expenses;
+      const profit = calculateNetProfit(revenue - (monthCosts.get(key) ?? 0), expenses);
       return {
         period: format(month, "MMM yyyy"),
         revenue,
@@ -166,6 +173,15 @@ export class AnalyticsService {
     const staffCount = users.filter((user) => user.role !== "owner" && !user.deletedAt).length;
 
     const customerMap = new Map(customers.map((customer) => [String(customer.externalId ?? customer._id), customer]));
+    const canonicalCustomerBalances = new Map<string, number>();
+    for (const customer of customers) {
+      const keys = [String(customer._id), customer.externalId].filter(Boolean);
+      canonicalCustomerBalances.set(String(customer.externalId ?? customer._id), calculateCustomerOutstanding({
+        sales: allCustomerSales.filter((sale) => keys.includes(String(sale.customerId))).map((sale) => ({ id: String(sale.externalId ?? sale._id), balanceDue: sale.balanceDue, currency: sale.currency })),
+        invoices: allCustomerInvoices.filter((invoice) => keys.includes(String(invoice.customerId))).map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), saleId: invoice.saleId ?? null, balanceDue: Number(invoice.balanceDue ?? 0), currency: invoice.currency ?? null })),
+        standalonePayments: allCustomerPayments.filter((payment) => keys.includes(String(payment.customerId))),
+      }));
+    }
     const userMap = new Map(users.map((user) => [String(user._id), user]));
     const productMap = new Map(products.map((product) => [String(product.externalId ?? product._id), product]));
 
@@ -185,8 +201,8 @@ export class AnalyticsService {
         label: customer?.name ?? String(row._id),
         value: Number(row.revenue ?? 0),
         secondaryValue: Number(row.visits ?? 0),
-        tertiaryValue: Number(customer?.balance ?? 0),
-        balance: Number(customer?.balance ?? 0)
+        tertiaryValue: canonicalCustomerBalances.get(String(row._id)) ?? 0,
+        balance: canonicalCustomerBalances.get(String(row._id)) ?? 0
       };
     });
 

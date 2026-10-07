@@ -3,9 +3,10 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { businessOperationSchemas, catalogSchemas, financeSchemas, opsSchemas, syncSchemas } from "../schemas";
 import { SyncController } from "./sync.controller";
 import { SyncService } from "./sync.service";
+import { SalesModule } from "../sales/sales.module";
 
 @Module({
-  imports: [MongooseModule.forFeature([...syncSchemas, ...catalogSchemas, ...financeSchemas, ...opsSchemas, ...businessOperationSchemas])],
+  imports: [MongooseModule.forFeature([...syncSchemas, ...catalogSchemas, ...financeSchemas, ...opsSchemas, ...businessOperationSchemas]), SalesModule],
   controllers: [SyncController],
   providers: [SyncService],
   exports: [SyncService]

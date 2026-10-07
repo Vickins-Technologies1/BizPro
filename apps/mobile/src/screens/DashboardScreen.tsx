@@ -7,13 +7,11 @@ import {
   hasPermission,
   resolveBusinessTypeConfig,
   resolveIndustryModule,
-  formatRoleLabel,
   type DailySummary,
   type EnterpriseAnalytics
 } from "@shared";
 import {
   AppScrollView,
-  Avatar,
   Badge,
   BottomSheet,
   Card,
@@ -28,7 +26,6 @@ import {
   SkeletonBlock,
   Tag
 } from "@/components/Primitives";
-import { BrandLogo } from "@/components/BrandLogo";
 import { lightTokens, tokens, type ThemeTokens } from "@/theme/tokens";
 import { useThemeMode, useThemeTokens } from "@/theme";
 import { formatMoney } from "@/utils/money";
@@ -178,7 +175,6 @@ export function DashboardScreen() {
   const paymentTotal = paymentBreakdown.reduce((sum, row) => sum + row.total, 0);
   const paymentCount = paymentBreakdown.reduce((sum, row) => sum + row.count, 0);
   const customerCount = analytics?.summary.customerCount ?? customers.length;
-  const staffCount = analytics?.summary.staffCount ?? employeesCount ?? 0;
   const salesCount = analytics?.summary.salesCount ?? sales.length;
   const productCount = analytics?.summary.productCount ?? products.length;
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
@@ -191,7 +187,6 @@ export function DashboardScreen() {
   const averageOrderValue = analytics?.summary.averageOrderValue ?? 0;
   const activeBranchLabel = resolveBranchLabel(branches, selectedBranchId, user?.role);
   const firstName = getFirstName(user?.fullName);
-  const roleLabel = user?.roleLabel ?? formatRoleLabel(user?.role ?? "cashier");
   const isMobile = width < 700;
   const metricWrapStyle = width >= 900 ? [styles.metricWrap, styles.metricWrapWide] : styles.metricWrap;
   const hasContent =
@@ -224,22 +219,21 @@ export function DashboardScreen() {
     <DashboardStylesContext.Provider value={dashboardStyles}>
       <Screen>
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.topBar}>
+        <View style={styles.homeHeader}>
           <Pressable
             onPress={openMore}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
             accessibilityRole="button"
             accessibilityLabel="Open more menu"
           >
-            <Ionicons name="menu-outline" size={28} color={tokens.colors.text} />
+            <Ionicons name="menu-outline" size={24} color={tokens.colors.text} />
           </Pressable>
 
-          <View style={styles.brandCluster}>
-            <BrandLogo style={styles.brandLogo} />
-            <View style={{ alignItems: "center" }}>
-              <Text style={styles.brandTitle}>Dira OS</Text>
-              <Text style={styles.brandSubtitle}>Business OS</Text>
-            </View>
+          <View style={styles.homeGreeting}>
+            <Text style={styles.homeGreetingText}>Good {getGreeting()}, {firstName} 👋</Text>
+            <Text style={styles.homeShopText}>
+              {business?.name ?? activeBranchLabel} · <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success }}>{pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
+            </Text>
           </View>
 
           <Pressable
@@ -257,42 +251,14 @@ export function DashboardScreen() {
           </Pressable>
         </View>
 
-        <Card style={[styles.heroCard, isLightTheme && styles.lightCard]}>
-          <View style={styles.heroGlowOne} />
-          <View style={styles.heroGlowTwo} />
-          <View style={styles.heroCopy}>
-            <Text style={styles.heroEyebrow}>Welcome back</Text>
-            <Text style={styles.heroName}>
-              {firstName}
-              {firstName === "there" ? "" : "!"} <Text style={styles.heroWave}>👋</Text>
-            </Text>
-            <View style={styles.heroPills}>
-              <Badge label={roleLabel} tone="primary" />
-              <Badge label={pendingSync ? `${pendingSync} pending sync` : "Synced"} tone={pendingSync ? "warning" : "success"} />
-              <Badge label={activeBranchLabel} tone="primary" />
-              {staffCount ? <Badge label={`${staffCount} team`} tone="success" /> : null}
-            </View>
-            <View style={styles.heroMetaRow}>
-              <Text style={styles.heroMeta}>{industry.label}</Text>
-              <Text style={styles.heroMetaDot}>•</Text>
-              <Text style={styles.heroMeta}>{currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Current period"}</Text>
-            </View>
-            <View style={styles.heroDebtRow}>
-              <Text style={styles.heroDebtLabel}>Outstanding debt</Text>
-              <Text style={styles.heroDebtValue}>{formatMoney(outstandingDebt, business?.currency)}</Text>
-            </View>
+        <View style={styles.primarySales}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Text style={styles.primarySalesLabel}>{activeFilter === "today" ? "TODAY'S SALES" : "PERIOD SALES"}</Text>
+            <Text style={styles.primarySalesValue}>{formatMoney(summary?.salesTotal ?? revenueTotal, business?.currency)}</Text>
+            <Text style={styles.primarySalesMeta}>{formatPercent(growthPercent)} vs previous period · {salesCount} sale{salesCount === 1 ? "" : "s"}</Text>
           </View>
-
-          <View style={styles.heroAvatarColumn}>
-            <View style={styles.heroRing}>
-              <Avatar name={user?.fullName ?? null} size={54} tone="primary" />
-            </View>
-            <View style={styles.heroRolePill}>
-              <Ionicons name="shield-checkmark-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.heroRoleText}>{roleLabel}</Text>
-            </View>
-          </View>
-        </Card>
+          <PrimaryButton title="Record sale" iconLeft="add" onPress={() => navigation.navigate("POS")} style={styles.recordSaleButton} />
+        </View>
 
         {isMobile ? (
           <View style={styles.mobileFilterBar}>
@@ -934,6 +900,13 @@ function getFirstName(fullName?: string | null) {
   return name.split(/\s+/)[0] ?? "there";
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "evening";
+}
+
 function resolveBranchLabel(
   branches: Array<{ id: string; name: string; isDefault?: boolean; status?: string | null }>,
   selectedBranchId: string | null,
@@ -1044,10 +1017,60 @@ function createStyles(theme: ThemeTokens) {
       color: lightTokens.colors.textSecondary
     },
   scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 6,
+    paddingHorizontal: 20,
+    paddingTop: 4,
     paddingBottom: 24,
+    gap: 16
+  },
+  homeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10
+  },
+  homeGreeting: {
+    flex: 1,
+    gap: 3
+  },
+  homeGreetingText: {
+    color: tokens.colors.text,
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: -0.25
+  },
+  homeShopText: {
+    color: tokens.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  primarySales: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 14,
+    paddingTop: 4,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border
+  },
+  primarySalesLabel: {
+    color: tokens.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8
+  },
+  primarySalesValue: {
+    color: tokens.colors.text,
+    fontSize: 30,
+    fontWeight: "700",
+    letterSpacing: -0.8
+  },
+  primarySalesMeta: {
+    color: tokens.colors.success,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  recordSaleButton: {
+    minHeight: 42,
+    paddingHorizontal: 12
   },
   topBar: {
     flexDirection: "row",

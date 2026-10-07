@@ -7,9 +7,10 @@ param(
 Add-Type -AssemblyName System.Drawing
 
 # Android's adaptive-icon canvas is 108dp and its never-clipped safe zone is 66dp.
-# A 620px logo on this 1024px canvas is just under that 66/108 (626px) maximum.
+# A 460px mark on this 1024px canvas is about 70% of the safe zone, leaving
+# enough breathing room for circular, squircle, and rounded-square launcher masks.
 $canvasSize = 1024
-$safeLogoSize = 620
+$safeLogoSize = 460
 $alphaThreshold = 16
 
 $sourceImage = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Source))
@@ -103,9 +104,6 @@ try {
     Save-ResizedIcon $ForegroundOutput (Join-Path $mipmapDirectory "ic_launcher_foreground.png") $size ([System.Drawing.Color]::Transparent)
     Save-ResizedIcon $IconOutput (Join-Path $mipmapDirectory "ic_launcher.png") $size ([System.Drawing.Color]::White)
     Save-ResizedIcon $IconOutput (Join-Path $mipmapDirectory "ic_launcher_round.png") $size ([System.Drawing.Color]::White)
-    Copy-Item (Join-Path $mipmapDirectory "ic_launcher_foreground.png") (Join-Path $mipmapDirectory "ic_launcher_foreground.webp") -Force
-    Copy-Item (Join-Path $mipmapDirectory "ic_launcher.png") (Join-Path $mipmapDirectory "ic_launcher.webp") -Force
-    Copy-Item (Join-Path $mipmapDirectory "ic_launcher_round.png") (Join-Path $mipmapDirectory "ic_launcher_round.webp") -Force
   }
 
   Write-Output "Visible logo bounds: $($targetWidth)x$($targetHeight) centered at ($($targetBounds.X), $($targetBounds.Y)) on a ${canvasSize}x${canvasSize} canvas."

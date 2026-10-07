@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncEventSchema = exports.stockAdjustmentCreateSchema = exports.stockTransferCreateSchema = exports.stockTransferLineSchema = exports.purchaseOrderCreateSchema = exports.purchaseOrderLineSchema = exports.supplierPaymentCreateSchema = exports.supplierDocumentCreateSchema = exports.supplierContactCreateSchema = exports.supplierCategoryCreateSchema = exports.supplierCreateSchema = exports.brandCreateSchema = exports.productCreateSchema = exports.debitNoteCreateSchema = exports.invoiceCreateSchema = exports.invoiceLineItemSchema = exports.creditNoteCreateSchema = exports.pettyCashEntryCreateSchema = exports.bankAccountCreateSchema = exports.expenseCreateSchema = exports.saleCreateSchema = exports.saleItemSchema = exports.loginSchema = exports.businessSetupSchema = void 0;
+exports.syncEventSchema = exports.stockAdjustmentCreateSchema = exports.stockTransferCreateSchema = exports.stockTransferLineSchema = exports.purchaseOrderCreateSchema = exports.purchaseOrderLineSchema = exports.supplierPaymentCreateSchema = exports.supplierDocumentCreateSchema = exports.supplierContactCreateSchema = exports.supplierCategoryCreateSchema = exports.supplierCreateSchema = exports.brandCreateSchema = exports.productCreateSchema = exports.debitNoteCreateSchema = exports.invoiceCreateSchema = exports.invoiceLineItemSchema = exports.creditNoteCreateSchema = exports.pettyCashEntryCreateSchema = exports.bankAccountCreateSchema = exports.expenseCreateSchema = exports.saleCreateSchema = exports.saleItemSchema = exports.branchUpdateSchema = exports.branchCreateSchema = exports.loginSchema = exports.businessSetupSchema = void 0;
 const zod_1 = require("zod");
 const constants_1 = require("./constants");
 const industries_1 = require("./industries");
@@ -23,6 +23,21 @@ exports.loginSchema = zod_1.z.object({
     identifier: zod_1.z.string().min(2, "Enter a phone number or account name."),
     passwordOrPin: zod_1.z.string().min(4, "Enter the password or PIN."),
     role: zod_1.z.enum(constants_1.USER_ROLES).optional(),
+});
+exports.branchCreateSchema = zod_1.z.object({
+    businessId: zod_1.z.string().min(1, "Select the business before saving."),
+    name: zod_1.z.string().min(2, "Enter the branch name."),
+    code: zod_1.z.string().min(2, "Enter the branch code."),
+    location: zod_1.z.string().nullable().optional(),
+    phone: zod_1.z.string().nullable().optional(),
+    email: zod_1.z.string().email().nullable().optional().or(zod_1.z.literal("")),
+    managerId: zod_1.z.string().nullable().optional(),
+    description: zod_1.z.string().nullable().optional(),
+    status: zod_1.z.enum(["active", "inactive"]).default("active"),
+    isDefault: zod_1.z.boolean().default(false)
+});
+exports.branchUpdateSchema = exports.branchCreateSchema.partial().extend({
+    businessId: zod_1.z.string().min(1, "Select the business before saving.")
 });
 exports.saleItemSchema = zod_1.z.object({
     productId: zod_1.z.string().min(1),

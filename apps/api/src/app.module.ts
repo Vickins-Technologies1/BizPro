@@ -25,6 +25,7 @@ import { SuppliersModule } from "./modules/suppliers/suppliers.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { BusinessOperationsModule } from "./modules/business-operations/business-operations.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
+import { CommerceModule } from "./modules/commerce/commerce.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { RolesGuard } from "./common/roles.guard";
 import { SupportKeyGuard } from "./common/support-key.guard";
@@ -66,7 +67,8 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     SuppliersModule,
     NotificationsModule,
     BusinessOperationsModule,
-    InvoicesModule
+    InvoicesModule,
+    CommerceModule
   ],
   controllers: [HealthController],
   providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]

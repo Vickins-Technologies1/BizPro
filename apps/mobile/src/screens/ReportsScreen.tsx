@@ -7,6 +7,7 @@ import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 import type { DailySummary } from "@shared";
 import {
   AppScrollView,
+  BottomSheet,
   Card,
   DateRangePickerModal,
   EmptyState,
@@ -14,9 +15,7 @@ import {
   GradientHeader,
   PrimaryButton,
   Screen,
-  SkeletonBlock,
-  StatCard,
-  Tag
+  SkeletonBlock
 } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
@@ -47,6 +46,7 @@ export function ReportsScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [pickerVisible, setPickerVisible] = React.useState(false);
+  const [rangeSheetVisible, setRangeSheetVisible] = React.useState(false);
   const requestIdRef = React.useRef(0);
   const initializedRef = React.useRef(false);
 
@@ -141,27 +141,16 @@ export function ReportsScreen() {
       />
 
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh}>
-        <Card style={{ gap: 12 }}>
-          <View style={{ gap: 4 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Date range</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              Use a preset or pick a custom date range to update the numbers instantly.
-            </Text>
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {([
-              ["today", "Today"],
-              ["week", "This Week"],
-              ["month", "This Month"],
-              ["year", "This Year"]
-            ] as Array<[Exclude<Filter, "custom">, string]>).map(([filter, label]) => (
-              <Tag key={filter} label={label} tone="primary" selected={activeFilter === filter} onPress={() => setActiveFilter(filter)} />
-            ))}
-            <Tag label="Custom Range" tone="warning" selected={activeFilter === "custom"} onPress={openCustomRange} />
-          </View>
-          <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Showing {rangeLabel}.</Text>
+        <View style={{ gap: 8 }}>
+          <Pressable onPress={() => setRangeSheetVisible(true)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Reporting period</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>{rangeLabel}</Text>
+            </View>
+            <Ionicons name="chevron-down" size={18} color={tokens.colors.textSecondary} />
+          </Pressable>
           {error ? <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>{error}</Text> : null}
-        </Card>
+        </View>
 
         {loading && !summary ? (
           <View style={{ gap: 16 }}>
@@ -206,20 +195,19 @@ export function ReportsScreen() {
           />
         ) : (
           <>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Sales" value={formatMoney(summary?.salesTotal ?? 0, business?.currency)} icon="cash-outline" tone="primary" />
+            <View style={{ gap: 14, paddingVertical: 4 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <ReportMetric label="Revenue" value={formatMoney(summary?.salesTotal ?? 0, business?.currency)} />
+                <ReportMetric label="Profit" value={formatMoney(summary?.estimatedProfit ?? 0, business?.currency)} tone="success" />
               </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Profit" value={formatMoney(summary?.estimatedProfit ?? 0, business?.currency)} icon="analytics-outline" tone="success" />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <ReportMetric label="COGS" value={formatMoney(summary?.cogsTotal ?? 0, business?.currency)} />
+                <ReportMetric label="Margin" value={`${summary?.salesTotal ? Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100) : 0}%`} tone="success" />
               </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Expenses" value={formatMoney(summary?.expensesTotal ?? 0, business?.currency)} icon="trending-down-outline" tone="warning" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Debts" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} icon="person-remove-outline" tone="danger" />
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <ReportMetric label="Expenses" value={formatMoney(summary?.expensesTotal ?? 0, business?.currency)} tone="warning" />
+                <ReportMetric label="Debt" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
               </View>
             </View>
 
@@ -260,6 +248,26 @@ export function ReportsScreen() {
         )}
       </AppScrollView>
 
+      <BottomSheet visible={rangeSheetVisible} title="Reporting period" subtitle="Choose the window used for every calculation on this report." onClose={() => setRangeSheetVisible(false)}>
+        <View style={{ gap: 8 }}>
+          {([
+            ["today", "Today"],
+            ["week", "This week"],
+            ["month", "This month"],
+            ["year", "This year"]
+          ] as Array<[Exclude<Filter, "custom">, string]>).map(([filter, label]) => (
+            <Pressable key={filter} onPress={() => { setActiveFilter(filter); setRangeSheetVisible(false); }} style={{ minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "600" }}>{label}</Text>
+              {activeFilter === filter ? <Ionicons name="checkmark" size={18} color={tokens.colors.primaryStrong} /> : null}
+            </Pressable>
+          ))}
+          <Pressable onPress={() => { setRangeSheetVisible(false); openCustomRange(); }} style={{ minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "600" }}>Custom range</Text>
+            {activeFilter === "custom" ? <Ionicons name="checkmark" size={18} color={tokens.colors.primaryStrong} /> : null}
+          </Pressable>
+        </View>
+      </BottomSheet>
+
       <DateRangePickerModal
         visible={pickerVisible}
         title="Custom date range"
@@ -269,6 +277,16 @@ export function ReportsScreen() {
         onApply={(range) => applyCustomRange(range)}
       />
     </Screen>
+  );
+}
+
+function ReportMetric({ label, value, tone = "primary" }: { label: string; value: string; tone?: "primary" | "success" | "warning" | "danger" }) {
+  const color = tone === "success" ? tokens.colors.success : tone === "warning" ? tokens.colors.warning : tone === "danger" ? tokens.colors.danger : tokens.colors.text;
+  return (
+    <View style={{ flex: 1, gap: 4 }}>
+      <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color, fontSize: 17, fontWeight: "700" }} numberOfLines={1}>{value}</Text>
+    </View>
   );
 }
 

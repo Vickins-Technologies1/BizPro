@@ -17,5 +17,6 @@ if (!fs.existsSync(standaloneAppRoot)) {
 
 copyIfExists(path.join(appRoot, ".next", "static"), path.join(standaloneAppRoot, ".next", "static"));
 copyIfExists(path.join(appRoot, "public"), path.join(standaloneAppRoot, "public"));
+copyIfExists(path.join(appRoot, "..", "mobile", "assets", "brand", "dira-os-logo.png"), path.join(appRoot, "resources", "dira-os-logo.png"));
 
 console.log("Prepared Dira OS desktop standalone assets.");

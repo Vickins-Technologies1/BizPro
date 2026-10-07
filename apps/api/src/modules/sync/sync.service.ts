@@ -36,7 +36,7 @@ import {
   SyncEventDocument
 } from "../schemas";
 import { BusinessOperation as BusinessOperationModel, BusinessOperationDocument } from "../business-operations.schemas";
-import { CreateSaleInput } from "../sales/sales.service";
+import { SalesService } from "../sales/sales.service";
 
 @Injectable()
 export class SyncService {
@@ -57,16 +57,35 @@ export class SyncService {
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(StockMovement.name) private readonly stockMovementModel: Model<StockMovementDocument>,
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
-    @InjectModel(BusinessOperationModel.name) private readonly businessOperationModel: Model<BusinessOperationDocument>
+    @InjectModel(BusinessOperationModel.name) private readonly businessOperationModel: Model<BusinessOperationDocument>,
+    private readonly salesService: SalesService
   ) {}
 
-  async push(businessId: string, deviceId: string, events: Array<{ eventId: string; entityType: string; entityId: string; action: string; payload: Record<string, unknown>; createdAt: string }>) {
+  async push(businessId: string, deviceId: string, events: Array<{ eventId: string; entityType: string; entityId: string; action: string; payload: Record<string, unknown>; createdAt: string; entityVersion?: number }>) {
     const acknowledgements: Array<{ eventId: string }> = [];
     for (const event of events) {
-      const existing = await this.syncEventModel.findOne({ eventId: event.eventId }).lean();
+      const existing = await this.syncEventModel.findOne({ businessId, deviceId, eventId: event.eventId }).lean();
       if (existing) {
-        acknowledgements.push({ eventId: event.eventId });
-        continue;
+        if (existing.status === "applied") {
+          acknowledgements.push({ eventId: event.eventId });
+          continue;
+        }
+        try {
+          await this.applyEvent(businessId, event);
+          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "applied", lastError: null, $inc: { retryCount: 1 } });
+          acknowledgements.push({ eventId: event.eventId });
+          continue;
+        } catch (error) {
+          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "failed", lastError: error instanceof Error ? error.message : "Sync apply failed", $inc: { retryCount: 1 } });
+          throw error;
+        }
+      }
+      if (event.entityVersion !== undefined) {
+        const newer = await this.syncEventModel.findOne({ businessId, entityType: event.entityType, entityId: event.entityId, entityVersion: { $gt: event.entityVersion } }).sort({ entityVersion: -1 }).lean();
+        if (newer) {
+          acknowledgements.push({ eventId: event.eventId });
+          continue;
+        }
       }
       const record = await this.syncEventModel.create({
         eventId: event.eventId,
@@ -75,6 +94,8 @@ export class SyncService {
         entityType: event.entityType,
         entityId: event.entityId,
         action: event.action,
+        entityVersion: event.entityVersion ?? null,
+        serverReceivedAt: new Date(),
         payload: event.payload,
         status: "pending",
         retryCount: 0,
@@ -344,7 +365,7 @@ export class SyncService {
           note: String(event.payload.note ?? ""),
           expenseDate: event.payload.expenseDate ? new Date(String(event.payload.expenseDate)) : new Date(),
           recordedById: (event.payload.recordedById as string | null) ?? null,
-          deletedAt: null
+          deletedAt: event.payload.deletedAt ? new Date(String(event.payload.deletedAt)) : null
         },
         { upsert: true, new: true }
       );
@@ -354,51 +375,33 @@ export class SyncService {
       const sale = event.payload.sale as Record<string, unknown> | undefined;
       const payment = event.payload.payment as Record<string, unknown> | undefined;
       if (sale) {
-        await this.saleModel.findOneAndUpdate(
-          { businessId, externalId: String(sale.id ?? event.entityId) },
-          {
-            externalId: String(sale.id ?? event.entityId),
-            businessId,
-            branchId: (sale.branchId as string | null) ?? null,
-            customerId: (sale.customerId as string | null) ?? null,
-            receiptNumber: String(sale.receiptNumber ?? ""),
-            subtotal: Number(sale.subtotal ?? 0),
-            discountTotal: Number(sale.discountTotal ?? 0),
-            taxTotal: Number(sale.taxTotal ?? 0),
-            grandTotal: Number(sale.grandTotal ?? 0),
-            amountPaid: Number(sale.amountPaid ?? 0),
-            balanceDue: Number(sale.balanceDue ?? 0),
-            paymentStatus: String(sale.paymentStatus ?? "paid"),
-            paymentMethod: String(sale.paymentMethod ?? "cash"),
-            cashierId: (sale.cashierId as string | null) ?? null,
-            notes: (sale.notes as string | null) ?? null,
-            items: Array.isArray(sale.items) ? sale.items : [],
-            deletedAt: null
-          },
-          { upsert: true, new: true }
-        );
+        if (sale.deletedAt) {
+          await this.saleModel.findOneAndUpdate(
+            { businessId, externalId: String(sale.externalId ?? sale.id ?? event.entityId) },
+            { deletedAt: new Date(String(sale.deletedAt)) },
+            { new: true }
+          );
+          return;
+        }
+        const items = Array.isArray(sale.items) ? sale.items.map((item) => {
+          const row = item as Record<string, unknown>;
+          return { productId: String(row.productId ?? ""), quantity: Number(row.quantity ?? 0), discount: Number(row.discount ?? row.lineDiscount ?? 0), tax: Number(row.tax ?? row.lineTax ?? 0) };
+        }) : [];
+        await this.salesService.create({
+          businessId,
+          externalId: String(sale.externalId ?? sale.id ?? event.entityId),
+          branchId: (sale.branchId as string | null) ?? null,
+          customerId: (sale.customerId as string | null) ?? null,
+          cashierId: (sale.cashierId as string | null) ?? null,
+          receiptNumber: String(sale.receiptNumber ?? event.entityId),
+          amountPaid: Number(payment?.amount ?? sale.amountPaid ?? 0),
+          paymentStatus: String(sale.paymentStatus ?? "unpaid") as never,
+          paymentMethod: String(payment?.method ?? sale.paymentMethod ?? "cash") as never,
+          notes: (sale.notes as string | null) ?? null,
+          items
+        }, {});
       }
-      if (payment) {
-        const paymentExternalId = String(payment.id ?? sale?.id ?? event.entityId);
-        await this.paymentModel.findOneAndUpdate(
-          { businessId, externalId: paymentExternalId },
-          {
-            externalId: paymentExternalId,
-            businessId,
-            customerId: (payment.customerId as string | null) ?? (sale?.customerId as string | null) ?? null,
-            saleId: String(sale?.id ?? event.entityId),
-            debtPaymentId: (payment.debtPaymentId as string | null) ?? null,
-            method: String(payment.method ?? "cash"),
-            status: String(payment.status ?? "paid"),
-            amount: Number(payment.amount ?? 0),
-            reference: (payment.reference as string | null) ?? null,
-            note: (payment.note as string | null) ?? null,
-            provider: (payment.provider as string | null) ?? null,
-            reconciledAt: payment.reconciledAt ? new Date(String(payment.reconciledAt)) : null
-          },
-          { upsert: true, new: true }
-        );
-      }
+      return;
     }
     if (event.entityType === "payment") {
       const payment = event.payload as Record<string, unknown>;

@@ -54,6 +54,13 @@ function resolvePort() {
 function buildCorsOptions() {
   const configuredOrigins = process.env.CORS_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean) ?? [];
   if (!configuredOrigins.length) {
+    if (process.env.NODE_ENV === "production") {
+      return {
+        origin: false,
+        credentials: true
+      };
+    }
+
     return {
       origin: true,
       credentials: true

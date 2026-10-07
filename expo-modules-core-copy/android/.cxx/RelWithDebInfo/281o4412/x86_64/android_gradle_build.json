@@ -1,0 +1,46 @@
+{
+  "buildFiles": [
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\prefab\\x86_64\\prefab\\lib\\x86_64-linux-android\\cmake\\fbjni\\fbjniConfig.cmake",
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\prefab\\x86_64\\prefab\\lib\\x86_64-linux-android\\cmake\\fbjni\\fbjniConfigVersion.cmake",
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\prefab\\x86_64\\prefab\\lib\\x86_64-linux-android\\cmake\\ReactAndroid\\ReactAndroidConfig.cmake",
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\prefab\\x86_64\\prefab\\lib\\x86_64-linux-android\\cmake\\ReactAndroid\\ReactAndroidConfigVersion.cmake",
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\.cxx\\RelWithDebInfo\\281o4412\\x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "expo-modules-core::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "expo-modules-core",
+      "output": "C:\\Users\\ABCD\\OneDrive\\Documentos\\BizPro\\expo-modules-core-copy\\android\\build\\intermediates\\cxx\\RelWithDebInfo\\281o4412\\obj\\x86_64\\libexpo-modules-core.so",
+      "runtimeFiles": [
+        "C:\\Users\\ABCD\\.gradle\\caches\\8.13\\transforms\\fc48a1eaf3bc2c7d18d587f5247afe86\\transformed\\fbjni-0.7.0\\prefab\\modules\\fbjni\\libs\\android.x86_64\\libfbjni.so",
+        "C:\\Users\\ABCD\\.gradle\\caches\\8.13\\transforms\\0b4d493c06a8cc9a1e94de656f7c8286\\transformed\\react-android-0.79.6-release\\prefab\\modules\\jsi\\libs\\android.x86_64\\libjsi.so",
+        "C:\\Users\\ABCD\\.gradle\\caches\\8.13\\transforms\\0b4d493c06a8cc9a1e94de656f7c8286\\transformed\\react-android-0.79.6-release\\prefab\\modules\\reactnative\\libs\\android.x86_64\\libreactnative.so"
+      ]
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+      "cppCompilerExecutable": "C:\\Users\\ABCD\\AppData\\Local\\Android\\Sdk\\ndk\\27.1.12297006\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

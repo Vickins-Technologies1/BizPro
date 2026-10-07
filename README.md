@@ -152,6 +152,8 @@ http://192.168.1.20:3000/api
 - `apps/api/.env.example` - MongoDB, JWT, support key, and webhook secrets
 - `apps/admin/.env.example` - support key for the admin dashboard
 
+The Commerce API foundation is documented in [`docs/COMMERCE_ARCHITECTURE.md`](docs/COMMERCE_ARCHITECTURE.md). Its external versioned surface is mounted at `/api/v1/commerce`; it is API-key/scoped and does not add a storefront or Marketplace UI.
+
 ## Production Deployment
 
 Recommended hosting split:

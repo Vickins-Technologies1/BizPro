@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
 import { ProductsService } from "./products.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -13,6 +13,10 @@ class CreateProductDto {
   @IsOptional() @IsString() categoryId?: string;
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() supplierId?: string;
+  @IsOptional() @IsString() description?: string | null;
+  @IsOptional() @IsArray() @IsObject({ each: true }) images?: Array<{ url: string; alt?: string | null }>;
+  @IsOptional() @IsIn(["INTERNAL", "VENDOR", "IMPORTED"]) productSource?: "INTERNAL" | "VENDOR" | "IMPORTED";
+  @IsOptional() @IsIn(["PRIVATE", "INTERNAL", "EXTERNAL", "MARKETPLACE"]) visibility?: "PRIVATE" | "INTERNAL" | "EXTERNAL" | "MARKETPLACE";
   @IsString() name!: string;
   @IsOptional() @IsString() sku?: string;
   @IsOptional() @IsString() barcode?: string;

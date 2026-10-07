@@ -1,5 +1,5 @@
 import type { UserRole } from "./types";
-export declare const ACCESS_PERMISSIONS: readonly ["viewDashboard", "manageSales", "createSales", "refundSales", "manageInventory", "addProducts", "editProducts", "deleteProducts", "viewReports", "manageCustomers", "manageSuppliers", "manageEmployees", "manageExpenses", "viewFinancialReports", "manageSettings", "manageAppointments", "manageBookings", "manageTables", "manageWorkOrders", "managePharmacy", "dispenseMedicines", "manageOperations"];
+export declare const ACCESS_PERMISSIONS: readonly ["viewDashboard", "manageSales", "createSales", "refundSales", "manageInventory", "addProducts", "editProducts", "deleteProducts", "viewReports", "manageCustomers", "manageSuppliers", "manageEmployees", "manageBranches", "manageExpenses", "viewFinancialReports", "manageSettings", "manageAppointments", "manageBookings", "manageTables", "manageWorkOrders", "managePharmacy", "dispenseMedicines", "manageOperations"];
 export type AccessPermission = (typeof ACCESS_PERMISSIONS)[number];
 export type RolePreset = {
     role: UserRole;
@@ -10,11 +10,11 @@ export type RolePreset = {
 export declare const ROLE_PRESETS: RolePreset[];
 export declare const ROLE_ACCESS: Record<UserRole, AccessPermission[]>;
 export declare function formatRoleLabel(role?: UserRole | string | null): string;
-export declare function getRolePermissions(role: UserRole | string | null | undefined): ("viewDashboard" | "manageSales" | "createSales" | "refundSales" | "manageInventory" | "addProducts" | "editProducts" | "deleteProducts" | "viewReports" | "manageCustomers" | "manageSuppliers" | "manageEmployees" | "manageExpenses" | "viewFinancialReports" | "manageSettings" | "manageAppointments" | "manageBookings" | "manageTables" | "manageWorkOrders" | "managePharmacy" | "dispenseMedicines" | "manageOperations")[];
+export declare function getRolePermissions(role: UserRole | string | null | undefined): ("viewDashboard" | "manageSales" | "createSales" | "refundSales" | "manageInventory" | "addProducts" | "editProducts" | "deleteProducts" | "viewReports" | "manageCustomers" | "manageSuppliers" | "manageEmployees" | "manageBranches" | "manageExpenses" | "viewFinancialReports" | "manageSettings" | "manageAppointments" | "manageBookings" | "manageTables" | "manageWorkOrders" | "managePharmacy" | "dispenseMedicines" | "manageOperations")[];
 export declare function getEffectivePermissions(input: {
     role?: UserRole | string | null;
     permissions?: AccessPermission[] | null;
-} | UserRole | string | null | undefined): ("viewDashboard" | "manageSales" | "createSales" | "refundSales" | "manageInventory" | "addProducts" | "editProducts" | "deleteProducts" | "viewReports" | "manageCustomers" | "manageSuppliers" | "manageEmployees" | "manageExpenses" | "viewFinancialReports" | "manageSettings" | "manageAppointments" | "manageBookings" | "manageTables" | "manageWorkOrders" | "managePharmacy" | "dispenseMedicines" | "manageOperations")[];
+} | UserRole | string | null | undefined): ("viewDashboard" | "manageSales" | "createSales" | "refundSales" | "manageInventory" | "addProducts" | "editProducts" | "deleteProducts" | "viewReports" | "manageCustomers" | "manageSuppliers" | "manageEmployees" | "manageBranches" | "manageExpenses" | "viewFinancialReports" | "manageSettings" | "manageAppointments" | "manageBookings" | "manageTables" | "manageWorkOrders" | "managePharmacy" | "dispenseMedicines" | "manageOperations")[];
 export declare function hasRolePermission(role: UserRole | string | null | undefined, permission: AccessPermission): boolean;
 export declare function hasPermission(input: {
     role?: UserRole | string | null;

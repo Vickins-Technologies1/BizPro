@@ -2,8 +2,8 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { INVENTORY_UNITS, productCreateSchema, resolveBusinessTypeConfig, resolveIndustryModule, type Product } from "@shared";
-import { AppScrollView, Card, GradientHeader, InputField, Pagination, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
+import { INVENTORY_UNITS, productCreateSchema, resolveBusinessTypeConfig, type Product } from "@shared";
+import { AppScrollView, BottomSheet, Card, GradientHeader, InputField, Pagination, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
@@ -41,6 +41,8 @@ export function ProductsScreen() {
   const [brandVisible, setBrandVisible] = useState(false);
   const [supplierVisible, setSupplierVisible] = useState(false);
   const [importVisible, setImportVisible] = useState(false);
+  const [toolsVisible, setToolsVisible] = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
   const [restockVisible, setRestockVisible] = useState(false);
   const [restockProductId, setRestockProductId] = useState<string | null>(null);
@@ -75,7 +77,6 @@ export function ProductsScreen() {
   const [listError, setListError] = useState<string | null>(null);
   const pageSize = 6;
   const deferredSearch = React.useDeferredValue(search);
-  const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
   const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
 
   const {
@@ -363,8 +364,6 @@ export function ProductsScreen() {
   const currentSupplierId = watch("supplierId");
   const currentUnit = watch("unit");
   const canManageInventory = hasPermission(user, "manageInventory");
-  const activeProductCount = products.filter((product) => product.isActive).length;
-  const lowStockCount = products.filter((product) => product.isActive && product.stockOnHand <= product.lowStockThreshold).length;
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
 
   if (!canManageInventory) {
@@ -387,126 +386,33 @@ export function ProductsScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.catalogLabel}
-        subtitle={`${industry.label} ${businessConfig.navigation.catalogDescription}`}
+        subtitle={`${totalProducts || products.length} products · ${formatMoney(inventoryValue, business?.currency)} stock`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
-            <Pressable onPress={() => setCategoryVisible(true)}>
-              <Ionicons name="albums-outline" size={26} color={tokens.colors.text} />
-            </Pressable>
             <Pressable onPress={() => setVisible(true)}>
-              <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
+              <Ionicons name="add" size={25} color={tokens.colors.primaryStrong} />
             </Pressable>
           </View>
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog}>
-        <Card style={{ gap: 14, padding: 18 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>{businessConfig.navigation.catalogLabel} pulse</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>{businessConfig.workflow.headline}</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{businessConfig.navigation.catalogDescription}.</Text>
-            </View>
-            <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
-              <Ionicons name="cube-outline" size={23} color={tokens.colors.primaryStrong} />
-            </View>
+        <View style={{ gap: 12 }}>
+          <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name, SKU, or barcode" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={() => setFiltersVisible(true)} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
+              <Ionicons name="options-outline" size={16} color={tokens.colors.textSecondary} />
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>Filter{selectedCategoryId || selectedBrandId || selectedSupplierId ? " · active" : ""}</Text>
+            </Pressable>
+            <Pressable onPress={() => setToolsVisible(true)} style={{ width: 92, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
+              <Ionicons name="ellipsis-horizontal" size={17} color={tokens.colors.textSecondary} />
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>More</Text>
+            </Pressable>
           </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {[
-              { label: "Active", value: activeProductCount, tone: tokens.colors.primaryStrong },
-              { label: "Low stock", value: lowStockCount, tone: tokens.colors.warning },
-              { label: "SKU count", value: products.length, tone: tokens.colors.success }
-            ].map((item) => (
-              <View key={item.label} style={{ flex: 1, padding: 11, borderRadius: 16, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border }}>
-                <Text style={{ color: item.tone, fontSize: 18, fontWeight: "900" }}>{item.value}</Text>
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", marginTop: 3, textTransform: "uppercase", letterSpacing: 0.45 }}>{item.label}</Text>
-              </View>
-            ))}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "700" }}>{totalProducts || products.length} products</Text>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Page {currentPage}{totalPages > 1 ? ` of ${totalPages}` : ""}</Text>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Stock at cost</Text>
-            <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>{formatMoney(inventoryValue, business?.currency)}</Text>
-          </View>
-        </Card>
-        <Card>
-          <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name or SKU" />
-        </Card>
-        <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{businessConfig.navigation.catalogLabel} tools</Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Add brand" variant="secondary" onPress={() => setBrandVisible(true)} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Add supplier" variant="secondary" onPress={() => setSupplierVisible(true)} />
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title="Import CSV"
-                variant="secondary"
-                onPress={async () => {
-                  const text = await Clipboard.getStringAsync();
-                  setImportText(text);
-                  setImportVisible(true);
-                }}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Export CSV" variant="secondary" onPress={() => void exportProductsCsv()} />
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Brands" variant="secondary" onPress={() => navigation.navigate("Brands")} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Suppliers" variant="secondary" onPress={() => navigation.navigate("Suppliers")} />
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => navigation.navigate("PurchaseOrders")} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => navigation.navigate("StockTransfers")} />
-            </View>
-          </View>
-        </Card>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            <Tag label="All products" tone="primary" selected={selectedCategoryId === null} onPress={() => setSelectedCategoryId(null)} />
-            {categories.map((category) => (
-              <Tag
-                key={category.id}
-                label={category.name}
-                tone="primary"
-                selected={selectedCategoryId === category.id}
-                onPress={() => setSelectedCategoryId(category.id)}
-              />
-            ))}
-          </ScrollView>
-        </Card>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by brand</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            <Tag label="All brands" tone="primary" selected={selectedBrandId === null} onPress={() => setSelectedBrandId(null)} />
-            {brands.map((brand) => (
-              <Tag key={brand.id} label={brand.name} tone="primary" selected={selectedBrandId === brand.id} onPress={() => setSelectedBrandId(brand.id)} />
-            ))}
-          </ScrollView>
-        </Card>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Filter by supplier</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            <Tag label="All suppliers" tone="primary" selected={selectedSupplierId === null} onPress={() => setSelectedSupplierId(null)} />
-            {suppliers.map((supplier) => (
-              <Tag key={supplier.id} label={supplier.name} tone="primary" selected={selectedSupplierId === supplier.id} onPress={() => setSelectedSupplierId(supplier.id)} />
-            ))}
-          </ScrollView>
-        </Card>
+        </View>
         {listLoading ? (
           <Card style={{ alignItems: "center", paddingVertical: 24 }}><Text style={{ color: tokens.colors.textSecondary }}>Loading products...</Text></Card>
         ) : listError ? (
@@ -606,6 +512,40 @@ export function ProductsScreen() {
           />
         )}
       </AppScrollView>
+      <BottomSheet visible={filtersVisible} title="Filters" subtitle="Narrow the product list without leaving the screen." onClose={() => setFiltersVisible(false)} footer={<PrimaryButton title="Done" onPress={() => setFiltersVisible(false)} />}>
+        <View style={{ gap: 12 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Tag label="All" tone="primary" selected={selectedCategoryId === null} onPress={() => setSelectedCategoryId(null)} />
+            {categories.map((category) => <Tag key={category.id} label={category.name} tone="primary" selected={selectedCategoryId === category.id} onPress={() => setSelectedCategoryId(category.id)} />)}
+          </ScrollView>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700", marginTop: 4 }}>Brand</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Tag label="All" tone="primary" selected={selectedBrandId === null} onPress={() => setSelectedBrandId(null)} />
+            {brands.map((brand) => <Tag key={brand.id} label={brand.name} tone="primary" selected={selectedBrandId === brand.id} onPress={() => setSelectedBrandId(brand.id)} />)}
+          </ScrollView>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700", marginTop: 4 }}>Supplier</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            <Tag label="All" tone="primary" selected={selectedSupplierId === null} onPress={() => setSelectedSupplierId(null)} />
+            {suppliers.map((supplier) => <Tag key={supplier.id} label={supplier.name} tone="primary" selected={selectedSupplierId === supplier.id} onPress={() => setSelectedSupplierId(supplier.id)} />)}
+          </ScrollView>
+          <Pressable onPress={() => { setSelectedCategoryId(null); setSelectedBrandId(null); setSelectedSupplierId(null); }} style={{ paddingVertical: 8 }}>
+            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 13, fontWeight: "700" }}>Reset filters</Text>
+          </Pressable>
+        </View>
+      </BottomSheet>
+      <BottomSheet visible={toolsVisible} title="Product tools" subtitle="Manage supporting catalog workflows." onClose={() => setToolsVisible(false)}>
+        <View style={{ gap: 10 }}>
+          <PrimaryButton title="Add brand" variant="secondary" onPress={() => { setToolsVisible(false); setBrandVisible(true); }} />
+          <PrimaryButton title="Add supplier" variant="secondary" onPress={() => { setToolsVisible(false); setSupplierVisible(true); }} />
+          <PrimaryButton title="Import CSV" variant="secondary" onPress={async () => { const text = await Clipboard.getStringAsync(); setImportText(text); setToolsVisible(false); setImportVisible(true); }} />
+          <PrimaryButton title="Export CSV" variant="secondary" onPress={() => { setToolsVisible(false); void exportProductsCsv(); }} />
+          <PrimaryButton title="Brands" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("Brands"); }} />
+          <PrimaryButton title="Suppliers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("Suppliers"); }} />
+          <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("PurchaseOrders"); }} />
+          <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("StockTransfers"); }} />
+        </View>
+      </BottomSheet>
       <SimpleModal visible={visible} title="Add product" onClose={() => setVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Controller

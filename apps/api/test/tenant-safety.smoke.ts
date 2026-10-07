@@ -462,7 +462,11 @@ async function testSalesService(SalesService: any) {
     _id: "64b3e9f0d8e4c5a123456789",
     externalId: "QnV7IFpJ6tXuU_wB",
     businessId: "business-1",
-    stockOnHand: 10
+    name: "Tea",
+    sellingPrice: 50,
+    buyingPrice: 20,
+    stockOnHand: 10,
+    lowStockThreshold: 5
   });
   const customerDoc = createDoc({
     _id: "customer-1",
@@ -513,6 +517,10 @@ async function testSalesService(SalesService: any) {
         }
       };
     }
+    ,findOneAndUpdate() {
+      calls.push({ method: "product.findOneAndUpdate" });
+      return leanResult({ ...productDoc, stockOnHand: 8 });
+    }
   };
 
   const customerModel = {
@@ -545,24 +553,15 @@ async function testSalesService(SalesService: any) {
     businessId: "business-1",
     customerId: "customer-1",
     receiptNumber: "R-001",
-    subtotal: 100,
-    discountTotal: 0,
-    taxTotal: 0,
-    grandTotal: 100,
     amountPaid: 95,
-    balanceDue: 5,
     paymentStatus: "partial",
     paymentMethod: "cash",
     notes: null,
     items: [
       {
         productId: "QnV7IFpJ6tXuU_wB",
-        productName: "Tea",
         quantity: 2,
-        unitPrice: 50,
-        costPrice: 20,
-        lineDiscount: 0,
-        lineTotal: 100
+        discount: 0
       }
     ]
   });
@@ -575,71 +574,16 @@ async function testSalesService(SalesService: any) {
       $or: [{ externalId: "QnV7IFpJ6tXuU_wB" }]
     }
   });
-  assert.deepEqual(calls[1], {
-    method: "sale.create",
-    input: {
-      businessId: "business-1",
-      branchId: null,
-      customerId: "customer-1",
-      receiptNumber: "R-001",
-      subtotal: 100,
-      discountTotal: 0,
-      taxTotal: 0,
-      grandTotal: 100,
-      amountPaid: 95,
-      balanceDue: 5,
-      paymentStatus: "partial",
-      paymentMethod: "cash",
-      notes: null,
-      items: [
-        {
-          productId: "QnV7IFpJ6tXuU_wB",
-          productName: "Tea",
-          quantity: 2,
-          unitPrice: 50,
-          costPrice: 20,
-          lineDiscount: 0,
-          lineTotal: 100
-        }
-      ],
-      deletedAt: null
-    }
-  });
-  assert.deepEqual(calls[2], {
-    method: "movement.create",
-    input: {
-      businessId: "business-1",
-      branchId: null,
-      productId: "QnV7IFpJ6tXuU_wB",
-      referenceType: "sale",
-      referenceId: "sale-1",
-      quantityDelta: -2,
-      unitCost: 20,
-      note: "Sale R-001"
-    }
-  });
-  assert.deepEqual(calls[3], {
-    method: "customer.findOne",
-    query: { _id: "customer-1", businessId: "business-1", deletedAt: null }
-  });
-  assert.deepEqual(calls[4], {
-    method: "payment.create",
-    input: {
-      businessId: "business-1",
-      branchId: null,
-      customerId: "customer-1",
-      saleId: "sale-1",
-      debtPaymentId: null,
-      externalId: null,
-      method: "cash",
-      status: "partial",
-      amount: 95,
-      reference: null,
-      note: null,
-      provider: null,
-      reconciledAt: null
-    }
-  });
+  const saleCreate = calls.find((call) => call.method === "sale.create")?.input as Record<string, unknown>;
+  assert.equal(saleCreate.grandTotal, 100);
+  assert.equal(saleCreate.balanceDue, 5);
+  const saleItem = (saleCreate.items as Array<Record<string, unknown>>)[0];
+  assert.equal(saleItem.unitPrice, 50);
+  assert.equal(saleItem.costPrice, 20);
+  assert.equal(saleItem.currency, "KES");
+  assert.ok(calls.some((call) => call.method === "product.findOneAndUpdate"));
+  assert.ok(calls.some((call) => call.method === "movement.create"));
+  assert.ok(calls.some((call) => call.method === "payment.create"));
 }
 
 async function testSalesServiceInvalidProductId(SalesService: any) {

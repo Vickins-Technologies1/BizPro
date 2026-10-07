@@ -1,0 +1,5 @@
+C:\Users\ABCD\OneDrive\Documentos\BizPro\expo-modules-core-copy\android\.cxx\RelWithDebInfo\281o4412\prefab\armeabi-v7a\prefab\lib\arm-linux-androideabi\cmake\fbjni\fbjniConfig.cmake
+C:\Users\ABCD\OneDrive\Documentos\BizPro\expo-modules-core-copy\android\.cxx\RelWithDebInfo\281o4412\prefab\armeabi-v7a\prefab\lib\arm-linux-androideabi\cmake\fbjni\fbjniConfigVersion.cmake
+C:\Users\ABCD\OneDrive\Documentos\BizPro\expo-modules-core-copy\android\.cxx\RelWithDebInfo\281o4412\prefab\armeabi-v7a\prefab\lib\arm-linux-androideabi\cmake\ReactAndroid\ReactAndroidConfig.cmake
+C:\Users\ABCD\OneDrive\Documentos\BizPro\expo-modules-core-copy\android\.cxx\RelWithDebInfo\281o4412\prefab\armeabi-v7a\prefab\lib\arm-linux-androideabi\cmake\ReactAndroid\ReactAndroidConfigVersion.cmake
+C:\Users\ABCD\OneDrive\Documentos\BizPro\expo-modules-core-copy\android\CMakeLists.txt

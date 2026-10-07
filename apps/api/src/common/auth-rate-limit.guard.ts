@@ -51,6 +51,20 @@ export class AuthRateLimitGuard implements CanActivate {
           key: (request: { ip?: string; body?: { phone?: string; businessId?: string } }) =>
             [this.normalize(request.ip), this.normalize(request.body?.phone), this.normalize(request.body?.businessId)].filter(Boolean).join(":") || "global"
         };
+      case "requestPasswordReset":
+        return {
+          limit: 5,
+          windowMs: 15 * 60 * 1000,
+          key: (request: { ip?: string; body?: { identifier?: string } }) =>
+            [this.normalize(request.ip), this.normalize(request.body?.identifier)].filter(Boolean).join(":") || "global"
+        };
+      case "resetPassword":
+        return {
+          limit: 10,
+          windowMs: 15 * 60 * 1000,
+          key: (request: { ip?: string; body?: { identifier?: string } }) =>
+            [this.normalize(request.ip), this.normalize(request.body?.identifier)].filter(Boolean).join(":") || "global"
+        };
       default:
         return null;
     }

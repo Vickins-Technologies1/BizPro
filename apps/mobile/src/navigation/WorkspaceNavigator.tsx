@@ -205,17 +205,20 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
               paddingHorizontal: 12
             }
         : {
-              marginHorizontal: 10,
-              marginBottom: Math.max(insets.bottom, 4),
-              marginTop: 2,
+              marginHorizontal: 0,
+              marginBottom: 0,
+              marginTop: 0,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 3,
-              paddingTop: 2,
-              paddingBottom: Math.max(insets.bottom, 4),
+              minHeight: 64,
+              paddingTop: 6,
+              paddingBottom: Math.max(insets.bottom, 5),
               paddingHorizontal: 0,
-              backgroundColor: "transparent"
+              backgroundColor: tokens.colors.surface,
+              borderTopWidth: 1,
+              borderTopColor: tokens.colors.border
             }
       ]}
     >
@@ -352,7 +355,7 @@ function SidebarThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dar
     >
       <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", justifyContent: "center" }}>
         <LinearGradient
-          colors={isDark ? ["#172A45", "#0D1728"] : ["#EEF5FF", "#F7FAFF"]}
+          colors={theme.gradients.surface}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
@@ -412,7 +415,9 @@ function renderWorkspaceItem({
   const currentRouteName = state.routes[state.index]?.name as keyof WorkspaceTabParamList | undefined;
   const focused = currentRouteName === routeName;
   const options = route ? descriptors[route.key]?.options : undefined;
-  const label = routeName === "More"
+  const label = routeName === "Dashboard" && !isDesktop
+    ? "Home"
+    : routeName === "More"
     ? "More"
     : routeName === "Catalog"
       ? businessConfig.navigation.catalogLabel
@@ -424,7 +429,7 @@ function renderWorkspaceItem({
             ? businessConfig.capabilities.appointments ? "Appointments" : businessConfig.capabilities.workOrders ? "Jobs" : "Orders"
             : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
   const icon = routeName === "More" ? (
-    <Ionicons name="apps-outline" color={tokens.colors.textMuted} size={isDesktop ? 22 : 20} />
+    <Ionicons name="apps-outline" color={focused ? tokens.colors.primaryStrong : tokens.colors.textMuted} size={isDesktop ? 22 : 22} />
   ) : options?.tabBarIcon?.({
     focused,
     color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted,
@@ -461,12 +466,13 @@ function renderWorkspaceItem({
             }
           : {
               flex: 1,
-              minHeight: 40,
+              minHeight: 42,
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 0,
-              borderBottomWidth: focused ? 2 : 0,
-              borderBottomColor: tokens.colors.primaryStrong,
+              borderTopWidth: focused ? 2 : 0,
+              borderTopColor: tokens.colors.primaryStrong,
+              paddingTop: focused ? 4 : 6,
               backgroundColor: "transparent"
             },
         pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] }
@@ -479,7 +485,7 @@ function renderWorkspaceItem({
           <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>{routeDescription(routeName, businessConfig)}</Text>
         </View>
         ) : (
-        <Text style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 0.25, marginTop: 2 }}>{label}</Text>
+        <Text style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted, fontSize: 10, fontWeight: focused ? "800" : "600", letterSpacing: 0.1, marginTop: 3 }}>{label}</Text>
       )}
     </Pressable>
   );

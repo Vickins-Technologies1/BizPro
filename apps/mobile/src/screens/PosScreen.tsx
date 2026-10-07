@@ -428,7 +428,7 @@ export function PosScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.posLabel}
-        subtitle={`${businessConfig.workflow.headline} • works offline and syncs later`}
+        subtitle={`${sales.length} transactions · ${pendingSync ? `${pendingSync} queued` : "Synced"}`}
         right={
           <Pressable onPress={() => setModalVisible(true)}>
             <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
@@ -437,26 +437,21 @@ export function PosScreen() {
       />
 
       <AppScrollView refreshing={refreshing} onRefresh={refreshSales} contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
-        <Card style={{ gap: 8, padding: 12 }}>
-          <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>{businessConfig.navigation.posLabel} history</Text>
-          <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{businessConfig.workflow.headline}</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 11 }}>
-            Open the {businessConfig.terminology.transaction.toLowerCase()} flow. History syncs after save.
-          </Text>
-          <PrimaryButton title={businessConfig.navigation.posLabel === "Sales" ? "Record Sale" : `Create ${businessConfig.terminology.transaction}`} onPress={() => setModalVisible(true)} />
-        </Card>
-
-        <Card style={{ gap: 8, padding: 12 }}>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Metric label="Drafts" value={String(drafts.length)} />
-            <Metric label="Queued" value={String(pendingSync)} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8 }}>TODAY</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "700" }}>{businessConfig.workflow.headline}</Text>
+            <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success, fontSize: 12, fontWeight: "600" }}>{syncMessage}</Text>
           </View>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>{syncMessage}</Text>
-        </Card>
+          <PrimaryButton title="Record sale" iconLeft="add" onPress={() => setModalVisible(true)} style={{ minWidth: 126 }} />
+        </View>
 
-        <Card>
-          <InputField label="Search sales" value={search} onChangeText={setSearch} placeholder="Receipt, method, or status" />
-        </Card>
+        <View style={{ flexDirection: "row", gap: 22, paddingVertical: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <Metric label="Drafts" value={String(drafts.length)} />
+          <Metric label="Queued" value={String(pendingSync)} />
+        </View>
+
+        <InputField label="Search sales" value={search} onChangeText={setSearch} placeholder="Receipt, method, or status" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
 
         <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>

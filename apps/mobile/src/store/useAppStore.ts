@@ -8,7 +8,7 @@ import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receipt
 import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
-import { initialThemeMode, setThemeTokens, type ThemeMode } from "@/theme/tokens";
+import { initialThemeMode, resolveThemeMode, setThemeTokens, type ThemeMode, type ThemePreference } from "@/theme/tokens";
 import type { AccessPermission } from "@shared";
 import {
   countQueuedActions,
@@ -141,6 +141,7 @@ interface AppState {
   authLoading: boolean;
   syncing: boolean;
   themeMode: ThemeMode;
+  themePreference: ThemePreference;
   business: Business | null;
   user: { id: string; fullName: string; role: string; businessId?: string; branchId?: string | null; ownerId?: string | null; roleLabel?: string | null; permissions?: AccessPermission[] | null } | null;
   branches: Branch[];
@@ -164,7 +165,8 @@ interface AppState {
   completeOnboarding: (input: unknown) => Promise<{ business: Business; session: StoredSession }>;
   login: (input: unknown) => Promise<void>;
   logout: () => Promise<void>;
-  setThemeMode: (mode: ThemeMode) => Promise<void>;
+  setThemeMode: (mode: ThemePreference) => Promise<void>;
+  syncSystemTheme: () => void;
   loadDashboard: () => Promise<void>;
   loadCatalog: (options?: { skipProducts?: boolean }) => Promise<void>;
   setSelectedBranchId: (branchId: string | null) => Promise<void>;
@@ -204,6 +206,12 @@ type StoredSession = {
 
 function normalizeSetupValue(value: string) {
   return value.trim();
+}
+
+function resolveEffectiveThemeMode(preference: ThemePreference): ThemeMode {
+  if (preference === "dark" || preference === "light") return preference;
+  if (typeof resolveThemeMode === "function") return resolveThemeMode(preference);
+  return initialThemeMode ?? "light";
 }
 
 function createReceiptNumber() {
@@ -336,6 +344,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   authLoading: true,
   syncing: false,
   themeMode: initialThemeMode,
+  themePreference: "system",
   business: null,
   user: null,
   branches: [],
@@ -363,9 +372,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         readStoredSession(),
         readStartupCache()
       ]);
-      const themeMode: ThemeMode = storedThemeMode === "dark" ? "dark" : storedThemeMode === "light" ? "light" : initialThemeMode;
+      const themePreference: ThemePreference = storedThemeMode === "dark" || storedThemeMode === "light" || storedThemeMode === "system" ? storedThemeMode : "system";
+      const themeMode = resolveEffectiveThemeMode(themePreference);
       if (!storedThemeMode) {
-        void secureStore.setThemeMode(themeMode);
+        void secureStore.setThemeMode(themePreference);
       }
       setThemeTokens(themeMode);
       const deviceId = storedDeviceId ?? createId();
@@ -378,6 +388,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const selectedBranchId = deriveSelectedBranchId(storedSession.user, branches, storedSession.selectedBranchId);
         set({
           themeMode,
+          themePreference,
           business: storedSession.business ?? null,
           user: storedSession.user,
           branches,
@@ -427,6 +438,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await clearStartupCache();
       set({
         themeMode,
+        themePreference,
         business: null,
         user: null,
         branches: [],
@@ -552,10 +564,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   setThemeMode: async (mode) => {
-    const themeMode: ThemeMode = mode === "dark" ? "dark" : "light";
+    const themePreference: ThemePreference = mode === "dark" || mode === "light" || mode === "system" ? mode : "system";
+    const themeMode = resolveEffectiveThemeMode(themePreference);
+    setThemeTokens(themeMode);
+    set({ themeMode, themePreference });
+    await secureStore.setThemeMode(themePreference);
+  },
+  syncSystemTheme: () => {
+    if (get().themePreference !== "system") return;
+    const themeMode = resolveEffectiveThemeMode("system");
     setThemeTokens(themeMode);
     set({ themeMode });
-    await secureStore.setThemeMode(themeMode);
   },
   loadDashboard: async () => {
     const business = get().business;
@@ -1151,6 +1170,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       balanceDue,
       items: input.items.map((item) => {
         const product = get().products.find((candidate) => candidate.id === item.productId);
+        const taxableBase = input.items.reduce((sum, candidate) => sum + Math.max(0, candidate.unitPrice * candidate.quantity - candidate.discount), 0);
+        const itemBase = Math.max(0, item.unitPrice * item.quantity - item.discount);
         return {
           productId: product?.serverId ?? item.productId,
           productName: product?.name ?? item.productId,
@@ -1158,7 +1179,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           unitPrice: item.unitPrice,
           costPrice: item.costPrice,
           lineDiscount: item.discount,
-          lineTotal: item.unitPrice * item.quantity - item.discount
+          lineTotal: item.unitPrice * item.quantity - item.discount,
+          tax: taxableBase > 0 ? (input.taxTotal ?? 0) * (itemBase / taxableBase) : 0
         };
       })
     };

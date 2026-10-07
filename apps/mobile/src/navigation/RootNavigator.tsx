@@ -18,6 +18,8 @@ import { TeamAccessScreen } from "@/screens/TeamAccessScreen";
 import { EmployeesScreen } from "@/screens/EmployeesScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
 import { OnboardingScreen } from "@/screens/OnboardingScreen";
+import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
 import { RoleLaunchpadScreen } from "@/screens/RoleLaunchpadScreen";
 import { NotificationsScreen } from "@/screens/NotificationsScreen";
 import { AdaptiveWorkspaceNavigator } from "@/navigation/WorkspaceNavigator";
@@ -45,6 +47,8 @@ type RootStackParamList = {
 type AuthStackParamList = {
   Onboarding: undefined;
   Login: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { identifier?: string; code?: string } | undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -56,6 +60,8 @@ function AuthNavigator() {
     <AuthStack.Navigator key={initialRouteName} initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </AuthStack.Navigator>
   );
 }

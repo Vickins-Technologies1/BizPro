@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { ClientSession, Connection, Model } from "mongoose";
 import bcrypt from "bcryptjs";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, ROLE_ACCESS, TRIAL_DAYS, getEffectivePermissions, resolveIndustryKey, type AccessPermission, type PlanTier } from "@vbo/shared";
 import { AuditLog, AuditLogDocument, Business, BusinessDocument, Branch, BranchDocument, Device, DeviceDocument, Subscription, SubscriptionDocument, SubscriptionPlan, SubscriptionPlanDocument, User, UserDocument } from "../schemas";
-import { RegisterDto, LoginDto } from "./dto";
+import { ForgotPasswordDto, RegisterDto, LoginDto, ResetPasswordDto } from "./dto";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { findBusinessByIdentifier } from "../../common/business-lookup";
 
@@ -70,7 +72,8 @@ export class AuthService {
     @InjectModel(Subscription.name) private readonly subscriptionModel: Model<SubscriptionDocument>,
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
     @InjectConnection() private readonly connection: Connection,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService
   ) {}
 
   async register(dto: RegisterDto): Promise<RegisterResponse> {
@@ -303,6 +306,90 @@ export class AuthService {
     }
   }
 
+  async requestPasswordReset(dto: ForgotPasswordDto) {
+    const genericResponse = {
+      accepted: true,
+      message: "If an account matches those details, we’ll send a one-time reset code shortly.",
+      expiresInMinutes: this.resetCodeTtlMinutes()
+    };
+    const identifier = dto.identifier.trim();
+    const user = await this.findUserForReset(identifier);
+
+    if (!user || !user.isActive) {
+      return genericResponse;
+    }
+
+    const code = String(randomInt(100000, 1000000));
+    const expiresAt = new Date(Date.now() + this.resetCodeTtlMinutes() * 60 * 1000);
+    const codeHash = this.hashResetCode(code);
+
+    await this.userModel.updateOne(
+      { _id: user._id, deletedAt: null },
+      {
+        $set: {
+          passwordResetCodeHash: codeHash,
+          passwordResetExpiresAt: expiresAt,
+          passwordResetAttempts: 0
+        }
+      }
+    );
+
+    try {
+      await this.deliverPasswordResetCode({ user, code, expiresAt });
+    } catch (error) {
+      this.logger.warn(`Password reset delivery unavailable for userId="${String(user._id)}": ${error instanceof Error ? error.message : "unknown delivery error"}`);
+    }
+
+    const debugCodeEnabled = this.config.get<string>("AUTH_RESET_EXPOSE_DEBUG_CODE") === "true" && this.config.get<string>("NODE_ENV") !== "production";
+    return debugCodeEnabled ? { ...genericResponse, debugCode: code } : genericResponse;
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.findUserForReset(dto.identifier.trim(), true);
+    const invalidMessage = "That reset code is invalid or has expired. Request a new code and try again.";
+    if (!user || !user.isActive || !user.passwordResetCodeHash || !user.passwordResetExpiresAt || user.passwordResetExpiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException(invalidMessage);
+    }
+
+    const attempts = Number(user.passwordResetAttempts ?? 0);
+    if (attempts >= 5) {
+      throw new BadRequestException(invalidMessage);
+    }
+
+    const suppliedHash = this.hashResetCode(dto.code);
+    const suppliedBuffer = Buffer.from(suppliedHash);
+    const storedBuffer = Buffer.from(user.passwordResetCodeHash);
+    const matches = suppliedBuffer.length === storedBuffer.length && timingSafeEqual(suppliedBuffer, storedBuffer);
+    if (!matches) {
+      const nextAttempts = attempts + 1;
+      await this.userModel.updateOne(
+        { _id: user._id, deletedAt: null },
+        nextAttempts >= 5
+          ? { $set: { passwordResetCodeHash: null, passwordResetExpiresAt: null, passwordResetAttempts: nextAttempts } }
+          : { $set: { passwordResetAttempts: nextAttempts } }
+      );
+      throw new BadRequestException(invalidMessage);
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const result = await this.userModel.updateOne(
+      {
+        _id: user._id,
+        deletedAt: null,
+        passwordResetCodeHash: user.passwordResetCodeHash,
+        passwordResetExpiresAt: { $gt: new Date() }
+      },
+      {
+        $set: { passwordHash, passwordResetCodeHash: null, passwordResetExpiresAt: null, passwordResetAttempts: 0 }
+      }
+    );
+    if (result.modifiedCount !== 1) {
+      throw new BadRequestException(invalidMessage);
+    }
+
+    return { success: true, message: "Your password has been updated. You can now sign in." };
+  }
+
   async me(userId: string) {
     const user = await this.userModel.findById(userId).lean();
     if (!user) throw new UnauthorizedException("Session not found");
@@ -438,6 +525,62 @@ export class AuthService {
     const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const fullName = new RegExp(`^${escaped}$`, "i");
     return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).select("+passwordHash +pinHash").lean();
+  }
+
+  private async findUserForReset(identifier: string, includeResetFields = false) {
+    const trimmed = identifier.trim();
+    const phone = this.normalizePhone(trimmed);
+    const select = includeResetFields
+      ? "businessId fullName phone isActive deletedAt passwordResetExpiresAt +passwordResetCodeHash +passwordResetAttempts"
+      : "businessId fullName phone isActive deletedAt";
+
+    if (phone) {
+      const byPhone = await this.userModel.findOne({ deletedAt: null, phone }).select(select).lean();
+      if (byPhone) return byPhone;
+    }
+
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const fullName = new RegExp(`^${escaped}$`, "i");
+    return this.userModel.findOne({ deletedAt: null, fullName }).select(select).lean();
+  }
+
+  private hashResetCode(code: string) {
+    return createHash("sha256").update(code).digest("hex");
+  }
+
+  private resetCodeTtlMinutes() {
+    const configured = Number(this.config.get<string>("AUTH_RESET_CODE_TTL_MINUTES") ?? 10);
+    return Number.isFinite(configured) && configured >= 5 && configured <= 60 ? Math.floor(configured) : 10;
+  }
+
+  private async deliverPasswordResetCode(input: { user: { _id: unknown; fullName: string; phone?: string | null }; code: string; expiresAt: Date }) {
+    const deliveryUrl = this.config.get<string>("AUTH_RESET_DELIVERY_URL")?.trim();
+    if (!deliveryUrl) {
+      return;
+    }
+
+    const appUrl = this.config.get<string>("AUTH_RESET_APP_URL")?.trim()?.replace(/\/$/, "");
+    const deliverySecret = this.config.get<string>("AUTH_RESET_DELIVERY_SECRET")?.trim();
+    const resetUrl = appUrl
+      ? `${appUrl}/reset-password?identifier=${encodeURIComponent(input.user.phone ?? input.user.fullName)}&code=${encodeURIComponent(input.code)}`
+      : null;
+    const response = await fetch(deliveryUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(deliverySecret ? { "X-Auth-Reset-Secret": deliverySecret } : {})
+      },
+      body: JSON.stringify({
+        event: "password_reset",
+        recipient: { phone: input.user.phone ?? null, name: input.user.fullName },
+        code: input.code,
+        expiresAt: input.expiresAt.toISOString(),
+        resetUrl
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`delivery request returned ${response.status}`);
+    }
   }
 
   private async loadBranches(businessId: string, scope: { role?: string | null; branchId?: string | null } = {}) {

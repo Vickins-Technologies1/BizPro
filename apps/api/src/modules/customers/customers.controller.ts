@@ -75,6 +75,11 @@ class RecordPaymentDto {
   @IsOptional() @IsString() note?: string;
 }
 
+class RepairBalanceDto {
+  @IsString() reason!: string;
+  @IsString() operationId!: string;
+}
+
 function normalizeCustomerAttachments(attachments?: CustomerAttachmentDto[] | null) {
   if (!Array.isArray(attachments)) {
     return [];
@@ -174,6 +179,18 @@ export class CustomersController {
   @Roles("owner", "manager", "cashier")
   payments(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Query("branchId") branchId?: string) {
     return this.customers.payments(user.businessId, id, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Get(":id/reconcile")
+  @Roles("owner", "manager")
+  reconcile(@CurrentUser() user: { businessId: string; branchId?: string | null }, @Param("id") id: string, @Query("branchId") branchId?: string) {
+    return this.customers.reconcileBalance(user.businessId, id, { branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Post(":id/reconcile/repair")
+  @Roles("owner", "manager")
+  repair(@CurrentUser() user: { businessId: string; sub: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: RepairBalanceDto) {
+    return this.customers.repairBalance(user.businessId, id, user.sub, dto.reason, dto.operationId, { branchId: user.branchId ?? null });
   }
 
   @Post(":id/payments")

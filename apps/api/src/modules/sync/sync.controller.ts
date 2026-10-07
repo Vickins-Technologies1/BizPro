@@ -16,6 +16,7 @@ class SyncPushEventDto {
   @IsObject()
   payload!: Record<string, unknown>;
   @IsDateString() createdAt!: string;
+  @IsOptional() entityVersion?: number;
 }
 
 class SyncPushRequestDto {

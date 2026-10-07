@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { CurrentUser } from "../../common/current-user.decorator";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { Roles } from "../../common/roles.decorator";
@@ -25,7 +25,6 @@ class UpdateBankAccountDto {
   @IsOptional() @IsString() accountNumber?: string | null;
   @IsOptional() @IsString() currency?: string;
   @IsOptional() @IsNumber() openingBalance?: number;
-  @IsOptional() @IsNumber() currentBalance?: number;
   @IsOptional() @IsIn([true, false]) isPrimary?: boolean;
   @IsOptional() @IsString() notes?: string | null;
 }
@@ -36,10 +35,22 @@ class CreatePettyCashEntryDto {
   @IsString() label!: string;
   @IsNumber() amount!: number;
   @IsIn(["in", "out"]) direction!: "in" | "out";
+  @IsOptional() @IsIn(["cash_in", "cash_out", "expense", "adjustment"]) entryType?: "cash_in" | "cash_out" | "expense" | "adjustment";
   @IsOptional() @IsString() category?: string | null;
   @IsOptional() @IsString() note?: string | null;
   @IsOptional() @IsString() recordedById?: string | null;
   @IsDateString() entryDate!: string;
+}
+
+class CreateBankTransactionDto {
+  @IsString() bankAccountId!: string;
+  @IsOptional() @IsString() externalId?: string;
+  @IsNumber() @Min(0.01) amount!: number;
+  @IsIn(["in", "out"]) direction!: "in" | "out";
+  @IsString() type!: string;
+  @IsString() source!: string;
+  @IsOptional() @IsString() reference?: string | null;
+  @IsOptional() @IsString() description?: string | null;
 }
 
 class CreateCreditNoteDto {
@@ -151,7 +162,6 @@ export class FinanceController {
       ...(dto.accountNumber !== undefined ? { accountNumber: dto.accountNumber } : {}),
       ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
       ...(dto.openingBalance !== undefined ? { openingBalance: dto.openingBalance } : {}),
-      ...(dto.currentBalance !== undefined ? { currentBalance: dto.currentBalance } : {}),
       ...(dto.isPrimary !== undefined ? { isPrimary: dto.isPrimary } : {}),
       ...(dto.notes !== undefined ? { notes: dto.notes } : {})
     });
@@ -161,6 +171,18 @@ export class FinanceController {
   @Roles("owner", "manager")
   archiveBankAccount(@CurrentUser() user: { businessId: string }, @Param("id") id: string) {
     return this.finance.archiveBankAccount(user.businessId, id);
+  }
+
+  @Get("bank-accounts/:id/transactions")
+  @Roles("owner", "manager")
+  bankTransactions(@CurrentUser() user: { businessId: string }, @Param("id") id: string) {
+    return this.finance.bankTransactions(user.businessId, id);
+  }
+
+  @Post("bank-accounts/:id/transactions")
+  @Roles("owner", "manager")
+  createBankTransaction(@CurrentUser() user: { businessId: string; sub: string }, @Param("id") id: string, @Body() dto: CreateBankTransactionDto) {
+    return this.finance.createBankTransaction({ ...dto, businessId: user.businessId, bankAccountId: id, reference: dto.reference ?? null, description: dto.description ?? null, createdById: user.sub });
   }
 
   @Get("petty-cash")
@@ -178,6 +200,7 @@ export class FinanceController {
       externalId: dto.externalId ?? null,
       category: dto.category ?? null,
       note: dto.note ?? null,
+      entryType: dto.entryType ?? (dto.direction === "in" ? "cash_in" : "cash_out"),
       recordedById: dto.recordedById ?? user.sub,
       entryDate: new Date(dto.entryDate)
     });

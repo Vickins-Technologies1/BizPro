@@ -3,10 +3,12 @@ const path = require("path");
 
 const projectRoot = process.env.DIRAOS_MOBILE_ROOT || __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
+const realMobileRoot = process.env.DIRAOS_REAL_MOBILE_ROOT || projectRoot;
+const realWorkspaceRoot = process.env.DIRAOS_REAL_WORKSPACE_ROOT || workspaceRoot;
 const expoModulesCoreRoot = process.env.DIRAOS_EXPO_MODULES_CORE || path.resolve(workspaceRoot, "node_modules/expo-modules-core");
 
 const config = getDefaultConfig(projectRoot);
-const mobileReactRoot = path.resolve(projectRoot, "node_modules/react");
+const mobileReactRoot = path.resolve(realMobileRoot, "node_modules/react");
 
 // This is a pnpm workspace with other apps that still use React 18. Metro can
 // otherwise resolve expo modules' peer React from the workspace store, creating
@@ -28,19 +30,20 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     : context.resolveRequest(context, moduleName, platform);
 };
 
-config.watchFolders = [workspaceRoot, expoModulesCoreRoot];
+config.watchFolders = [realWorkspaceRoot, expoModulesCoreRoot];
 config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, "node_modules"),
-  path.resolve(workspaceRoot, "node_modules")
+  path.resolve(realMobileRoot, "node_modules"),
+  path.resolve(realWorkspaceRoot, "node_modules")
 ];
 // This workspace contains apps with different React major versions. Metro must
 // not resolve React for a mobile dependency from the workspace-level React 18
 // installation while the mobile app renders with React 19.
 config.resolver.extraNodeModules = {
   "@babel/runtime": process.env.DIRAOS_BABEL_RUNTIME || path.resolve(projectRoot, "node_modules/@babel/runtime"),
+  "@expo/vector-icons": process.env.DIRAOS_VECTOR_ICONS_ROOT || path.resolve(realMobileRoot, "node_modules/@expo/vector-icons"),
   "expo-modules-core": expoModulesCoreRoot,
   react: mobileReactRoot,
-  "react-native": path.resolve(projectRoot, "node_modules/react-native")
+  "react-native": path.resolve(realMobileRoot, "node_modules/react-native")
 };
 config.resolver.disableHierarchicalLookup = true;
 

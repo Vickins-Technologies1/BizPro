@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { CurrentUser } from "../../common/current-user.decorator";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { Roles } from "../../common/roles.decorator";
@@ -28,6 +28,7 @@ class CreateInvoiceDto {
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() customerId?: string | null;
+  @IsOptional() @IsString() saleId?: string | null;
   @IsOptional() @IsString() customerName?: string | null;
   @IsOptional() @IsString() customerBusinessName?: string | null;
   @IsOptional() @IsString() customerEmail?: string | null;
@@ -55,6 +56,7 @@ class PatchInvoiceDto {
   @IsOptional() @IsString() invoiceNumber?: string | null;
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() customerId?: string | null;
+  @IsOptional() @IsString() saleId?: string | null;
   @IsOptional() @IsString() customerName?: string | null;
   @IsOptional() @IsString() customerBusinessName?: string | null;
   @IsOptional() @IsString() customerEmail?: string | null;
@@ -92,7 +94,7 @@ class CreateCreditNoteDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsString() reference!: string;
   @IsOptional() @IsString() customerId?: string | null;
-  @IsNumber() amount!: number;
+  @IsNumber() @Min(0.01) amount!: number;
   @IsString() reason!: string;
   @IsOptional() @IsString() note?: string | null;
   @IsDateString() creditDate!: string;
@@ -105,8 +107,8 @@ class CreateDebitNoteDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsString() reference!: string;
   @IsString() reason!: string;
-  @IsNumber() amount!: number;
-  @IsNumber() taxAdjustment!: number;
+  @IsNumber() @Min(0) amount!: number;
+  @IsNumber() @Min(0) taxAdjustment!: number;
   @IsOptional() @IsString() note?: string | null;
   @IsDateString() issuedAt!: string;
   @IsOptional() @IsIn(["draft", "issued", "void"]) status?: "draft" | "issued" | "void";

@@ -10,6 +10,23 @@ import { buildSuppliersSchemas } from "./suppliers.schemas";
 import { buildSyncSchemas } from "./sync.schemas";
 import { buildSubscriptionSchemas } from "./subscription.schemas";
 import { buildOpsSchemas } from "./ops.schemas";
+import {
+  buildCommerceSchemas,
+  CommerceApiCredential,
+  CommerceApiCredentialSchema,
+  CommerceIdempotencyRecord,
+  CommerceIdempotencyRecordSchema,
+  CommerceOrder,
+  CommerceOrderSchema,
+  CommerceWebhookDelivery,
+  CommerceWebhookDeliverySchema,
+  CommerceWebhookEndpoint,
+  CommerceWebhookEndpointSchema,
+  InventoryReservation,
+  InventoryReservationSchema,
+  VendorProduct,
+  VendorProductSchema
+} from "./commerce.schemas";
 import { BusinessOperation, BusinessOperationSchema } from "./business-operations.schemas";
 
 @Schema({ timestamps: true, collection: "businesses" })
@@ -174,6 +191,15 @@ export class User {
   @Prop({ type: String, select: false })
   pinHash?: string | null;
 
+  @Prop({ type: String, select: false, default: null, index: true })
+  passwordResetCodeHash?: string | null;
+
+  @Prop({ type: Date, default: null, index: true })
+  passwordResetExpiresAt?: Date | null;
+
+  @Prop({ type: Number, select: false, default: 0 })
+  passwordResetAttempts?: number;
+
   @Prop({ required: true, enum: [...USER_ROLES] satisfies UserRole[] })
   role!: UserRole;
 
@@ -301,6 +327,18 @@ export class Product {
   @Prop({ type: String })
   supplierId?: string | null;
 
+  @Prop({ type: String, default: null })
+  description?: string | null;
+
+  @Prop({ type: [Object], default: [] })
+  images!: Array<{ url: string; alt?: string | null }>;
+
+  @Prop({ type: String, required: true, enum: ["INTERNAL", "VENDOR", "IMPORTED"], default: "INTERNAL" })
+  productSource!: "INTERNAL" | "VENDOR" | "IMPORTED";
+
+  @Prop({ type: String, required: true, enum: ["PRIVATE", "INTERNAL", "EXTERNAL", "MARKETPLACE"], default: "INTERNAL" })
+  visibility!: "PRIVATE" | "INTERNAL" | "EXTERNAL" | "MARKETPLACE";
+
   @Prop({ required: true })
   name!: string;
 
@@ -331,6 +369,9 @@ export class Product {
   @Prop({ required: true, default: 0 })
   stockOnHand!: number;
 
+  @Prop({ required: true, default: 0, min: 0 })
+  reservedQuantity!: number;
+
   @Prop({ required: true, default: 5 })
   lowStockThreshold!: number;
 
@@ -342,6 +383,9 @@ export class Product {
 }
 export type ProductDocument = HydratedDocument<Product>;
 export const ProductSchema = SchemaFactory.createForClass(Product);
+ProductSchema.index({ businessId: 1, branchId: 1, sku: 1 }, { sparse: true });
+ProductSchema.index({ businessId: 1, visibility: 1, isActive: 1, createdAt: -1 });
+ProductSchema.index({ businessId: 1, categoryId: 1, brandId: 1, branchId: 1 });
 
 @Schema({ timestamps: true, collection: "suppliers" })
 export class Supplier {
@@ -368,6 +412,24 @@ export class Supplier {
 
   @Prop({ type: String })
   contactName?: string | null;
+
+  @Prop({ type: String, default: null })
+  businessName?: string | null;
+
+  @Prop({ type: String, default: null })
+  contactPerson?: string | null;
+
+  @Prop({ type: String, default: null })
+  address?: string | null;
+
+  @Prop({ type: String, default: null })
+  location?: string | null;
+
+  @Prop({ type: String, enum: ["ACTIVE", "INACTIVE", "SUSPENDED"], default: "ACTIVE" })
+  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+
+  @Prop({ type: Object, default: {} })
+  metadata?: Record<string, unknown>;
 
   @Prop({ type: String })
   notes?: string | null;
@@ -494,7 +556,7 @@ export class SupplierPayment {
   @Prop({ type: String, default: null })
   purchaseOrderId?: string | null;
 
-  @Prop({ required: true })
+  @Prop({ required: true, min: 0 })
   amount!: number;
 
   @Prop({ required: true })
@@ -757,7 +819,7 @@ export class Expense {
   @Prop({ type: String })
   categoryId?: string | null;
 
-  @Prop({ required: true })
+  @Prop({ required: true, min: 0 })
   amount!: number;
 
   @Prop({ required: true })
@@ -774,6 +836,7 @@ export class Expense {
 }
 export type ExpenseDocument = HydratedDocument<Expense>;
 export const ExpenseSchema = SchemaFactory.createForClass(Expense);
+ExpenseSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "bank_accounts" })
 export class BankAccount {
@@ -812,6 +875,25 @@ export class BankAccount {
 }
 export type BankAccountDocument = HydratedDocument<BankAccount>;
 export const BankAccountSchema = SchemaFactory.createForClass(BankAccount);
+BankAccountSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
+
+@Schema({ timestamps: true, collection: "bank_transactions" })
+export class BankTransaction {
+  @Prop({ type: String, index: true }) externalId?: string | null;
+  @Prop({ required: true, index: true }) businessId!: string;
+  @Prop({ required: true, index: true }) bankAccountId!: string;
+  @Prop({ required: true, min: 0.01 }) amount!: number;
+  @Prop({ required: true, enum: ["in", "out"] }) direction!: "in" | "out";
+  @Prop({ required: true }) currency!: string;
+  @Prop({ required: true }) type!: string;
+  @Prop({ required: true }) source!: string;
+  @Prop({ type: String, default: null }) reference?: string | null;
+  @Prop({ type: String, default: null }) description?: string | null;
+  @Prop({ type: String, default: null }) createdById?: string | null;
+}
+export type BankTransactionDocument = HydratedDocument<BankTransaction>;
+export const BankTransactionSchema = SchemaFactory.createForClass(BankTransaction);
+BankTransactionSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "petty_cash_entries" })
 export class PettyCashEntry {
@@ -830,6 +912,9 @@ export class PettyCashEntry {
   @Prop({ required: true, enum: ["in", "out"] })
   direction!: "in" | "out";
 
+  @Prop({ required: true, enum: ["cash_in", "cash_out", "expense", "adjustment"], default: "cash_out" })
+  entryType!: "cash_in" | "cash_out" | "expense" | "adjustment";
+
   @Prop({ type: String, default: null })
   category?: string | null;
 
@@ -847,6 +932,7 @@ export class PettyCashEntry {
 }
 export type PettyCashEntryDocument = HydratedDocument<PettyCashEntry>;
 export const PettyCashEntrySchema = SchemaFactory.createForClass(PettyCashEntry);
+PettyCashEntrySchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "credit_notes" })
 export class CreditNote {
@@ -871,7 +957,7 @@ export class CreditNote {
   @Prop({ type: String, default: null })
   customerId?: string | null;
 
-  @Prop({ required: true })
+  @Prop({ required: true, min: 0 })
   amount!: number;
 
   @Prop({ required: true })
@@ -891,6 +977,7 @@ export class CreditNote {
 }
 export type CreditNoteDocument = HydratedDocument<CreditNote>;
 export const CreditNoteSchema = SchemaFactory.createForClass(CreditNote);
+CreditNoteSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "invoices" })
 export class Invoice {
@@ -905,6 +992,9 @@ export class Invoice {
 
   @Prop({ type: String, default: null, index: true })
   customerId?: string | null;
+
+  @Prop({ type: String, default: null, index: true })
+  saleId?: string | null;
 
   @Prop({ type: String, default: null })
   customerName?: string | null;
@@ -1042,6 +1132,7 @@ export type InvoiceDocument = HydratedDocument<Invoice>;
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);
 InvoiceSchema.index({ businessId: 1, invoiceNumber: 1 }, { unique: true });
 InvoiceSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
+InvoiceSchema.index({ businessId: 1, saleId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "debit_notes" })
 export class DebitNote {
@@ -1095,6 +1186,9 @@ export interface SaleItem {
   costPrice: number;
   lineDiscount: number;
   lineTotal: number;
+  lineTax?: number;
+  currency?: string;
+  calculationVersion?: number;
 }
 
 @Schema({ timestamps: true, collection: "sales" })
@@ -1144,6 +1238,9 @@ export class Sale {
   @Prop({ type: String })
   notes?: string | null;
 
+  @Prop({ required: true, default: "KES" })
+  currency!: string;
+
   @Prop({ type: Array, default: [] })
   items!: SaleItem[];
 
@@ -1152,6 +1249,7 @@ export class Sale {
 }
 export type SaleDocument = HydratedDocument<Sale>;
 export const SaleSchema = SchemaFactory.createForClass(Sale);
+SaleSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "payments" })
 export class Payment {
@@ -1199,6 +1297,7 @@ export class Payment {
 }
 export type PaymentDocument = HydratedDocument<Payment>;
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+PaymentSchema.index({ businessId: 1, externalId: 1 }, { unique: true, sparse: true });
 
 @Schema({ timestamps: true, collection: "stock_movements" })
 export class StockMovement {
@@ -1251,6 +1350,12 @@ export class SyncEvent {
 
   @Prop({ required: true })
   action!: string;
+
+  @Prop({ type: Number, default: null, index: true })
+  entityVersion?: number | null;
+
+  @Prop({ type: Date, default: null })
+  serverReceivedAt?: Date | null;
 
   @Prop({ type: Object, required: true })
   payload!: Record<string, unknown>;
@@ -1495,6 +1600,7 @@ export const financeSchemas = buildFinanceSchemas({
   Expense: { name: Expense.name, schema: ExpenseSchema },
   BankAccount: { name: BankAccount.name, schema: BankAccountSchema },
   PettyCashEntry: { name: PettyCashEntry.name, schema: PettyCashEntrySchema },
+  BankTransaction: { name: BankTransaction.name, schema: BankTransactionSchema },
   CreditNote: { name: CreditNote.name, schema: CreditNoteSchema },
   Sale: { name: Sale.name, schema: SaleSchema },
   Payment: { name: Payment.name, schema: PaymentSchema },
@@ -1518,8 +1624,18 @@ export const opsSchemas = buildOpsSchemas({
   BusinessNotification: { name: BusinessNotification.name, schema: BusinessNotificationSchema }
 });
 
+export const commerceSchemas = buildCommerceSchemas({
+  VendorProduct: { name: VendorProduct.name, schema: VendorProductSchema },
+  InventoryReservation: { name: InventoryReservation.name, schema: InventoryReservationSchema },
+  CommerceOrder: { name: CommerceOrder.name, schema: CommerceOrderSchema },
+  CommerceApiCredential: { name: CommerceApiCredential.name, schema: CommerceApiCredentialSchema },
+  CommerceIdempotencyRecord: { name: CommerceIdempotencyRecord.name, schema: CommerceIdempotencyRecordSchema },
+  CommerceWebhookEndpoint: { name: CommerceWebhookEndpoint.name, schema: CommerceWebhookEndpointSchema },
+  CommerceWebhookDelivery: { name: CommerceWebhookDelivery.name, schema: CommerceWebhookDeliverySchema }
+});
+
 export const businessOperationSchemas = [{ name: BusinessOperation.name, schema: BusinessOperationSchema }] as const;
 
-export const allSchemas = [...businessSchemas, ...catalogSchemas, ...invoiceSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas, ...businessOperationSchemas] as const;
+export const allSchemas = [...businessSchemas, ...catalogSchemas, ...invoiceSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas, ...commerceSchemas, ...businessOperationSchemas] as const;
 
 export type MongoId = Types.ObjectId;

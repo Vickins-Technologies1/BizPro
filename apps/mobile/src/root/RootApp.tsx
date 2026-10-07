@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, AppState, Easing, Image, Platform, StyleSheet, View } from "react-native";
+import { Animated, AppState, Appearance, Easing, Image, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -11,7 +11,7 @@ import { ErrorState, PrimaryButton } from "@/components/Primitives";
 import { getBrandLogo } from "@/components/BrandLogo";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
-import { getThemeTokens, tokens, type ThemeMode } from "@/theme/tokens";
+import { getThemeTokens, type ThemeMode } from "@/theme/tokens";
 import { configureNotificationListeners, registerPushNotifications } from "@/services/notifications";
 
 export function RootApp() {
@@ -23,6 +23,8 @@ export function RootApp() {
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncNow = useAppStore((state) => state.syncNow);
   const themeMode = useAppStore((state) => state.themeMode);
+  const themePreference = useAppStore((state) => state.themePreference);
+  const syncSystemTheme = useAppStore((state) => state.syncSystemTheme);
   const error = useAppStore((state) => state.error);
   const theme = getThemeTokens(themeMode);
 
@@ -31,6 +33,12 @@ export function RootApp() {
       void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(() => undefined);
     }
   }, [theme.colors.background]);
+
+  useEffect(() => {
+    if (themePreference !== "system") return;
+    const subscription = Appearance.addChangeListener(() => syncSystemTheme());
+    return () => subscription.remove();
+  }, [syncSystemTheme, themePreference]);
 
   useEffect(() => {
     bootstrap();

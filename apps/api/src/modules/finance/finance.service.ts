@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { InjectConnection, InjectModel } from "@nestjs/mongoose";
+import { Connection, Model } from "mongoose";
 import { endOfDay, parseISO, startOfDay } from "date-fns";
 import {
   BankAccount,
   BankAccountDocument,
+  BankTransaction,
+  BankTransactionDocument,
   CreditNote,
   CreditNoteDocument,
   Expense,
@@ -15,6 +17,8 @@ import {
   PaymentDocument,
   PettyCashEntry,
   PettyCashEntryDocument,
+  AuditLog,
+  AuditLogDocument,
   Sale,
   SaleDocument
 } from "../schemas";
@@ -28,6 +32,8 @@ import type {
   PettyCashEntry as PettyCashEntryView
 } from "@vbo/shared";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
+import { calculateGrossProfit, calculateNetProfit, calculateOutstanding, roundMoney } from "@vbo/shared";
+import { runInTransaction } from "../../common/mongo-transaction";
 
 type DateRange = Record<string, Date>;
 
@@ -40,7 +46,10 @@ export class FinanceService {
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(BankAccount.name) private readonly bankAccountModel: Model<BankAccountDocument>,
     @InjectModel(PettyCashEntry.name) private readonly pettyCashModel: Model<PettyCashEntryDocument>,
-    @InjectModel(CreditNote.name) private readonly creditNoteModel: Model<CreditNoteDocument>
+    @InjectModel(CreditNote.name) private readonly creditNoteModel: Model<CreditNoteDocument>,
+    @InjectModel(BankTransaction.name) private readonly bankTransactionModel: Model<BankTransactionDocument>,
+    @InjectConnection() private readonly connection: Connection,
+    @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>
   ) {}
 
   async overview(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
@@ -51,14 +60,15 @@ export class FinanceService {
     const entryRange = buildDateRange(from, to);
     const invoiceRange = buildDateRange(from, to);
 
-    const [sales, expenseTotals, payments, creditNotes, bankAccounts, pettyCashEntries, invoices] = await Promise.all([
+    const [sales, expenseTotals, payments, standalonePayments, creditNotes, bankAccounts, pettyCashEntries, invoices] = await Promise.all([
       this.saleModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(saleRange ? { createdAt: saleRange } : {}) }).lean(),
-      this.expenseModel.aggregate([{ $match: { businessId, ...buildBranchMatch(branchId), ...(expenseRange ? { expenseDate: expenseRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+      this.expenseModel.aggregate([{ $match: { businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(expenseRange ? { expenseDate: expenseRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.paymentModel.aggregate([{ $match: { businessId, ...buildBranchMatch(branchId), ...(paymentRange ? { createdAt: paymentRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+      this.paymentModel.aggregate([{ $match: { businessId, saleId: null, invoiceId: null, deletedAt: null, ...buildBranchMatch(branchId), ...(paymentRange ? { createdAt: paymentRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.creditNoteModel.aggregate([{ $match: { businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(entryRange ? { creditDate: entryRange } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.bankAccountModel.find({ businessId, deletedAt: null }).lean(),
       this.pettyCashModel.find({ businessId, deletedAt: null, ...(entryRange ? { entryDate: entryRange } : {}) }).lean(),
-      this.invoiceModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId), ...(invoiceRange ? { issueDate: invoiceRange } : {}) }).lean()
+      this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] }, ...buildBranchMatch(branchId), ...(invoiceRange ? { issueDate: invoiceRange } : {}) }).lean()
     ]);
 
     const incomeTotal = sales.reduce((sum, sale) => sum + Number(sale.grandTotal ?? 0), 0);
@@ -76,10 +86,14 @@ export class FinanceService {
     const bankBalanceTotal = bankAccounts.reduce((sum, account) => sum + Number(account.currentBalance ?? account.openingBalance ?? 0), 0);
     const pettyCashBalance = pettyCashEntries.reduce((sum, entry) => sum + (entry.direction === "in" ? Number(entry.amount ?? 0) : -Number(entry.amount ?? 0)), 0);
     const invoiceCount = invoices.length;
-    const invoiceTotal = invoices.reduce((sum, invoice) => sum + Math.max(0, Number((invoice as { balanceDue?: number }).balanceDue ?? 0)), 0);
+    const outstandingReceivables = [
+      ...sales.map((sale) => ({ id: String(sale.externalId ?? sale._id), source: "sale" as const, balanceDue: sale.balanceDue, currency: sale.currency, linkedReceivableId: String(sale.externalId ?? sale._id) })),
+      ...invoices.map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), source: "invoice" as const, balanceDue: invoice.balanceDue, currency: invoice.currency, linkedReceivableId: invoice.saleId ?? null }))
+    ];
+    const invoiceTotal = Math.max(0, calculateOutstanding(outstandingReceivables) - Number(standalonePayments[0]?.total ?? 0));
     const taxTotal = invoices.reduce((sum, invoice) => sum + Number((invoice as { taxTotal?: number }).taxTotal ?? 0), 0);
-    const profitLossTotal = incomeTotal - cogsTotal - expensesTotal;
-    const cashFlowTotal = paymentTotal - expensesTotal + pettyCashBalance;
+    const profitLossTotal = calculateNetProfit(calculateGrossProfit(incomeTotal, cogsTotal), expensesTotal);
+    const cashFlowTotal = roundMoney(paymentTotal - expensesTotal + pettyCashBalance);
 
     return {
       incomeTotal,
@@ -157,6 +171,7 @@ export class FinanceService {
     creditDate: Date;
   }, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
+    if (!Number.isFinite(input.amount) || input.amount <= 0) throw new BadRequestException("Credit note amount must be greater than zero");
     if (input.externalId) {
       const existing = await this.creditNoteModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).lean();
       if (existing) {
@@ -252,11 +267,42 @@ export class FinanceService {
     if (patch.accountNumber !== undefined) account.accountNumber = patch.accountNumber ?? null;
     if (patch.currency !== undefined) account.currency = patch.currency;
     if (patch.openingBalance !== undefined) account.openingBalance = Number(patch.openingBalance ?? 0);
-    if (patch.currentBalance !== undefined) account.currentBalance = Number(patch.currentBalance ?? 0);
     if (patch.isPrimary !== undefined) account.isPrimary = patch.isPrimary;
     if (patch.notes !== undefined) account.notes = patch.notes ?? null;
     await account.save();
     return this.normalizeBankAccount(account.toObject());
+  }
+
+  async bankTransactions(businessId: string, bankAccountId: string) {
+    const account = await this.bankAccountModel.findOne({ _id: bankAccountId, businessId, deletedAt: null }).lean();
+    if (!account) throw new NotFoundException("Bank account not found");
+    return this.bankTransactionModel.find({ businessId, bankAccountId }).sort({ createdAt: 1 }).lean();
+  }
+
+  async createBankTransaction(input: {
+    businessId: string;
+    bankAccountId: string;
+    externalId?: string | null;
+    amount: number;
+    direction: "in" | "out";
+    type: string;
+    source: string;
+    reference?: string | null;
+    description?: string | null;
+    createdById?: string | null;
+  }) {
+    if (!Number.isFinite(input.amount) || input.amount <= 0) throw new NotFoundException("Bank transaction amount must be greater than zero");
+    return runInTransaction(this.connection, async (session) => {
+      const existing = input.externalId ? await this.bankTransactionModel.findOne({ businessId: input.businessId, externalId: input.externalId }).session(session).lean() : null;
+      if (existing) return existing;
+      const account = await this.bankAccountModel.findOne({ _id: input.bankAccountId, businessId: input.businessId, deletedAt: null }).session(session);
+      if (!account) throw new NotFoundException("Bank account not found");
+      const created = (await this.bankTransactionModel.create([{ ...input, currency: account.currency, reference: input.reference ?? null, description: input.description ?? null, createdById: input.createdById ?? null }], { session }))[0]!;
+      account.currentBalance = roundMoney(Number(account.currentBalance ?? account.openingBalance ?? 0) + (input.direction === "in" ? input.amount : -input.amount));
+      await account.save({ session });
+      await this.auditLogModel.create([{ businessId: input.businessId, entityType: "bank_transaction", entityId: String(created._id), action: "created", actorId: input.createdById ?? null, payload: { bankAccountId: input.bankAccountId, amount: input.amount, direction: input.direction, externalId: input.externalId ?? null } }], { session });
+      return created.toObject();
+    });
   }
 
   async archiveBankAccount(businessId: string, id: string) {
@@ -280,6 +326,7 @@ export class FinanceService {
     label: string;
     amount: number;
     direction: "in" | "out";
+    entryType?: "cash_in" | "cash_out" | "expense" | "adjustment";
     category?: string | null;
     note?: string | null;
     recordedById?: string | null;
@@ -297,6 +344,7 @@ export class FinanceService {
       label: input.label,
       amount: input.amount,
       direction: input.direction,
+      entryType: input.entryType ?? (input.direction === "in" ? "cash_in" : "cash_out"),
       category: input.category ?? null,
       note: input.note ?? null,
       recordedById: input.recordedById ?? null,

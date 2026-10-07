@@ -467,6 +467,29 @@ export async function loginBusiness(input: { identifier: string; passwordOrPin: 
   return apiRequest<AuthResponse>("/auth/login", { method: "POST", body: input, auth: false });
 }
 
+export type PasswordResetRequestResponse = {
+  accepted: boolean;
+  message: string;
+  expiresInMinutes: number;
+  debugCode?: string;
+};
+
+export async function requestPasswordReset(identifier: string) {
+  return apiRequest<PasswordResetRequestResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: { identifier: identifier.trim() },
+    auth: false
+  });
+}
+
+export async function resetPassword(input: { identifier: string; code: string; password: string }) {
+  return apiRequest<{ success: boolean; message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: input,
+    auth: false
+  });
+}
+
 export async function listCategories() {
   const categories = await apiRequest<RawEntity[]>("/categories");
   return categories.map((category) => withId(category)) as Category[];
@@ -1247,18 +1270,26 @@ export async function createSale(input: {
   branchId?: string | null;
   customerId?: string | null;
   paymentMethod: Sale["paymentMethod"];
-  paymentStatus: Sale["paymentStatus"];
+  paymentStatus?: Sale["paymentStatus"];
   amountPaid: number;
-  discountTotal?: number;
-  taxTotal?: number;
-  grandTotal: number;
   notes?: string | null;
   receiptNumber: string;
-  subtotal: number;
-  balanceDue: number;
-  items: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; costPrice: number; lineDiscount: number; lineTotal: number }>;
+  items: Array<{ productId: string; quantity: number; discount?: number; tax?: number; productName?: string; unitPrice?: number; costPrice?: number; lineDiscount?: number; lineTotal?: number }>;
 }) {
-  const sale = await apiRequest<RawEntity>("/sales", { method: "POST", body: input });
+  const sale = await apiRequest<RawEntity>("/sales", {
+    method: "POST",
+    body: {
+      externalId: input.externalId,
+      branchId: input.branchId,
+      customerId: input.customerId,
+      paymentMethod: input.paymentMethod,
+      paymentStatus: input.paymentStatus ?? "unpaid",
+      amountPaid: input.amountPaid,
+      notes: input.notes,
+      receiptNumber: input.receiptNumber,
+      items: input.items.map((item) => ({ productId: item.productId, quantity: item.quantity, discount: item.discount ?? item.lineDiscount ?? 0, tax: item.tax ?? 0 }))
+    }
+  });
   return withSaleItems(sale) as Sale;
 }
 

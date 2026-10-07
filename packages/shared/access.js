@@ -21,6 +21,7 @@ exports.ACCESS_PERMISSIONS = [
     "manageCustomers",
     "manageSuppliers",
     "manageEmployees",
+    "manageBranches",
     "manageExpenses",
     "viewFinancialReports",
     "manageSettings",
@@ -55,6 +56,7 @@ exports.ROLE_PRESETS = [
             "manageCustomers",
             "manageSuppliers",
             "manageExpenses",
+            "manageBranches",
             "viewFinancialReports",
             "manageSettings",
             "manageOperations"

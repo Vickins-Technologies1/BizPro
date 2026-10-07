@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { ClientSession, Connection, Model } from "mongoose";
-import { Customer, CustomerDocument, CustomerGroup, CustomerGroupDocument, Payment, PaymentDocument } from "../schemas";
+import { AuditLog, AuditLogDocument, Customer, CustomerDocument, CustomerGroup, CustomerGroupDocument, Invoice, InvoiceDocument, Payment, PaymentDocument, Sale, SaleDocument } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import { toSafeIsoString } from "../../common/date-normalizer";
+import { calculateCustomerOutstanding, reconcileCustomerBalance } from "./customer-balance";
 
 type CustomerAttachmentInput = {
   id?: string;
@@ -44,7 +45,10 @@ export class CustomersService {
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>,
     @InjectModel(CustomerGroup.name) private readonly customerGroupModel: Model<CustomerGroupDocument>,
     @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>,
-    @InjectConnection() private readonly connection: Connection
+    @InjectConnection() private readonly connection: Connection,
+    @Optional() @InjectModel(Sale.name) private readonly saleModel?: Model<SaleDocument>,
+    @Optional() @InjectModel(Invoice.name) private readonly invoiceModel?: Model<InvoiceDocument>,
+    @Optional() @InjectModel(AuditLog.name) private readonly auditLogModel?: Model<AuditLogDocument>
   ) {}
 
   list(businessId: string, scope: BranchScope = {}) {
@@ -223,6 +227,23 @@ export class CustomersService {
 
   async analytics(businessId: string, scope: BranchScope = {}) {
     const [customers, groups] = await Promise.all([this.list(businessId, scope), this.listGroups(businessId)]);
+    const [sales, invoices, payments] = this.saleModel && this.invoiceModel
+      ? await Promise.all([
+          this.saleModel.find({ businessId, deletedAt: null }).select({ customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
+          this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] } }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
+          this.paymentModel.find({ businessId, customerId: { $ne: null }, saleId: null, invoiceId: null, deletedAt: null }).select({ customerId: 1, amount: 1 }).lean()
+        ])
+      : [[], [], []];
+    const canonicalBalances = new Map<string, number>();
+    for (const customer of customers) {
+      const customerKey = String(customer.id ?? "");
+      const keys = [customerKey, String((customer as { _id?: unknown })._id ?? "")].filter(Boolean);
+      canonicalBalances.set(customerKey, calculateCustomerOutstanding({
+        sales: sales.filter((sale) => keys.includes(String(sale.customerId))).map((sale) => ({ id: String(sale.externalId ?? sale._id), balanceDue: Number(sale.balanceDue ?? 0), currency: sale.currency ?? null })),
+        invoices: invoices.filter((invoice) => keys.includes(String(invoice.customerId))).map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), saleId: invoice.saleId ?? null, balanceDue: Number(invoice.balanceDue ?? 0), currency: invoice.currency ?? null })),
+        standalonePayments: payments.filter((payment) => keys.includes(String(payment.customerId)))
+      }));
+    }
     const groupById = new Map(groups.map((group) => [group.id, group]));
     const grouped = new Map<string | null, { groupId: string | null; groupName: string; customerCount: number; outstanding: number; loyaltyPoints: number }>();
 
@@ -237,31 +258,63 @@ export class CustomersService {
         loyaltyPoints: 0
       };
       current.customerCount += 1;
-      current.outstanding += Math.max(0, Number(customer.balance ?? 0));
+      current.outstanding += Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0));
       current.loyaltyPoints += Number(customer.loyaltyPoints ?? 0);
       grouped.set(groupId, current);
     }
 
     const sortedCustomers = [...customers]
-      .sort((left, right) => Number(right.balance ?? 0) - Number(left.balance ?? 0))
+      .sort((left, right) => Number(canonicalBalances.get(String(right.id ?? "")) ?? 0) - Number(canonicalBalances.get(String(left.id ?? "")) ?? 0))
       .slice(0, 8)
       .map((customer) => ({
         customerId: customer.id,
         name: customer.name,
-        balance: Math.max(0, Number(customer.balance ?? 0)),
+        balance: Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)),
         creditLimit: Number(customer.creditLimit ?? 0),
         loyaltyPoints: Number(customer.loyaltyPoints ?? 0)
       }));
 
     return {
       totalCustomers: customers.length,
-      totalOutstanding: customers.reduce((sum, customer) => sum + Math.max(0, Number(customer.balance ?? 0)), 0),
+      totalOutstanding: customers.reduce((sum, customer) => sum + Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)), 0),
       totalCreditLimit: customers.reduce((sum, customer) => sum + Math.max(0, Number(customer.creditLimit ?? 0)), 0),
       totalLoyaltyPoints: customers.reduce((sum, customer) => sum + Number(customer.loyaltyPoints ?? 0), 0),
-      owingCustomers: customers.filter((customer) => Math.max(0, Number(customer.balance ?? 0)) > 0).length,
+      owingCustomers: customers.filter((customer) => Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)) > 0).length,
       grouped: [...grouped.values()].sort((left, right) => right.customerCount - left.customerCount),
       topBalances: sortedCustomers
     };
+  }
+
+  async reconcileBalance(businessId: string, id: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const customer = await this.findCustomerById(businessId, id, branchId);
+    if (!customer) throw new NotFoundException("Customer not found");
+    const keys = [customer._id.toString(), customer.externalId].filter(Boolean) as string[];
+    const [sales, invoices, payments] = await Promise.all([
+      this.saleModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null }).select({ _id: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
+      this.invoiceModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] } }).select({ _id: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
+      this.paymentModel.find({ businessId, customerId: { $in: keys }, saleId: null, invoiceId: null, deletedAt: null }).select({ amount: 1 }).lean()
+    ]);
+    const calculatedBalance = calculateCustomerOutstanding({ sales, invoices, standalonePayments: payments });
+    return { customerId: customer.externalId ?? customer._id.toString(), name: customer.name, ...reconcileCustomerBalance(customer.balance, calculatedBalance), status: customer.balance < 0 ? "INVALID" : calculatedBalance === customer.balance ? "MATCH" : "MISMATCH" };
+  }
+
+  async repairBalance(businessId: string, id: string, actorId: string, reason: string, operationId: string, scope: BranchScope = {}) {
+    if (!reason?.trim()) throw new NotFoundException("A repair reason is required");
+    if (!operationId?.trim()) throw new NotFoundException("An operation ID is required");
+    return runInTransaction(this.connection, async (session) => {
+      const prior = await this.auditLogModel!.findOne({ businessId, entityType: "customer", action: "balance_repaired", "payload.operationId": operationId }).session(session).lean();
+      if (prior) return prior.payload;
+      const customer = await this.findCustomerById(businessId, id, resolveWriteBranchId(scope, scope.branchId ?? null), session);
+      if (!customer) throw new NotFoundException("Customer not found");
+      const before = await this.reconcileBalance(businessId, customer._id.toString(), scope);
+      const oldValue = Number(customer.balance ?? 0);
+      customer.balance = before.calculatedBalance;
+      await customer.save({ session });
+      const result = { ...before, oldValue, newValue: before.calculatedBalance, repaired: true, operationId };
+      await this.auditLogModel!.create([{ businessId, entityType: "customer", entityId: customer._id.toString(), action: "balance_repaired", actorId, payload: result }], { session });
+      return result;
+    });
   }
 
   private async findCustomerById(businessId: string, id: string, branchId?: string | null, session?: ClientSession | null) {

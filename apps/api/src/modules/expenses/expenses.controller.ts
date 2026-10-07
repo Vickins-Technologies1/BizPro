@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { Type } from "class-transformer";
-import { IsDate, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsDate, IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { ExpensesService } from "./expenses.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -12,7 +12,7 @@ class CreateExpenseDto {
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() categoryId?: string;
-  @IsNumber() amount!: number;
+  @IsNumber() @Min(0) amount!: number;
   @IsString() note!: string;
   @Type(() => Date) @IsDate() expenseDate!: Date;
   @IsOptional() @IsString() recordedById?: string;

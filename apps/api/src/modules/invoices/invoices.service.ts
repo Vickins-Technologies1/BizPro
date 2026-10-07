@@ -17,7 +17,9 @@ import {
   Invoice,
   InvoiceDocument,
   Payment,
-  PaymentDocument
+  PaymentDocument,
+  Sale,
+  SaleDocument
 } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
@@ -25,6 +27,7 @@ import { buildBusinessLookup } from "../../common/business-lookup";
 import { toSafeIsoDateString, toSafeIsoString } from "../../common/date-normalizer";
 import { NotificationsService } from "../notifications/notifications.service";
 import { FiscalizationService, type FiscalizationOutcome } from "./fiscalization.service";
+import { calculateTax } from "@vbo/shared";
 import type { DebitNote as DebitNoteView, Invoice as InvoiceView, InvoiceLineItem, InvoicePaymentRecord, InvoiceTaxSnapshot, InvoiceLifecycleStatus, FinanceInvoice } from "@vbo/shared";
 
 type InvoiceListQuery = {
@@ -54,6 +57,7 @@ type InvoiceCreateInput = {
   externalId?: string | null;
   shareToken?: string | null;
   customerId?: string | null;
+  saleId?: string | null;
   customerName?: string | null;
   customerBusinessName?: string | null;
   customerEmail?: string | null;
@@ -72,6 +76,7 @@ type InvoiceCreateInput = {
   status?: InvoiceLifecycleStatus;
   amountPaid?: number;
   lineItems: InvoiceLineInput[];
+  taxPolicy?: { defaultTaxRate?: number; defaultTaxCategory?: InvoiceTaxSnapshot["taxCategory"]; defaultTaxInclusive?: boolean };
 };
 
 type InvoicePatchInput = Partial<Omit<InvoiceCreateInput, "businessId" | "issueDate" | "dueDate" | "lineItems">> & {
@@ -144,6 +149,7 @@ export class InvoicesService {
     @InjectModel(Business.name) private readonly businessModel: Model<BusinessDocument>,
     @InjectModel(CreditNote.name) private readonly creditNoteModel: Model<CreditNoteDocument>,
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
+    @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
     @InjectConnection() private readonly connection: Connection,
     private readonly notifications: NotificationsService,
     private readonly fiscalization: FiscalizationService
@@ -270,8 +276,15 @@ export class InvoicesService {
       const shareToken = resolvedSettings.publicSharingEnabled ? randomUUID().replaceAll("-", "") : null;
       const customer = input.customerId ? await this.customerModel.findOne({ _id: input.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
       if (input.customerId && !customer) throw new NotFoundException("Customer not found");
+      if (input.saleId) {
+        const linkedSale = await this.saleModel.findOne({ $or: [{ _id: input.saleId }, { externalId: input.saleId }], businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+        if (!linkedSale) throw new NotFoundException("Linked sale not found");
+        if (input.customerId && linkedSale.customerId && input.customerId !== linkedSale.customerId) throw new BadRequestException("Invoice customer does not match linked sale customer");
+      }
       const prepared = this.prepareInvoicePayload({
         ...input,
+        currency: String(business.currency ?? "KES").toUpperCase(),
+        ...(business.taxSettings ? { taxPolicy: business.taxSettings } : {}),
         invoiceNumber,
         shareToken,
         branchId,
@@ -305,6 +318,8 @@ export class InvoicesService {
   async update(businessId: string, id: string, patch: InvoicePatchInput, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, patch.branchId ?? null);
     return runInTransaction(this.connection, async (session) => {
+      const business = await this.businessModel.findOne(buildBusinessLookup(businessId)).session(session);
+      if (!business) throw new NotFoundException("Business not found");
       const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
       if (this.isFinalStatus(invoice.status)) throw new BadRequestException("Only draft or open invoices can be edited");
@@ -319,7 +334,7 @@ export class InvoicesService {
       if (patch.issueDate !== undefined) invoice.issueDate = patch.issueDate;
       if (patch.dueDate !== undefined) invoice.dueDate = patch.dueDate;
       if (patch.paymentTerms !== undefined) invoice.paymentTerms = patch.paymentTerms;
-      if (patch.currency !== undefined) invoice.currency = patch.currency;
+      // Currency is an immutable business-authoritative snapshot once the invoice exists.
       if (patch.referenceNumber !== undefined) invoice.referenceNumber = patch.referenceNumber ?? null;
       if (patch.purchaseOrderNumber !== undefined) invoice.purchaseOrderNumber = patch.purchaseOrderNumber ?? null;
       if (patch.notes !== undefined) invoice.notes = patch.notes ?? null;
@@ -331,6 +346,7 @@ export class InvoicesService {
           branchId,
           invoiceNumber: invoice.invoiceNumber,
           customerId: invoice.customerId ?? null,
+          saleId: invoice.saleId ?? null,
           customerName: invoice.customerName ?? null,
           customerBusinessName: invoice.customerBusinessName ?? null,
           customerEmail: invoice.customerEmail ?? null,
@@ -347,7 +363,8 @@ export class InvoicesService {
           termsAndConditions: invoice.termsAndConditions ?? null,
           status: invoice.status,
           amountPaid: invoice.amountPaid,
-          lineItems: patch.lineItems
+          lineItems: patch.lineItems,
+          ...(business.taxSettings ? { taxPolicy: business.taxSettings } : {})
         });
         Object.assign(invoice, prepared.record);
       }
@@ -550,8 +567,22 @@ export class InvoicesService {
   async createCreditNote(input: CreditNoteInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
     return runInTransaction(this.connection, async (session) => {
+      if (!Number.isFinite(input.amount) || input.amount <= 0) throw new BadRequestException("Credit note amount must be greater than zero");
+      if (input.externalId) {
+        const existing = await this.creditNoteModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).session(session).lean();
+        if (existing) return { creditNote: this.serializeCreditNote(existing) };
+      }
       const invoice = await this.invoiceModel.findOne({ _id: input.invoiceId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
+      const priorCredits = await this.creditNoteModel.find({
+        businessId: input.businessId,
+        invoiceId: invoice._id.toString(),
+        deletedAt: null,
+        status: { $in: ["draft", "issued"] }
+      }).session(session).lean();
+      const creditedTotal = priorCredits.reduce((sum, credit) => sum + Number(credit.amount ?? 0), 0);
+      const remainingCredit = Math.max(0, Number(invoice.grandTotal ?? 0) - creditedTotal);
+      if (input.amount > remainingCredit) throw new BadRequestException(`Credit note exceeds remaining invoice value of ${remainingCredit.toFixed(2)}`);
       const created = await this.creditNoteModel.create(
         [
           {
@@ -718,7 +749,7 @@ export class InvoicesService {
   }
 
   private prepareInvoicePayload(input: InvoiceCreateInput & { branchId?: string | null; customerName?: string | null; customerBusinessName?: string | null; customerEmail?: string | null; customerPhone?: string | null; customerAddress?: string | null; customerTaxPin?: string | null }) {
-    const lineItems = input.lineItems.map((line) => this.calculateLineItem(line));
+    const lineItems = input.lineItems.map((line) => this.calculateLineItem(line, input.taxPolicy));
     const subtotal = roundMoney(lineItems.reduce((sum, line) => sum + line.lineSubtotal, 0));
     const discountTotal = roundMoney(lineItems.reduce((sum, line) => sum + line.lineDiscount, 0));
     const taxableAmount = roundMoney(lineItems.reduce((sum, line) => sum + line.tax.taxableAmount, 0));
@@ -732,6 +763,7 @@ export class InvoicesService {
         businessId: input.businessId,
         branchId: input.branchId ?? null,
         customerId: input.customerId ?? null,
+        saleId: input.saleId ?? null,
         customerName: input.customerName ?? null,
         customerBusinessName: input.customerBusinessName ?? null,
         customerEmail: input.customerEmail ?? null,
@@ -783,7 +815,7 @@ export class InvoicesService {
     };
   }
 
-  private calculateLineItem(input: InvoiceLineInput): InvoiceLineItem {
+  private calculateLineItem(input: InvoiceLineInput, taxPolicy?: InvoiceCreateInput["taxPolicy"]): InvoiceLineItem {
     const quantity = Number(input.quantity ?? 0);
     const unitPrice = Number(input.unitPrice ?? 0);
     const lineSubtotal = roundMoney(quantity * unitPrice);
@@ -791,9 +823,11 @@ export class InvoicesService {
     const lineDiscount =
       (input.discountType ?? "fixed") === "percentage" ? roundMoney(lineSubtotal * (discountValue / 100)) : roundMoney(Math.min(discountValue, lineSubtotal));
     const taxableAmount = roundMoney(Math.max(0, lineSubtotal - lineDiscount));
-    const taxRate = Number(input.taxRate ?? 0);
-    const taxInclusive = Boolean(input.taxInclusive);
-    const taxAmount = taxInclusive ? roundMoney(taxableAmount - taxableAmount / (1 + taxRate / 100 || 1)) : roundMoney(taxableAmount * (taxRate / 100));
+    const taxCategory = input.taxCategory ?? taxPolicy?.defaultTaxCategory ?? "vat";
+    const isNonTaxable = ["zero_rated", "exempt", "non_taxable"].includes(taxCategory);
+    const taxRate = isNonTaxable ? 0 : Number(taxPolicy?.defaultTaxRate ?? input.taxRate ?? 0);
+    const taxInclusive = taxPolicy?.defaultTaxInclusive ?? Boolean(input.taxInclusive);
+    const taxAmount = calculateTax(taxableAmount, taxRate, taxInclusive);
     const lineTotal = taxInclusive ? taxableAmount : roundMoney(taxableAmount + taxAmount);
     return {
       id: randomUUID(),
@@ -810,7 +844,7 @@ export class InvoicesService {
       lineTax: taxAmount,
       lineTotal,
       tax: {
-        taxCategory: input.taxCategory ?? "vat",
+        taxCategory,
         taxCode: input.taxCode ?? null,
         taxRate,
         taxInclusive,

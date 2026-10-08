@@ -22,6 +22,8 @@ export const BUSINESS_TYPES = [
   "garage",
   "auto_parts",
   "service_center",
+  "tyre_business",
+  "body_shop",
   "general_service",
   "consultancy",
   "agency",

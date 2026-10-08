@@ -1,0 +1,30 @@
+# EAS builds the mobile workspace from this monorepo root. Keep source,
+# workspace manifests, and native project files; omit local/generated content.
+node_modules/
+.pnpm-store/
+.turbo/
+.codex/
+.git/
+builds/
+docs/
+video/
+
+# Other app targets are not inputs to the Android mobile build.
+apps/admin/
+apps/api/
+apps/desktop/
+
+# Mobile caches and generated artifacts.
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/.metro-build-runtime/
+apps/mobile/.turbo/
+apps/mobile/dist/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/*.apk
+apps/mobile/*.aab
+apps/mobile/*.log
+apps/mobile/latest-*.json
+apps/mobile/latest-*.txt

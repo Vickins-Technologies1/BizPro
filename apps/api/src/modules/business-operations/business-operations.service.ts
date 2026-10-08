@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { isBusinessOperationStatusTransitionAllowed, type BusinessOperationStatus } from "@vbo/shared";
 import { buildBranchMatch, resolveReadBranchId, type BranchScope } from "../../common/branch-scope";
 import { BusinessOperation, BusinessOperationDocument } from "../business-operations.schemas";
 
-const OPERATION_KINDS = ["order", "appointment", "work_order"] as const;
+const OPERATION_KINDS = ["order", "appointment", "work_order", "project"] as const;
 const OPERATION_STATUSES = ["draft", "open", "preparing", "ready", "confirmed", "in_progress", "completed", "cancelled"] as const;
 
 @Injectable()
@@ -42,19 +42,22 @@ export class BusinessOperationsService {
       if (!OPERATION_STATUSES.includes(safePatch.status as (typeof OPERATION_STATUSES)[number])) {
         throw new BadRequestException("Unsupported operation status");
       }
-      const current = await this.operationModel.findOne({ _id: id, businessId, deletedAt: null }).lean();
+      const identityFilter = Types.ObjectId.isValid(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
+      const current = await this.operationModel.findOne({ ...identityFilter, businessId, deletedAt: null }).lean();
       if (!current) throw new NotFoundException("Business operation not found");
       if (!isBusinessOperationStatusTransitionAllowed(current.status as BusinessOperationStatus, safePatch.status as BusinessOperationStatus)) {
         throw new BadRequestException(`Invalid operation transition: ${current.status} -> ${safePatch.status}`);
       }
     }
-    const updated = await this.operationModel.findOneAndUpdate({ _id: id, businessId, deletedAt: null }, safePatch, { new: true }).lean();
+    const identityFilter = Types.ObjectId.isValid(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
+    const updated = await this.operationModel.findOneAndUpdate({ ...identityFilter, businessId, deletedAt: null }, safePatch, { new: true }).lean();
     if (!updated) throw new NotFoundException("Business operation not found");
     return updated;
   }
 
   async archive(businessId: string, id: string) {
-    const updated = await this.operationModel.findOneAndUpdate({ _id: id, businessId, deletedAt: null }, { deletedAt: new Date(), status: "cancelled" }, { new: true }).lean();
+    const identityFilter = Types.ObjectId.isValid(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
+    const updated = await this.operationModel.findOneAndUpdate({ ...identityFilter, businessId, deletedAt: null }, { deletedAt: new Date(), status: "cancelled" }, { new: true }).lean();
     if (!updated) throw new NotFoundException("Business operation not found");
     return updated;
   }

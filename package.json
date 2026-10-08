@@ -11,7 +11,13 @@
     "clean": "turbo clean"
   },
   "devDependencies": {
+    "has-flag": "4.0.0",
     "turbo": "^2.0.14",
     "typescript": "^5.5.4"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@brooons/react-native-bluetooth-escpos-printer@1.2.0": "patches/@brooons__react-native-bluetooth-escpos-printer@1.2.0.patch"
+    }
   }
 }

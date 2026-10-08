@@ -14,7 +14,9 @@ export type OfflineQueueKind =
   | "recordCustomerPayment"
   | "createSale"
   | "createBusinessOperation"
-  | "updateBusinessOperation";
+  | "updateBusinessOperation"
+  | "createIndustryDomain"
+  | "updateIndustryDomain";
 
 export type OfflineQueueEntry =
   | {
@@ -238,6 +240,26 @@ export type OfflineQueueEntry =
       createdAt: string;
       attempts: number;
       lastError: string | null;
+    }
+  | {
+      id: string;
+      businessId: string;
+      dedupeKey?: string | null;
+      kind: "createIndustryDomain";
+      payload: { businessId: string; domain: string; externalId: string; branchId?: string | null; data: Record<string, unknown> };
+      createdAt: string;
+      attempts: number;
+      lastError: string | null;
+    }
+  | {
+      id: string;
+      businessId: string;
+      dedupeKey?: string | null;
+      kind: "updateIndustryDomain";
+      payload: { businessId: string; domain: string; recordId: string; patch: Record<string, unknown> };
+      createdAt: string;
+      attempts: number;
+      lastError: string | null;
     };
 
 type OfflineQueueStorage = {
@@ -291,6 +313,45 @@ export async function listQueuedActions(businessId?: string) {
 
 export async function countQueuedActions(businessId?: string) {
   return (await listQueuedActions(businessId)).length;
+}
+
+export async function listQueuedBusinessOperations(businessId: string, branchId?: string | null) {
+  const actions = await listQueuedActions(businessId);
+  const operations = new Map<string, BusinessOperation>();
+  for (const action of actions) {
+    if (action.kind === "createBusinessOperation") {
+      const operation = createBusinessOperationDraft(action.payload);
+      if (branchId && operation.branchId !== branchId) continue;
+      operations.set(operation.id, operation);
+    }
+  }
+  for (const action of actions) {
+    if (action.kind !== "updateBusinessOperation") continue;
+    const operation = operations.get(action.payload.operationId);
+    if (!operation) continue;
+    operations.set(operation.id, { ...operation, ...action.payload.patch, updatedAt: new Date().toISOString() });
+  }
+  return [...operations.values()];
+}
+
+export async function listCachedBusinessOperations(businessId: string, branchId?: string | null) {
+  try {
+    const parsed = JSON.parse((await secureStore.getBusinessOperationsCache()) ?? "{}");
+    const rows = Array.isArray(parsed?.[businessId]) ? parsed[businessId] as BusinessOperation[] : [];
+    return branchId ? rows.filter((operation) => operation.branchId === branchId) : rows;
+  } catch {
+    return [];
+  }
+}
+
+export async function cacheBusinessOperations(businessId: string, operations: BusinessOperation[]) {
+  try {
+    const parsed = JSON.parse((await secureStore.getBusinessOperationsCache()) ?? "{}");
+    parsed[businessId] = operations;
+    await secureStore.setBusinessOperationsCache(JSON.stringify(parsed));
+  } catch {
+    // Cache failure must never prevent an operation from being created or synced.
+  }
 }
 
 export async function enqueueAction(
@@ -560,6 +621,10 @@ export function createBusinessOperationDraft(input: Omit<BusinessOperation, "id"
     durationMinutes: input.durationMinutes ?? null,
     tableName: input.tableName ?? null,
     vehiclePlate: input.vehiclePlate ?? null,
+    vehicleMake: input.vehicleMake ?? null,
+    vehicleModel: input.vehicleModel ?? null,
+    vehicleYear: input.vehicleYear ?? null,
+    vehicleMileage: input.vehicleMileage ?? null,
     notes: input.notes ?? null,
     items: input.items ?? [],
     total: input.total ?? 0,

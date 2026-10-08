@@ -19,7 +19,7 @@ type BusinessOperationStatus = "draft" | "open" | "preparing" | "ready" | "confi
 class CreateOperationDto {
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string | null;
-  @IsIn(["order", "appointment", "work_order"]) kind!: "order" | "appointment" | "work_order";
+  @IsIn(["order", "appointment", "work_order", "project"]) kind!: "order" | "appointment" | "work_order" | "project";
   @IsString() title!: string;
   @IsOptional() @IsString() customerId?: string | null;
   @IsOptional() @IsString() staffId?: string | null;
@@ -27,6 +27,10 @@ class CreateOperationDto {
   @IsOptional() @IsNumber() durationMinutes?: number | null;
   @IsOptional() @IsString() tableName?: string | null;
   @IsOptional() @IsString() vehiclePlate?: string | null;
+  @IsOptional() @IsString() vehicleMake?: string | null;
+  @IsOptional() @IsString() vehicleModel?: string | null;
+  @IsOptional() @IsNumber() vehicleYear?: number | null;
+  @IsOptional() @IsNumber() vehicleMileage?: number | null;
   @IsOptional() @IsString() notes?: string | null;
   @IsOptional() @IsIn(["draft", "open", "preparing", "ready", "confirmed", "in_progress", "completed", "cancelled"]) status?: BusinessOperationStatus;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => OperationItemDto) items?: OperationItemDto[];
@@ -35,7 +39,7 @@ class CreateOperationDto {
 
 class UpdateOperationDto {
   @IsOptional() @IsString() branchId?: string | null;
-  @IsOptional() @IsIn(["order", "appointment", "work_order"]) kind?: "order" | "appointment" | "work_order";
+  @IsOptional() @IsIn(["order", "appointment", "work_order", "project"]) kind?: "order" | "appointment" | "work_order" | "project";
   @IsOptional() @IsString() title?: string;
   @IsOptional() @IsString() customerId?: string | null;
   @IsOptional() @IsString() staffId?: string | null;
@@ -43,6 +47,10 @@ class UpdateOperationDto {
   @IsOptional() @IsNumber() durationMinutes?: number | null;
   @IsOptional() @IsString() tableName?: string | null;
   @IsOptional() @IsString() vehiclePlate?: string | null;
+  @IsOptional() @IsString() vehicleMake?: string | null;
+  @IsOptional() @IsString() vehicleModel?: string | null;
+  @IsOptional() @IsNumber() vehicleYear?: number | null;
+  @IsOptional() @IsNumber() vehicleMileage?: number | null;
   @IsOptional() @IsString() notes?: string | null;
   @IsOptional() @IsIn(["draft", "open", "preparing", "ready", "confirmed", "in_progress", "completed", "cancelled"]) status?: BusinessOperationStatus;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => OperationItemDto) items?: OperationItemDto[];

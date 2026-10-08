@@ -1,0 +1,21 @@
+# Local dependencies and generated caches
+node_modules/
+.expo/
+.turbo/
+.metro-build-runtime/
+dist/
+
+# Large local build artifacts and diagnostics
+*.apk
+*.aab
+*.log
+latest-build.json
+latest-log-url.txt
+
+# Local Android build output/caches
+android/.gradle/
+android/app/build/
+android/build/
+
+# Local credentials are supplied by EAS credentials management
+credentials/

@@ -20,6 +20,18 @@ import * as Sharing from "expo-sharing";
 
 type FormValues = z.infer<typeof productCreateSchema>;
 
+function splitMenuValues(value: string) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function parseRecipeIngredients(value: string) {
+  return value.split(",").map((entry) => {
+    const [ingredientId, quantityText] = entry.split(":").map((part) => part.trim());
+    const quantity = Number(quantityText);
+    return ingredientId && Number.isFinite(quantity) && quantity > 0 ? { ingredientId, quantity } : null;
+  }).filter((item): item is { ingredientId: string; quantity: number } => Boolean(item));
+}
+
 export function ProductsScreen() {
   const navigation = useNavigation<any>();
   const products = useAppStore((state) => state.products);
@@ -60,6 +72,9 @@ export function ProductsScreen() {
   const [supplierPhone, setSupplierPhone] = useState("");
   const [supplierContact, setSupplierContact] = useState("");
   const [supplierNotes, setSupplierNotes] = useState("");
+  const [menuVariants, setMenuVariants] = useState("");
+  const [menuAddOns, setMenuAddOns] = useState("");
+  const [menuRecipe, setMenuRecipe] = useState("");
   const [importText, setImportText] = useState("");
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -78,6 +93,11 @@ export function ProductsScreen() {
   const pageSize = 6;
   const deferredSearch = React.useDeferredValue(search);
   const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const isMenu = businessConfig.workspace.catalogMode === "menu";
+  const isService = businessConfig.workspace.catalogMode === "services";
+  const isAutomotive = businessConfig.industryKey === "automotive";
+  const itemLabel = businessConfig.terminology.catalogItem;
+  const itemLabelPlural = businessConfig.navigation.catalogLabel;
 
   const {
     control,
@@ -95,6 +115,17 @@ export function ProductsScreen() {
       brandId: null,
       supplierId: null,
       name: "",
+      description: "",
+      variants: [],
+      addOns: [],
+      recipeIngredients: [],
+      serviceDurationMinutes: null,
+      assignedStaffId: null,
+      commissionRate: null,
+      compatibility: "",
+      pricingModel: "fixed",
+      hourlyPrice: null,
+      quantityUnit: "",
       sku: "",
       barcode: "",
       batchNumber: "",
@@ -142,7 +173,7 @@ export function ProductsScreen() {
       setPageProducts([]);
       setTotalProducts(0);
       setTotalPages(1);
-      setListError("We could not load products. Check your connection and try again.");
+      setListError(`We could not load ${itemLabelPlural.toLowerCase()}. Check your connection and try again.`);
     } finally {
       setListLoading(false);
     }
@@ -229,7 +260,7 @@ export function ProductsScreen() {
 
   async function exportProductsCsv() {
     if (!products.length) {
-      Alert.alert("Nothing to export", "Create products first, then export the catalog as CSV.");
+      Alert.alert("Nothing to export", `Create ${itemLabelPlural.toLowerCase()} first, then export the catalog as CSV.`);
       return;
     }
     const headers = [
@@ -281,7 +312,7 @@ export function ProductsScreen() {
     const filePath = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ""}${fileName}`;
     await FileSystem.writeAsStringAsync(filePath, csv, { encoding: FileSystem.EncodingType.UTF8 });
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(filePath, { mimeType: "text/csv", dialogTitle: "Export products" });
+      await Sharing.shareAsync(filePath, { mimeType: "text/csv", dialogTitle: `Export ${itemLabelPlural.toLowerCase()}` });
       return;
     }
     await Clipboard.setStringAsync(csv);
@@ -327,9 +358,9 @@ export function ProductsScreen() {
       }
       setImportVisible(false);
       setImportText("");
-      Alert.alert("Import complete", `Imported ${imported} product${imported === 1 ? "" : "s"} successfully.`);
+      Alert.alert("Import complete", `Imported ${imported} ${itemLabel.toLowerCase()}${imported === 1 ? "" : "s"} successfully.`);
     } catch (error) {
-      Alert.alert("Import failed", error instanceof Error ? error.message : "Failed to import products");
+      Alert.alert("Import failed", error instanceof Error ? error.message : `Failed to import ${itemLabelPlural.toLowerCase()}`);
     } finally {
       setImportingProducts(false);
     }
@@ -344,9 +375,9 @@ export function ProductsScreen() {
     try {
       await deleteProduct(id, selectedBranchId);
       await loadCatalog();
-      Alert.alert("Product deleted", `${name} was removed from the catalog.`);
+      Alert.alert(`${itemLabel} deleted`, `${name} was removed from the catalog.`);
     } catch (error) {
-      Alert.alert("Delete failed", error instanceof Error ? error.message : "Failed to delete product");
+      Alert.alert("Delete failed", error instanceof Error ? error.message : `Failed to delete ${itemLabel.toLowerCase()}`);
     } finally {
       setDeletingProductId(null);
     }
@@ -364,9 +395,14 @@ export function ProductsScreen() {
   const currentSupplierId = watch("supplierId");
   const currentUnit = watch("unit");
   const canManageInventory = hasPermission(user, "manageInventory");
+  const canManageCatalog = canManageInventory || (isService && hasPermission(user, "addProducts"));
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
 
-  if (!canManageInventory) {
+  if (!businessConfig.capabilities.products) {
+    return <CapabilityCatalogPanel config={businessConfig} onOpenOperations={() => navigation.navigate("Operations")} />;
+  }
+
+  if (!canManageCatalog) {
     return (
       <Screen>
         <GradientHeader title={businessConfig.navigation.catalogLabel} subtitle={businessConfig.navigation.catalogDescription} />
@@ -386,7 +422,7 @@ export function ProductsScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.catalogLabel}
-        subtitle={`${totalProducts || products.length} products · ${formatMoney(inventoryValue, business?.currency)} stock`}
+        subtitle={`${totalProducts || products.length} ${itemLabelPlural.toLowerCase()}${isService ? " · appointment-ready services" : ` · ${formatMoney(inventoryValue, business?.currency)} ${isMenu ? "ingredient" : "stock"}`}`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
             <Pressable onPress={() => setVisible(true)}>
@@ -397,7 +433,7 @@ export function ProductsScreen() {
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog}>
         <View style={{ gap: 12 }}>
-          <InputField label="Search products" value={search} onChangeText={setSearch} placeholder="Search name, SKU, or barcode" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+          <InputField label={`Search ${itemLabelPlural.toLowerCase()}`} value={search} onChangeText={setSearch} placeholder={isMenu ? "Search menu item or category" : isService ? "Search service or category" : "Search name, SKU, or barcode"} leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable onPress={() => setFiltersVisible(true)} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
               <Ionicons name="options-outline" size={16} color={tokens.colors.textSecondary} />
@@ -409,12 +445,12 @@ export function ProductsScreen() {
             </Pressable>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "700" }}>{totalProducts || products.length} products</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "700" }}>{totalProducts || products.length} {itemLabelPlural.toLowerCase()}</Text>
             <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Page {currentPage}{totalPages > 1 ? ` of ${totalPages}` : ""}</Text>
           </View>
         </View>
         {listLoading ? (
-          <Card style={{ alignItems: "center", paddingVertical: 24 }}><Text style={{ color: tokens.colors.textSecondary }}>Loading products...</Text></Card>
+          <Card style={{ alignItems: "center", paddingVertical: 24 }}><Text style={{ color: tokens.colors.textSecondary }}>Loading {itemLabelPlural.toLowerCase()}...</Text></Card>
         ) : listError ? (
           <Card style={{ alignItems: "center", gap: 10, paddingVertical: 20 }}>
             <Text style={{ color: tokens.colors.danger, textAlign: "center" }}>{listError}</Text>
@@ -449,8 +485,10 @@ export function ProductsScreen() {
                         <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
                       </View>
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Stock {product.stockOnHand}</Text>
-                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Low {product.lowStockThreshold}</Text>
+                        {businessConfig.capabilities.inventory ? <>
+                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Stock {product.stockOnHand}</Text>
+                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Low {product.lowStockThreshold}</Text>
+                        </> : <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{product.serviceDurationMinutes ? `${product.serviceDurationMinutes} min` : "Available"}</Text>}
                         <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>View details</Text>
                       </View>
                       <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "800" }}>
@@ -464,7 +502,7 @@ export function ProductsScreen() {
                         </Text>
                       ) : null}
                       <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                        <Pressable
+                        {businessConfig.capabilities.inventory ? <Pressable
                           onPress={(event) => {
                             event?.stopPropagation?.();
                             setRestockProductId(product.id);
@@ -474,7 +512,7 @@ export function ProductsScreen() {
                           }}
                         >
                           <Badge label="Restock" tone="success" />
-                        </Pressable>
+                        </Pressable> : null}
                         <Pressable
                           onPress={(event) => {
                             event?.stopPropagation?.();
@@ -505,9 +543,9 @@ export function ProductsScreen() {
           </>
         ) : (
           <EmptyState
-            title={search || selectedCategoryId || selectedBrandId || selectedSupplierId ? "No matching products" : "No products yet"}
-            subtitle={search ? "Try a different product name or SKU, or clear the search to see everything." : "Create your first product to start tracking stock and sales."}
-            action={<PrimaryButton title="Add product" onPress={() => setVisible(true)} />}
+            title={search || selectedCategoryId || selectedBrandId || selectedSupplierId ? `No matching ${itemLabelPlural.toLowerCase()}` : `No ${itemLabelPlural.toLowerCase()} yet`}
+            subtitle={search ? `Try a different ${itemLabel.toLowerCase()} name or clear the search to see everything.` : `Create your first ${itemLabel.toLowerCase()} to start tracking availability and sales.`}
+            action={<PrimaryButton title={`Add ${itemLabel}`} onPress={() => setVisible(true)} />}
             icon="cube-outline"
           />
         )}
@@ -534,27 +572,45 @@ export function ProductsScreen() {
           </Pressable>
         </View>
       </BottomSheet>
-      <BottomSheet visible={toolsVisible} title="Product tools" subtitle="Manage supporting catalog workflows." onClose={() => setToolsVisible(false)}>
+      <BottomSheet visible={toolsVisible} title={`${itemLabel} tools`} subtitle="Manage supporting catalog workflows." onClose={() => setToolsVisible(false)}>
         <View style={{ gap: 10 }}>
           <PrimaryButton title="Add brand" variant="secondary" onPress={() => { setToolsVisible(false); setBrandVisible(true); }} />
           <PrimaryButton title="Add supplier" variant="secondary" onPress={() => { setToolsVisible(false); setSupplierVisible(true); }} />
-          <PrimaryButton title="Import CSV" variant="secondary" onPress={async () => { const text = await Clipboard.getStringAsync(); setImportText(text); setToolsVisible(false); setImportVisible(true); }} />
-          <PrimaryButton title="Export CSV" variant="secondary" onPress={() => { setToolsVisible(false); void exportProductsCsv(); }} />
+          <PrimaryButton title={`Import ${itemLabelPlural}`} variant="secondary" onPress={async () => { const text = await Clipboard.getStringAsync(); setImportText(text); setToolsVisible(false); setImportVisible(true); }} />
+          <PrimaryButton title={`Export ${itemLabelPlural}`} variant="secondary" onPress={() => { setToolsVisible(false); void exportProductsCsv(); }} />
           <PrimaryButton title="Brands" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("Brands"); }} />
           <PrimaryButton title="Suppliers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("Suppliers"); }} />
-          <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("PurchaseOrders"); }} />
-          <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("StockTransfers"); }} />
+          {businessConfig.capabilities.purchasing ? <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("PurchaseOrders"); }} /> : null}
+          {businessConfig.capabilities.inventory ? <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("StockTransfers"); }} /> : null}
         </View>
       </BottomSheet>
-      <SimpleModal visible={visible} title="Add product" onClose={() => setVisible(false)}>
+      <SimpleModal visible={visible} title={`Add ${itemLabel.toLowerCase()}`} onClose={() => setVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <Controller
             control={control}
             name="name"
             render={({ field: { value, onChange } }) => (
-              <InputField label="Product name" value={value} onChangeText={onChange} error={errors.name?.message} helperText="Use the name staff will recognize quickly." />
+              <InputField label={`${itemLabel} name`} value={value} onChangeText={onChange} error={errors.name?.message?.replace(/product/gi, itemLabel.toLowerCase())} helperText="Use the name staff will recognize quickly." />
             )}
           />
+          {isMenu ? <View style={{ gap: 10 }}>
+            <InputField label="Variants" value={menuVariants} onChangeText={setMenuVariants} placeholder="Small, Regular, Large" helperText="Separate variants with commas." />
+            <InputField label="Add-ons" value={menuAddOns} onChangeText={setMenuAddOns} placeholder="Extra cheese, Avocado" helperText="Separate add-ons with commas." />
+            {businessConfig.capabilities.recipes ? <InputField label="Recipe ingredients" value={menuRecipe} onChangeText={setMenuRecipe} placeholder="ingredient-id:1, ingredient-id:0.5" helperText="Ingredient IDs and quantities used per serving." /> : null}
+          </View> : null}
+          {isMenu ? <Controller
+            control={control}
+            name="description"
+            render={({ field: { value, onChange } }) => <InputField label="Description" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Describe the dish or drink" multiline />}
+          /> : null}
+          {isService ? <View style={{ gap: 10 }}>
+            <Controller control={control} name="pricingModel" render={({ field: { value, onChange } }) => <View style={{ gap: 7 }}><Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>Pricing model</Text><View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>{(["fixed", "hourly", "quantity", "recurring", "milestone", "custom"] as const).map((model) => <Tag key={model} label={model === "fixed" ? "Fixed fee" : model === "hourly" ? "Hourly" : model === "quantity" ? "By quantity" : model === "recurring" ? "Recurring" : model === "milestone" ? "Milestone" : "Custom"} tone="primary" selected={value === model} onPress={() => onChange(model)} />)}</View></View>} />
+            <Controller control={control} name="serviceDurationMinutes" render={({ field: { value, onChange } }) => <InputField label="Duration (minutes)" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="numeric" placeholder="60" />} />
+            <Controller control={control} name="assignedStaffId" render={({ field: { value, onChange } }) => <InputField label="Assigned specialist" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Staff or specialist ID" />} />
+            <Controller control={control} name="hourlyPrice" render={({ field: { value, onChange } }) => <InputField label="Hourly price" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="decimal-pad" placeholder="Optional" />} />
+            <Controller control={control} name="quantityUnit" render={({ field: { value, onChange } }) => <InputField label="Quantity unit" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Room, photo, visit, kilometre" />} />
+            <Controller control={control} name="commissionRate" render={({ field: { value, onChange } }) => <InputField label="Commission (%)" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="decimal-pad" placeholder="Optional" />} />
+          </View> : null}
           <Controller
             control={control}
             name="sku"
@@ -647,6 +703,7 @@ export function ProductsScreen() {
             name="serialNumber"
             render={({ field: { value, onChange } }) => <InputField label="Serial number" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional serialized item tracking." />}
           /> : null}
+          {isAutomotive ? <Controller control={control} name="compatibility" render={({ field: { value, onChange } }) => <InputField label="Compatibility" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Toyota Hilux 2018–2022" helperText="Vehicles, models, or fitment notes." />} /> : null}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Tag label="No category" tone="primary" selected={!currentCategoryId} onPress={() => setValue("categoryId", null)} />
             {categories.map((category) => (
@@ -666,12 +723,12 @@ export function ProductsScreen() {
                 name="buyingPrice"
                 render={({ field: { value, onChange } }) => (
                   <InputField
-                    label="Buying price"
+                    label={isMenu ? "Ingredient cost" : "Buying price"}
                     value={String(value)}
                     onChangeText={(text) => onChange(Number(text || 0))}
                     keyboardType="decimal-pad"
                     error={errors.buyingPrice?.message}
-                    helperText="How much you paid for one unit."
+                    helperText={isMenu ? "Estimated ingredient cost per serving." : "How much you paid for one unit."}
                   />
                 )}
               />
@@ -693,7 +750,7 @@ export function ProductsScreen() {
               />
             </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}
@@ -726,9 +783,9 @@ export function ProductsScreen() {
                 )}
               />
             </View>
-          </View>
+          </View> : null}
           <PrimaryButton
-            title="Save product"
+            title={`Save ${itemLabel.toLowerCase()}`}
             onPress={handleSubmit(async (values) => {
               if (businessConfig.businessType === "pharmacy" && (!values.batchNumber?.trim() || !values.expiryDate)) {
                 Alert.alert("Batch and expiry required", "Pharmacy medicines must have a batch number and expiry date before they can be stocked.");
@@ -750,6 +807,17 @@ export function ProductsScreen() {
                   brandId: values.brandId ?? null,
                   supplierId: values.supplierId ?? null,
                   name: values.name,
+                  description: values.description ?? null,
+                  variants: isMenu ? splitMenuValues(menuVariants) : [],
+                  addOns: isMenu ? splitMenuValues(menuAddOns) : [],
+                  recipeIngredients: isMenu ? parseRecipeIngredients(menuRecipe) : [],
+                  serviceDurationMinutes: isService ? values.serviceDurationMinutes ?? null : null,
+                  assignedStaffId: isService ? values.assignedStaffId ?? null : null,
+                  commissionRate: isService ? values.commissionRate ?? null : null,
+                  compatibility: isAutomotive ? values.compatibility ?? null : null,
+                  pricingModel: isService ? values.pricingModel ?? "fixed" : null,
+                  hourlyPrice: isService ? values.hourlyPrice ?? null : null,
+                  quantityUnit: isService ? values.quantityUnit ?? null : null,
                   sku: values.sku ? values.sku : null,
                   barcode: values.barcode ? values.barcode : null,
                   batchNumber: values.batchNumber ? values.batchNumber : null,
@@ -768,6 +836,17 @@ export function ProductsScreen() {
                   brandId: null,
                   supplierId: null,
                   name: "",
+                  description: "",
+                  variants: [],
+                  addOns: [],
+                  recipeIngredients: [],
+                  serviceDurationMinutes: null,
+                  assignedStaffId: null,
+                  commissionRate: null,
+                  compatibility: "",
+                  pricingModel: "fixed",
+                  hourlyPrice: null,
+                  quantityUnit: "",
                   sku: "",
                   barcode: "",
                   batchNumber: "",
@@ -781,9 +860,9 @@ export function ProductsScreen() {
                   isActive: true
                 });
                 setVisible(false);
-                Alert.alert("Product created", "Product created successfully.");
+                Alert.alert(`${itemLabel} created`, `${itemLabel} created successfully.`);
               } catch (error) {
-                Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save product");
+                Alert.alert("Save failed", error instanceof Error ? error.message : `Failed to save ${itemLabel.toLowerCase()}`);
               } finally {
                 setSavingProduct(false);
               }
@@ -794,8 +873,8 @@ export function ProductsScreen() {
       </SimpleModal>
       <BarcodeScannerModal
         visible={visible && barcodeScannerVisible}
-        title="Scan product barcode"
-        subtitle="Point the camera at the barcode to fill the product field automatically."
+        title={`Scan ${itemLabel.toLowerCase()} barcode`}
+        subtitle={`Point the camera at the barcode to fill the ${itemLabel.toLowerCase()} field automatically.`}
         onClose={() => setBarcodeScannerVisible(false)}
         onBarcodeScanned={async (barcode) => {
           const normalizedBarcode = barcode.trim().toLowerCase();
@@ -920,7 +999,7 @@ export function ProductsScreen() {
           />
         </View>
       </SimpleModal>
-      <SimpleModal visible={importVisible} title="Import products" onClose={() => setImportVisible(false)}>
+      <SimpleModal visible={importVisible} title={`Import ${itemLabelPlural.toLowerCase()}`} onClose={() => setImportVisible(false)}>
         <View style={{ gap: 12 }}>
           <InputField
             label="CSV content"
@@ -981,6 +1060,36 @@ export function ProductsScreen() {
           />
         </View>
       </SimpleModal>
+    </Screen>
+  );
+}
+
+function CapabilityCatalogPanel({ config, onOpenOperations }: { config: ReturnType<typeof resolveBusinessTypeConfig>; onOpenOperations: () => void }) {
+  return (
+    <Screen>
+      <GradientHeader title={config.navigation.catalogLabel} subtitle={config.navigation.catalogDescription} />
+      <AppScrollView contentContainerStyle={{ gap: 12, padding: 16 }}>
+        <Card style={{ gap: 10, padding: 14 }}>
+          <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 0.8, textTransform: "uppercase" }}>{config.label} capability</Text>
+          <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>{config.navigation.catalogLabel}</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{config.navigation.catalogDescription}. This workspace is driven by {config.workspace.activityLabel.toLowerCase()} rather than physical product stock.</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {config.capabilities.services ? <Badge label="Services" tone="success" /> : null}
+            {config.capabilities.rooms ? <Badge label="Rooms" tone="primary" /> : null}
+            {config.capabilities.guests ? <Badge label="Guests" tone="success" /> : null}
+            {config.capabilities.housekeeping ? <Badge label="Housekeeping" tone="warning" /> : null}
+            {config.capabilities.appointments ? <Badge label="Appointments" tone="primary" /> : null}
+            {config.capabilities.projects ? <Badge label="Projects" tone="warning" /> : null}
+            {config.capabilities.timeTracking ? <Badge label="Time tracking" tone="primary" /> : null}
+            {config.capabilities.invoices ? <Badge label="Invoices" tone="success" /> : null}
+          </View>
+        </Card>
+        <Card style={{ gap: 8, padding: 14 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{config.workspace.activityLabel} workflow</Text>
+          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{config.workflow.steps.join("  →  ")}</Text>
+          <PrimaryButton title={config.workspace.primaryAction} onPress={onOpenOperations} />
+        </Card>
+      </AppScrollView>
     </Screen>
   );
 }

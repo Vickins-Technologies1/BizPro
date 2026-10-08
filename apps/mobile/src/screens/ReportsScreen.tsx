@@ -20,7 +20,7 @@ import {
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
-import { getPaymentBreakdown, getReportsSummary, getTopProducts } from "@/services/apiClient";
+import { getPaymentBreakdown, getReportsSummary, getTopProducts, listBusinessOperationsOfflineFirst } from "@/services/apiClient";
 
 type ReportRow = { productId: string; productName: string; quantity: number; total: number };
 type PaymentRow = { _id: string; total: number; count: number };
@@ -42,6 +42,7 @@ export function ReportsScreen() {
   const [summary, setSummary] = React.useState<DailySummary | null>(null);
   const [topProducts, setTopProducts] = React.useState<ReportRow[]>([]);
   const [paymentBreakdown, setPaymentBreakdown] = React.useState<PaymentRow[]>([]);
+  const [operations, setOperations] = React.useState<Array<{ status: string }>>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -74,15 +75,26 @@ export function ReportsScreen() {
     else setLoading(true);
 
     try {
-      const [summaryResponse, topProductsResponse, paymentResponse] = await Promise.all([
+      const operationKind = businessConfig.capabilities.projects
+        ? "project"
+        : businessConfig.capabilities.workOrders
+          ? "work_order"
+          : businessConfig.capabilities.appointments || businessConfig.capabilities.reservations
+            ? "appointment"
+            : businessConfig.capabilities.orders
+              ? "order"
+              : undefined;
+      const [summaryResponse, topProductsResponse, paymentResponse, operationsResponse] = await Promise.all([
         getReportsSummary(from, to, selectedBranchId),
         getTopProducts(from, to, selectedBranchId),
-        getPaymentBreakdown(from, to, selectedBranchId)
+        getPaymentBreakdown(from, to, selectedBranchId),
+        operationKind ? listBusinessOperationsOfflineFirst({ businessId: business?.id ?? "", kind: operationKind, branchId: selectedBranchId }) : Promise.resolve([])
       ]);
       if (requestId !== requestIdRef.current) return;
       setSummary(summaryResponse);
       setTopProducts(topProductsResponse);
       setPaymentBreakdown(paymentResponse);
+      setOperations(operationsResponse);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : "Unable to load insights");
@@ -110,7 +122,7 @@ export function ReportsScreen() {
   }
 
   const rangeLabel = currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading";
-  const hasContent = Boolean(summary) && (summary!.salesTotal > 0 || summary!.expensesTotal > 0 || summary!.debtTotal > 0 || topProducts.length > 0 || paymentBreakdown.length > 0);
+  const hasContent = Boolean(summary) && (summary!.salesTotal > 0 || summary!.expensesTotal > 0 || summary!.debtTotal > 0 || topProducts.length > 0 || paymentBreakdown.length > 0 || operations.length > 0);
 
   if (!canViewReports) {
     return (
@@ -220,6 +232,8 @@ export function ReportsScreen() {
               <BarMeter label="Debt" value={summary?.debtTotal ?? 0} max={Math.max(summary?.salesTotal ?? 1, summary?.expensesTotal ?? 1, summary?.estimatedProfit ?? 1, summary?.debtTotal ?? 1)} tone="danger" currency={business?.currency ?? "KES"} />
             </Card>
 
+            <IndustryReportFocus config={businessConfig} summary={summary} topProducts={topProducts} operations={operations} currency={business?.currency ?? "KES"} />
+
             <Card style={{ gap: 12 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Payment mix</Text>
               {paymentBreakdown.length ? (
@@ -229,21 +243,27 @@ export function ReportsScreen() {
               )}
             </Card>
 
-            <Card style={{ gap: 12 }}>
+            {businessConfig.capabilities.products ? <Card style={{ gap: 12 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{businessConfig.terminology.catalogItem} performance</Text>
               {topProducts.length ? (
                 topProducts.map((row) => <ProductBar key={row.productId} row={row} max={maxQuantity(topProducts)} />)
               ) : (
                 <Text style={{ color: tokens.colors.textSecondary }}>No {businessConfig.terminology.catalogItem.toLowerCase()} movement yet. Performance will appear after transactions come in.</Text>
               )}
-            </Card>
+            </Card> : (
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{businessConfig.workspace.activityLabel} performance</Text>
+                <Text style={{ color: tokens.colors.textSecondary }}>Use the {businessConfig.workspace.activityLabel.toLowerCase()} workflow to track {businessConfig.workflow.steps.join(", ").toLowerCase()}.</Text>
+                <PrimaryButton title={`Open ${businessConfig.workspace.activityLabel.toLowerCase()}`} variant="secondary" onPress={() => navigation.navigate("Operations")} />
+              </Card>
+            )}
 
-            <Card style={{ gap: 10 }}>
+            {businessConfig.capabilities.inventory ? <Card style={{ gap: 10 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Stock pressure</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>
                 {summary?.lowStockCount ?? 0} items are close to running out. Review them before the next busy period.
               </Text>
-            </Card>
+            </Card> : null}
           </>
         )}
       </AppScrollView>
@@ -277,6 +297,67 @@ export function ReportsScreen() {
         onApply={(range) => applyCustomRange(range)}
       />
     </Screen>
+  );
+}
+
+function IndustryReportFocus({ config, summary, topProducts, operations, currency }: { config: ReturnType<typeof resolveBusinessTypeConfig>; summary: DailySummary | null; topProducts: ReportRow[]; operations: Array<{ status: string }>; currency: string }) {
+  const activityCount = summary?.transactionsCount ?? operations.length;
+  const completedCount = operations.filter((operation) => ["completed", "served", "picked_up", "checked_out", "closed"].includes(operation.status)).length;
+  const rows = config.capabilities.kitchen
+    ? [
+        ["Sales by menu item", topProducts.length ? topProducts[0]!.productName : "No menu activity yet"],
+        ["Ingredient consumption", `${summary?.cogsTotal ? formatMoney(summary.cogsTotal, currency) : "—"} estimated cost`],
+        ["Food cost", summary?.salesTotal ? `${Math.round(((summary.cogsTotal ?? 0) / summary.salesTotal) * 100)}%` : "—"],
+        ["Daily orders", String(activityCount)]
+      ]
+    : config.operatingModel === "appointment"
+      ? [
+          ["Revenue by service", topProducts.length ? topProducts[0]!.productName : "No service activity yet"],
+          ["Appointments", String(activityCount)],
+          ["Customer visits", String(activityCount)],
+          ["Product sales", topProducts.length ? `${topProducts.length} catalog items` : "—"]
+        ]
+      : config.operatingModel === "hospitality"
+        ? [
+            ["Occupancy", "Track from room status"],
+              ["Reservations", String(activityCount)],
+            ["Guest balances", formatMoney(summary?.debtTotal ?? 0, currency)],
+            ["Service revenue", formatMoney(summary?.salesTotal ?? 0, currency)]
+          ]
+        : config.operatingModel === "care"
+          ? [
+              ["Patient visits", String(activityCount)],
+              ["Service revenue", formatMoney(summary?.salesTotal ?? 0, currency)],
+              ["Outstanding billing", formatMoney(summary?.debtTotal ?? 0, currency)],
+              ["Top service/medicine", topProducts.length ? topProducts[0]!.productName : "—"]
+            ]
+          : config.operatingModel === "work_order"
+            ? [
+                ["Jobs completed", String(completedCount || activityCount)],
+                ["Revenue by service", formatMoney(summary?.salesTotal ?? 0, currency)],
+                ["Parts usage", topProducts.length ? topProducts[0]!.productName : "—"],
+                ["Technician performance", "Use staff performance" ]
+              ]
+            : config.operatingModel === "project"
+              ? [
+                  ["Revenue by client", formatMoney(summary?.salesTotal ?? 0, currency)],
+                  ["Revenue by matter/project", formatMoney(summary?.salesTotal ?? 0, currency)],
+                  ["Billable work", String(activityCount)],
+                  ["Outstanding invoices", formatMoney(summary?.debtTotal ?? 0, currency)]
+                ]
+              : [
+                  ["Jobs completed", String(completedCount || activityCount)],
+                  ["Service revenue", formatMoney(summary?.salesTotal ?? 0, currency)],
+                  ["Outstanding invoices", formatMoney(summary?.debtTotal ?? 0, currency)],
+                  ["Top service", topProducts.length ? topProducts[0]!.productName : "—"]
+                ];
+  const title = config.capabilities.kitchen ? "Food & Beverage reports" : config.operatingModel === "appointment" ? "Beauty reports" : config.operatingModel === "hospitality" ? "Hospitality reports" : config.operatingModel === "care" ? (config.businessType === "pharmacy" ? "Pharmacy reports" : "Clinic reports") : config.operatingModel === "work_order" ? "Workshop reports" : config.operatingModel === "project" ? "Professional services reports" : "Service reports";
+  return (
+    <Card style={{ gap: 10 }}>
+      <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{title}</Text>
+      <Text style={{ color: tokens.colors.textSecondary }}>Operational reporting for the selected business model.</Text>
+      {rows.map(([label, value]) => <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 5 }}><Text style={{ color: tokens.colors.textSecondary, flex: 1 }}>{label}</Text><Text style={{ color: tokens.colors.text, fontWeight: "800", textAlign: "right" }}>{value}</Text></View>)}
+    </Card>
   );
 }
 

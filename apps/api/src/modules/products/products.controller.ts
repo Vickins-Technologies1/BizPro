@@ -14,6 +14,16 @@ class CreateProductDto {
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() supplierId?: string;
   @IsOptional() @IsString() description?: string | null;
+  @IsOptional() @IsArray() @IsString({ each: true }) variants?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) addOns?: string[];
+  @IsOptional() @IsArray() @IsObject({ each: true }) recipeIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  @IsOptional() @IsNumber() serviceDurationMinutes?: number | null;
+  @IsOptional() @IsString() assignedStaffId?: string | null;
+  @IsOptional() @IsNumber() commissionRate?: number | null;
+  @IsOptional() @IsString() compatibility?: string | null;
+  @IsOptional() @IsIn(["fixed", "hourly", "quantity", "recurring", "milestone", "custom"]) pricingModel?: "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null;
+  @IsOptional() @IsNumber() hourlyPrice?: number | null;
+  @IsOptional() @IsString() quantityUnit?: string | null;
   @IsOptional() @IsArray() @IsObject({ each: true }) images?: Array<{ url: string; alt?: string | null }>;
   @IsOptional() @IsIn(["INTERNAL", "VENDOR", "IMPORTED"]) productSource?: "INTERNAL" | "VENDOR" | "IMPORTED";
   @IsOptional() @IsIn(["PRIVATE", "INTERNAL", "EXTERNAL", "MARKETPLACE"]) visibility?: "PRIVATE" | "INTERNAL" | "EXTERNAL" | "MARKETPLACE";

@@ -60,8 +60,6 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
   const theme = useThemeTokens();
   const user = useAppStore((state) => state.user);
   const business = useAppStore((state) => state.business);
-  const themeMode = useAppStore((state) => state.themeMode);
-  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -126,7 +124,7 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
           {DRAWER_GROUPS.map((group) => {
             const items = group.items.filter((item) => (
               (!item.permission || hasPermission(user, item.permission)) &&
-              isDrawerItemAvailable(item.routeName, businessConfig.capabilities)
+              isDrawerItemAvailable(item.routeName, businessConfig)
             ));
             if (!items.length) return null;
             return (
@@ -147,7 +145,7 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
                         accessibilityState={{ selected: active }}
                       >
                         <Ionicons name={item.icon} size={19} color={active ? theme.colors.primaryStrong : theme.colors.textSecondary} />
-                        <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>{item.label}</Text>
+                        <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>{drawerItemLabel(item, businessConfig)}</Text>
                         <Ionicons name="chevron-forward" size={15} color={active ? theme.colors.primaryStrong : theme.colors.textMuted} />
                       </Pressable>
                     );
@@ -157,53 +155,27 @@ export function MoreDrawer({ visible, currentRoute, onClose, onNavigate }: MoreD
             );
           })}
         </View>
-        <MobileThemeToggle
-          themeMode={themeMode}
-          onToggle={() => void setThemeMode(themeMode === "dark" ? "light" : "dark")}
-        />
       </Animated.View>
     </View>
   );
 }
 
-function isDrawerItemAvailable(routeName: string, capabilities: Readonly<Record<string, boolean>>) {
+function isDrawerItemAvailable(routeName: string, config: ReturnType<typeof resolveBusinessTypeConfig>) {
+  const capabilities = config.capabilities;
   if (routeName === "Customers") return capabilities.customers;
-  if (["Brands", "PurchaseOrders", "StockTransfers"].includes(routeName)) return capabilities.inventory || capabilities.purchasing;
+  if (routeName === "Brands") return capabilities.inventory;
+  if (["PurchaseOrders", "StockTransfers"].includes(routeName)) return capabilities.inventory || capabilities.purchasing;
+  if (routeName === "Suppliers") return capabilities.suppliers;
   if (routeName === "Branches") return true;
-  if (routeName === "Operations") return capabilities.orders || capabilities.appointments || capabilities.workOrders;
+  if (routeName === "Operations") return capabilities.orders || capabilities.appointments || capabilities.workOrders || capabilities.projects || capabilities.tasks;
   return true;
 }
 
-function MobileThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dark"; onToggle: () => void }) {
-  const theme = useThemeTokens();
-  const isDark = themeMode === "dark";
-  return (
-    <Pressable
-      onPress={onToggle}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: isDark }}
-      accessibilityLabel="Toggle light and dark theme"
-      style={({ pressed }) => ({
-        marginTop: "auto",
-        minHeight: 48,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.surfaceAlt,
-        opacity: pressed ? 0.82 : 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 12
-      })}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Ionicons name={isDark ? "moon-outline" : "sunny-outline"} size={17} color={theme.colors.primaryStrong} />
-        <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "900" }}>{isDark ? "Dark mode" : "Light mode"}</Text>
-      </View>
-      <Text style={{ color: theme.colors.primaryStrong, fontSize: 11, fontWeight: "900" }}>Switch</Text>
-    </Pressable>
-  );
+function drawerItemLabel(item: DrawerItem, config: ReturnType<typeof resolveBusinessTypeConfig>) {
+  if (item.routeName === "Customers") return config.navigation.customersLabel;
+  if (item.routeName === "Employees") return config.terminology.staff;
+  if (item.routeName === "Operations") return config.workspace.activityLabel;
+  return item.label;
 }
 
 function createStyles(theme: ReturnType<typeof useThemeTokens>) {

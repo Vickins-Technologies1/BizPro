@@ -10,7 +10,7 @@ import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
 import { deleteProduct, getProductHistory } from "@/services/apiClient";
 import type { StockMovement } from "@shared";
-import { hasPermission } from "@shared";
+import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 
 type RootStackParamList = {
   Main: undefined;
@@ -56,20 +56,24 @@ export function ProductDetailScreen() {
   const [deleting, setDeleting] = React.useState(false);
   const [lookupCode, setLookupCode] = React.useState("");
   const [scannerVisible, setScannerVisible] = React.useState(false);
+  const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
+  const itemLabel = businessConfig.terminology.catalogItem;
+  const supportsBarcode = businessConfig.capabilities.barcode;
   const canManageInventory = hasPermission(user, "manageInventory");
+  const canManageCatalog = canManageInventory || (businessConfig.capabilities.services && hasPermission(user, "addProducts"));
 
   React.useEffect(() => {
     loadHistory().catch(() => undefined);
   }, [route.params.productId]);
 
-  if (!canManageInventory) {
+  if (!canManageCatalog) {
     return (
       <Screen>
-        <GradientHeader title="Product details" subtitle="Inventory view" />
+        <GradientHeader title={`${itemLabel} details`} subtitle={`${businessConfig.navigation.catalogLabel} view`} />
         <View style={{ padding: 16 }}>
           <EmptyState
-            title="Product details restricted"
-            subtitle="This account cannot view inventory detail. Ask an owner or manager for inventory access."
+            title={`${itemLabel} details restricted`}
+            subtitle={`This account cannot view ${businessConfig.navigation.catalogLabel.toLowerCase()} detail. Ask an owner or manager for access.`}
             action={<PrimaryButton title="Go back" onPress={() => navigation.goBack()} />}
             icon="cube-outline"
           />
@@ -110,7 +114,7 @@ export function ProductDetailScreen() {
     try {
       await deleteProduct(currentProduct.id, currentProduct.branchId ?? selectedBranchId);
       await useAppStore.getState().loadCatalog();
-      Alert.alert("Product deleted", `${currentProduct.name} was removed from the catalog.`);
+      Alert.alert(`${itemLabel} deleted`, `${currentProduct.name} was removed from the catalog.`);
       navigation.goBack();
     } catch (error) {
       Alert.alert("Delete failed", error instanceof Error ? error.message : "Failed to delete product");
@@ -133,10 +137,10 @@ export function ProductDetailScreen() {
   if (!product) {
     return (
       <Screen>
-        <GradientHeader title="Product details" subtitle="Item not found locally" />
+        <GradientHeader title={`${itemLabel} details`} subtitle="Item not found locally" />
         <View style={{ padding: 16 }}>
           <Card style={{ gap: 8 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Product not found</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{itemLabel} not found</Text>
             <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>The selected product is not available in the local catalog yet.</Text>
           </Card>
         </View>
@@ -170,24 +174,22 @@ export function ProductDetailScreen() {
         <Card style={{ gap: 9, padding: 14 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Quick lookup</Text>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
-            Jump to another product by SKU or barcode without leaving inventory detail.
+            Jump to another {itemLabel.toLowerCase()} by {supportsBarcode ? "SKU or barcode" : "name or code"} without leaving the catalog.
           </Text>
           <InputField
             label="Code"
             value={lookupCode}
             onChangeText={setLookupCode}
-            placeholder="Scan or type SKU / barcode"
+            placeholder={supportsBarcode ? "Scan or type SKU / barcode" : `Search ${itemLabel.toLowerCase()} code`}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="done"
-            rightAccessory={
-              <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner">
+            rightAccessory={supportsBarcode ? <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner">
                 <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
-              </Pressable>
-            }
+              </Pressable> : null}
             onSubmitEditing={() => {
               if (!lookupMatch) {
-                Alert.alert("No match", "Try the full SKU or barcode.");
+                Alert.alert("No match", `Try the full ${supportsBarcode ? "SKU or barcode" : "catalog code"}.`);
                 return;
               }
               navigation.push("ProductDetail", { productId: lookupMatch.id });
@@ -197,10 +199,10 @@ export function ProductDetailScreen() {
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton
-                title="Open product"
+                title={`Open ${itemLabel.toLowerCase()}`}
                 onPress={() => {
                   if (!lookupMatch) {
-                    Alert.alert("No match", "Try the full SKU or barcode.");
+                    Alert.alert("No match", `Try the full ${supportsBarcode ? "SKU or barcode" : "catalog code"}.`);
                     return;
                   }
                   navigation.push("ProductDetail", { productId: lookupMatch.id });
@@ -226,13 +228,17 @@ export function ProductDetailScreen() {
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{currentProduct.name}</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{currentProduct.barcode ?? "No barcode"}</Text>
             </View>
-            <Badge label={lowStock ? "Low stock" : "Healthy"} tone={lowStock ? "danger" : "success"} />
+            <Badge label={businessConfig.capabilities.inventory ? (lowStock ? "Low stock" : "Healthy") : "Available"} tone={businessConfig.capabilities.inventory && lowStock ? "danger" : "success"} />
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12 }}>
             <Metric label="Units on hand" value={String(currentProduct.stockOnHand)} />
             <Metric label="Low stock limit" value={String(currentProduct.lowStockThreshold)} />
             <Metric label="Profit per unit" value={formatMoney(margin, business?.currency)} />
-          </View>
+          </View> : <View style={{ flexDirection: "row", gap: 12 }}>
+            <Metric label="Duration" value={currentProduct.serviceDurationMinutes ? `${currentProduct.serviceDurationMinutes} min` : "Flexible"} />
+            <Metric label="Price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
+            <Metric label="Pricing" value={currentProduct.pricingModel ?? "Fixed"} />
+          </View>}
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Metric label="Buying price" value={formatMoney(currentProduct.buyingPrice, business?.currency)} />
             <Metric label="Selling price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
@@ -250,16 +256,16 @@ export function ProductDetailScreen() {
             <Metric label="Barcode" value={currentProduct.barcode ?? "No barcode"} />
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1 }}>
+            {businessConfig.capabilities.inventory ? <View style={{ flex: 1 }}>
               <PrimaryButton title="Add stock" onPress={() => setRestockVisible(true)} />
-            </View>
+            </View> : null}
             <View style={{ flex: 1 }}>
               <PrimaryButton title={deleting ? "Deleting..." : "Delete"} variant="danger" onPress={confirmDelete} loading={deleting} />
             </View>
           </View>
         </Card>
 
-        <Card style={{ gap: 9, padding: 14 }}>
+        {businessConfig.capabilities.inventory ? <Card style={{ gap: 9, padding: 14 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Stock history</Text>
           {historyLoading ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
@@ -283,7 +289,7 @@ export function ProductDetailScreen() {
           ) : (
             <Text style={{ color: tokens.colors.textSecondary }}>No stock movements yet.</Text>
           )}
-        </Card>
+        </Card> : null}
 
         <Card style={{ gap: 9, padding: 14 }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Sales history</Text>
@@ -318,7 +324,7 @@ export function ProductDetailScreen() {
           try {
             await handleScannedBarcode(barcode);
           } catch (error) {
-            Alert.alert("Product not found", error instanceof Error ? error.message : "No product matches this barcode.");
+            Alert.alert(`${itemLabel} not found`, error instanceof Error ? error.message : `No ${itemLabel.toLowerCase()} matches this barcode.`);
             throw error instanceof Error ? error : new Error("No product matches this barcode.");
           }
         }}

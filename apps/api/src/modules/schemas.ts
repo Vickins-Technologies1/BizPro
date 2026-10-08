@@ -28,6 +28,7 @@ import {
   VendorProductSchema
 } from "./commerce.schemas";
 import { BusinessOperation, BusinessOperationSchema } from "./business-operations.schemas";
+import { Matter, MatterSchema, MatterTask, MatterTaskSchema, Patient, PatientSchema, Reservation, ReservationSchema, Room, RoomCharge, RoomChargeSchema, RoomSchema, RoomType, RoomTypeSchema, Stay, StaySchema, TimeEntry, TimeEntrySchema, Visit, VisitSchema } from "./industry-domains.schemas";
 
 @Schema({ timestamps: true, collection: "businesses" })
 export class Business {
@@ -147,7 +148,6 @@ export class Branch {
 
   @Prop({ type: String, default: null })
   description?: string | null;
-
   @Prop({ type: String, default: null, index: true })
   managerId?: string | null;
 
@@ -329,6 +329,36 @@ export class Product {
 
   @Prop({ type: String, default: null })
   description?: string | null;
+
+  @Prop({ type: [String], default: [] })
+  variants!: string[];
+
+  @Prop({ type: [String], default: [] })
+  addOns!: string[];
+
+  @Prop({ type: [Object], default: [] })
+  recipeIngredients!: Array<{ ingredientId: string; quantity: number }>;
+
+  @Prop({ type: Number, default: null })
+  serviceDurationMinutes?: number | null;
+
+  @Prop({ type: String, default: null })
+  assignedStaffId?: string | null;
+
+  @Prop({ type: Number, default: null })
+  commissionRate?: number | null;
+
+  @Prop({ type: String, default: null })
+  compatibility?: string | null;
+
+  @Prop({ type: String, enum: ["fixed", "hourly", "quantity", "recurring", "milestone", "custom"], default: null })
+  pricingModel?: "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null;
+
+  @Prop({ type: Number, default: null })
+  hourlyPrice?: number | null;
+
+  @Prop({ type: String, default: null })
+  quantityUnit?: string | null;
 
   @Prop({ type: [Object], default: [] })
   images!: Array<{ url: string; alt?: string | null }>;
@@ -1634,7 +1664,19 @@ export const commerceSchemas = buildCommerceSchemas({
   CommerceWebhookDelivery: { name: CommerceWebhookDelivery.name, schema: CommerceWebhookDeliverySchema }
 });
 
-export const businessOperationSchemas = [{ name: BusinessOperation.name, schema: BusinessOperationSchema }] as const;
+export const businessOperationSchemas = [
+  { name: BusinessOperation.name, schema: BusinessOperationSchema },
+  { name: RoomType.name, schema: RoomTypeSchema },
+  { name: Room.name, schema: RoomSchema },
+  { name: Reservation.name, schema: ReservationSchema },
+  { name: Stay.name, schema: StaySchema },
+  { name: RoomCharge.name, schema: RoomChargeSchema },
+  { name: Patient.name, schema: PatientSchema },
+  { name: Visit.name, schema: VisitSchema },
+  { name: Matter.name, schema: MatterSchema },
+  { name: MatterTask.name, schema: MatterTaskSchema },
+  { name: TimeEntry.name, schema: TimeEntrySchema }
+] as const;
 
 export const allSchemas = [...businessSchemas, ...catalogSchemas, ...invoiceSchemas, ...financeSchemas, ...syncSchemas, ...subscriptionSchemas, ...opsSchemas, ...commerceSchemas, ...businessOperationSchemas] as const;
 

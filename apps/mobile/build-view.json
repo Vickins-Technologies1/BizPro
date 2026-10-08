@@ -1,0 +1,45 @@
+{
+  "id": "78b58527-8bf1-4c78-a24a-71cd7a211436",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "EAS_BUILD_UNKNOWN_GRADLE_ERROR",
+    "message": "Gradle build failed with unknown error. See logs for the \"Run gradlew\" phase for more information."
+  },
+  "artifacts": {},
+  "initiatingActor": {
+    "id": "ceac22d0-fb9c-4b4e-ae57-1d3bf1c3a765",
+    "displayName": "vickins"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/a1608b80-e48e-4bb6-ab68-999353b0d243/78b58527-8bf1-4c78-a24a-71cd7a211436/2026-10-08T19%3A20%3A37Z-99be3ffe-a03d-4527-9033-7f9988e6b41d.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20261008%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20261008T192643Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7780627ecbee2de564f365ea86da25f59398e97bad3420645152377c453b2d0ff5a3b3fa18aeb3adc2c87c37d0869ca56f8a47f61e93be4289e44b6a6634433b8ca7fe4e6c73d5fb27a74c3763491b1d45a9a515c0af49b002db0a895edfa943adf4decd9c8e04269fc2c3c61c7ac46573bb2cf5e301a9fc19ca4796cbf6a43f712491a6c9ebce513b500823cc6f8b8ddba9fb854c8e3c63a924849c873d36a06fcf6bdd336e585fefd4973aa9b9808cfc5c9d44d68f4e47df145165dfdcdfec70aedc3eefd02d6a0d244d726121e927582248d5b7c81c11f989efc88e84122ff6431469fc65943bd3d44a129dcc7e082fe417b9079f71ea0bcc6c75c96e4c9d"
+  ],
+  "app": {
+    "id": "a1608b80-e48e-4bb6-ab68-999353b0d243",
+    "name": "biz-pro",
+    "slug": "biz-pro",
+    "ownerAccount": {
+      "id": "c2e7f18e-2e41-48bb-b74d-9bb05159dbb9",
+      "name": "vickins"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "preview",
+  "appIdentifier": "com.bizpro.vickins",
+  "sdkVersion": "53.0.0",
+  "appVersion": "0.1.0",
+  "appBuildVersion": "13",
+  "gitCommitHash": "b656b0f29196d5df1524fbe0ee95cb7ba880934f",
+  "gitCommitMessage": "Improve business workflows and refresh the application UI",
+  "priority": "NORMAL",
+  "createdAt": "2026-10-08T19:15:49.036Z",
+  "updatedAt": "2026-10-08T19:24:58.380Z",
+  "completedAt": "2026-10-08T19:24:58.152Z",
+  "expirationDate": "2026-10-22T19:15:49.105Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 4175,
+    "buildQueueTime": 288947,
+    "buildDuration": 255994
+  }
+}

@@ -51,6 +51,8 @@ export class ReportsService {
     const debtTotal = Math.max(0, calculateOutstanding(receivables) - standalonePayments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0));
     return {
       salesTotal,
+      transactionsCount: salesDocs.length,
+      grossProfit: calculateGrossProfit(salesTotal, cogsTotal),
       expensesTotal,
       estimatedProfit: calculateNetProfit(calculateGrossProfit(salesTotal, cogsTotal), expensesTotal),
       debtTotal,

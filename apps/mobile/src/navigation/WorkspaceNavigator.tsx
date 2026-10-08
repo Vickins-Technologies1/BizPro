@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator, type BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Animated, Easing, Pressable, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { Badge, Card } from "@/components/Primitives";
 import { MoreDrawer } from "@/components/MoreDrawer";
@@ -84,7 +84,7 @@ export function AdaptiveWorkspaceNavigator() {
         name="POS"
         component={PosScreen}
         options={{
-          tabBarLabel: "Sales",
+          tabBarLabel: "Work",
           tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />
         }}
       />
@@ -92,7 +92,7 @@ export function AdaptiveWorkspaceNavigator() {
         name="Catalog"
         component={ProductsScreen}
         options={{
-          tabBarLabel: "Inventory",
+          tabBarLabel: "Catalog",
           tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" color={color} size={size} />
         }}
       />
@@ -171,8 +171,6 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
   const user = useAppStore((store) => store.user);
   const pendingSync = useAppStore((store) => store.pendingSync);
   const syncProgress = useAppStore((store) => store.syncProgress);
-  const themeMode = useAppStore((store) => store.themeMode);
-  const setThemeMode = useAppStore((store) => store.setThemeMode);
   const permissions = React.useMemo(() => getEffectivePermissions(user), [user]);
   const businessConfig = React.useMemo(
     () => resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey }),
@@ -181,8 +179,9 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
   const configuredRoutes = isDesktop ? businessConfig.navigation.sidebarRoutes : businessConfig.navigation.primaryRoutes;
   const visibleRoutes = configuredRoutes.filter((routeName) => {
     if (routeName === "Catalog") return businessConfig.capabilities.catalog;
+    if (routeName === "POS") return businessConfig.capabilities.pos;
     if (routeName === "Customers") return businessConfig.capabilities.customers;
-    if (routeName === "Operations") return businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders;
+    if (routeName === "Operations") return businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders || businessConfig.capabilities.projects || businessConfig.capabilities.tasks;
     if (routeName === "Finance") return businessConfig.capabilities.payments;
     return true;
   });
@@ -287,7 +286,6 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
               Use the sidebar to switch between the main work areas without losing your place.
             </Text>
           </Card>
-          <SidebarThemeToggle themeMode={themeMode} onToggle={() => void setThemeMode(themeMode === "dark" ? "light" : "dark")} />
         </View>
           ) : (
             <View style={{ flex: 1, gap: 8 }}>
@@ -317,80 +315,6 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
         </View>
       )}
     </View>
-  );
-}
-
-function SidebarThemeToggle({ themeMode, onToggle }: { themeMode: "light" | "dark"; onToggle: () => void }) {
-  const theme = useThemeTokens();
-  const progress = React.useRef(new Animated.Value(themeMode === "dark" ? 1 : 0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(progress, {
-      toValue: themeMode === "dark" ? 1 : 0,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true
-    }).start();
-  }, [progress, themeMode]);
-
-  const knobTranslate = progress.interpolate({ inputRange: [0, 1], outputRange: [2, 108] });
-  const isDark = themeMode === "dark";
-
-  return (
-    <Pressable
-      onPress={onToggle}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: isDark }}
-      accessibilityLabel="Toggle light and dark theme"
-      style={({ pressed }) => ({
-        minHeight: 66,
-        borderRadius: 16,
-        padding: 5,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.surfaceElevated,
-        opacity: pressed ? 0.9 : 1,
-        transform: [{ scale: pressed ? 0.985 : 1 }]
-      })}
-    >
-      <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", justifyContent: "center" }}>
-        <LinearGradient
-          colors={theme.gradients.surface}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-        />
-        <Animated.View
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 2,
-            bottom: 2,
-            width: 108,
-            borderRadius: 13,
-            backgroundColor: isDark ? theme.colors.surfaceElevated : theme.colors.surface,
-            borderWidth: 1,
-            borderColor: theme.colors.primaryStrong,
-            shadowColor: isDark ? "#000" : theme.colors.primaryStrong,
-            shadowOpacity: isDark ? 0.24 : 0.12,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 3 },
-            elevation: 3,
-            transform: [{ translateX: knobTranslate }]
-          }}
-        />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingHorizontal: 4 }} pointerEvents="none">
-          <View style={{ width: 108, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 }}>
-            <Ionicons name="sunny-outline" size={16} color={isDark ? theme.colors.textMuted : theme.colors.primaryStrong} />
-            <Text style={{ color: isDark ? theme.colors.textMuted : theme.colors.text, fontSize: 12, fontWeight: "900" }}>Light</Text>
-          </View>
-          <View style={{ width: 108, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 }}>
-            <Ionicons name="moon-outline" size={15} color={isDark ? theme.colors.primaryStrong : theme.colors.textMuted} />
-            <Text style={{ color: isDark ? theme.colors.text : theme.colors.textMuted, fontSize: 12, fontWeight: "900" }}>Dark</Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
   );
 }
 
@@ -426,7 +350,9 @@ function renderWorkspaceItem({
         : routeName === "Customers"
           ? businessConfig.navigation.customersLabel
           : routeName === "Operations"
-            ? businessConfig.capabilities.appointments ? "Appointments" : businessConfig.capabilities.workOrders ? "Jobs" : "Orders"
+            ? businessConfig.workspace.activityLabel
+            : routeName === "Employees"
+              ? businessConfig.terminology.staff
             : typeof options?.tabBarLabel === "string" ? options.tabBarLabel : routeName;
   const icon = routeName === "More" ? (
     <Ionicons name="apps-outline" color={focused ? tokens.colors.primaryStrong : tokens.colors.textMuted} size={isDesktop ? 22 : 22} />

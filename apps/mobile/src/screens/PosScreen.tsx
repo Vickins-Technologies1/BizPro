@@ -37,6 +37,11 @@ export function PosScreen() {
   const createSale = useAppStore((state) => state.createSale);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
+  const primaryAction = businessConfig.workspace.primaryAction;
+  const catalogLabel = businessConfig.navigation.catalogLabel;
+  const catalogItemLabel = businessConfig.terminology.catalogItem;
+  const tracksStock = businessConfig.capabilities.inventory;
+  const supportsBarcode = businessConfig.capabilities.barcode;
 
   const [search, setSearch] = React.useState("");
   const [modalVisible, setModalVisible] = React.useState(false);
@@ -158,9 +163,9 @@ export function PosScreen() {
   function addToCart(productId: string) {
     const product = products.find((item) => item.id === productId);
     if (!product) return;
-    const availableStock = Math.max(0, product.stockOnHand);
-    if (availableStock <= 0) {
-      Alert.alert("Out of stock", `${product.name} is currently out of stock.`);
+    const availableStock = tracksStock ? Math.max(0, product.stockOnHand) : Number.POSITIVE_INFINITY;
+    if (tracksStock && availableStock <= 0) {
+      Alert.alert("Unavailable", `${product.name} is currently unavailable.`);
       return;
     }
     setCart((current) => {
@@ -190,7 +195,7 @@ export function PosScreen() {
 
   function setLineQuantity(productId: string, quantity: number) {
     const product = products.find((item) => item.id === productId);
-    const cappedQuantity = product ? Math.min(Math.max(0, Math.floor(quantity)), Math.max(0, product.stockOnHand)) : Math.max(0, Math.floor(quantity));
+    const cappedQuantity = product && tracksStock ? Math.min(Math.max(0, Math.floor(quantity)), Math.max(0, product.stockOnHand)) : Math.max(0, Math.floor(quantity));
     setCart((current) => {
       if (cappedQuantity <= 0) {
         return current.filter((line) => line.productId !== productId);
@@ -228,7 +233,7 @@ export function PosScreen() {
 
   function handleLookupSubmit() {
     if (!lookupMatch) {
-      Alert.alert("No match", "Try scanning or typing a full SKU or barcode.");
+      Alert.alert("No match", `Try searching for a ${catalogItemLabel.toLowerCase()} by name${supportsBarcode ? " or scanning its code" : ""}.`);
       return;
     }
     addToCart(lookupMatch.id);
@@ -239,7 +244,7 @@ export function PosScreen() {
     setLookupCode(barcode);
     const match = findProductByCode(products, barcode);
     if (!match) {
-      return { status: "not-found" as const, message: "No product was found for this barcode." };
+      return { status: "not-found" as const, message: `No ${catalogItemLabel.toLowerCase()} was found for this barcode.` };
     }
     addToCart(match.id);
     setLookupCode("");
@@ -384,7 +389,7 @@ export function PosScreen() {
 
   async function saveSale() {
     if (!cart.length) {
-      Alert.alert("Add products", "Choose at least one product before recording the sale.");
+      Alert.alert(`Add ${catalogItemLabel.toLowerCase()}s`, `Choose at least one ${catalogItemLabel.toLowerCase()} before recording the transaction.`);
       return;
     }
 
@@ -428,7 +433,7 @@ export function PosScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.posLabel}
-        subtitle={`${sales.length} transactions · ${pendingSync ? `${pendingSync} queued` : "Synced"}`}
+        subtitle={`${sales.length} ${businessConfig.workspace.activityLabel.toLowerCase()} · ${pendingSync ? `${pendingSync} queued` : "Synced"}`}
         right={
           <Pressable onPress={() => setModalVisible(true)}>
             <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
@@ -443,7 +448,7 @@ export function PosScreen() {
             <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "700" }}>{businessConfig.workflow.headline}</Text>
             <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success, fontSize: 12, fontWeight: "600" }}>{syncMessage}</Text>
           </View>
-          <PrimaryButton title="Record sale" iconLeft="add" onPress={() => setModalVisible(true)} style={{ minWidth: 126 }} />
+          <PrimaryButton title={primaryAction} iconLeft="add" onPress={() => setModalVisible(true)} style={{ minWidth: 126 }} />
         </View>
 
         <View style={{ flexDirection: "row", gap: 22, paddingVertical: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
@@ -456,7 +461,7 @@ export function PosScreen() {
         <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <View style={{ gap: 4, flex: 1 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Draft {businessConfig.terminology.transaction.toLowerCase()}s</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Draft {businessConfig.workspace.primaryEntity.toLowerCase()}s</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>Hold a basket and resume it later.</Text>
             </View>
             <Badge label={`${drafts.length} saved`} tone={drafts.length ? "success" : "primary"} />
@@ -494,7 +499,7 @@ export function PosScreen() {
               </Card>
             ))
           ) : (
-            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>No drafts yet. Hold a sale to save one here.</Text>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>No drafts yet. Hold a {businessConfig.workspace.primaryEntity.toLowerCase()} to save one here.</Text>
           )}
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
@@ -580,16 +585,16 @@ export function PosScreen() {
         ) : (
           <EmptyState
             title={search ? "No matching sales" : "No sales yet"}
-            subtitle={search ? "Try a different receipt number, method, or status." : "Use Record Sale to create the first entry."}
+            subtitle={search ? `Try a different ${businessConfig.workspace.primaryEntity.toLowerCase()} number, method, or status.` : `Use ${primaryAction} to create the first entry.`}
             icon="receipt-outline"
           />
         )}
       </AppScrollView>
 
-      <SimpleModal visible={modalVisible} title="Record sale" onClose={() => setModalVisible(false)}>
+      <SimpleModal visible={modalVisible} title={primaryAction} onClose={() => setModalVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
-            Add products, confirm payment, and record the sale.
+            {businessConfig.operatingModel === "commerce" ? `Add ${catalogLabel.toLowerCase()}, confirm payment, and record the sale.` : `Add ${catalogLabel.toLowerCase()}, confirm payment, and close the ${businessConfig.workspace.primaryEntity.toLowerCase()}.`}
           </Text>
 
           <Card style={{ gap: 8, padding: 12 }}>
@@ -611,14 +616,14 @@ export function PosScreen() {
 
           <Card style={{ gap: 9, padding: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Products</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{catalogLabel}</Text>
               <Badge label={`${filteredProducts.length} found`} tone="primary" />
             </View>
             <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
               <View style={{ flex: 1 }}>
                 <InputField label={`Search ${businessConfig.terminology.catalogItem.toLowerCase()}s`} value={productSearch} onChangeText={setProductSearch} placeholder={`Find a ${businessConfig.terminology.catalogItem.toLowerCase()}`} />
               </View>
-              <PrimaryButton title="Scan" variant="secondary" iconLeft="scan-outline" onPress={() => setScannerVisible(true)} />
+              {supportsBarcode ? <PrimaryButton title="Scan" variant="secondary" iconLeft="scan-outline" onPress={() => setScannerVisible(true)} /> : null}
             </View>
             {filteredProducts.length ? (
               <View style={{ gap: 8 }}>
@@ -640,19 +645,19 @@ export function PosScreen() {
                       <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "900" }}>{formatMoney(product.sellingPrice, business?.currency ?? "KES")}</Text>
                     </View>
                     <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
-                      {product.sku ?? "No SKU"} • {product.stockOnHand > 0 ? `Stock ${product.stockOnHand}` : "Out of stock"}
+                      {tracksStock ? `${product.sku ?? "No SKU"} • ${product.stockOnHand > 0 ? `Stock ${product.stockOnHand}` : "Unavailable"}` : `${product.serviceDurationMinutes ? `${product.serviceDurationMinutes} min` : "Available"} • ${catalogItemLabel}`}
                     </Text>
                   </Pressable>
                 ))}
               </View>
             ) : (
-              <EmptyState title="No matching products" subtitle="Try a different product name or SKU." icon="cube-outline" />
+              <EmptyState title={`No matching ${businessConfig.terminology.catalogItem.toLowerCase()}s`} subtitle={`Try a different ${businessConfig.terminology.catalogItem.toLowerCase()} name or code.`} icon="cube-outline" />
             )}
           </Card>
 
           <Card style={{ gap: 9, padding: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>Cart</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{businessConfig.operatingModel === "commerce" ? "Basket" : `${businessConfig.workspace.primaryEntity} lines`}</Text>
               <Badge label={`${cart.length} line${cart.length === 1 ? "" : "s"}`} tone={cart.length ? "success" : "primary"} />
             </View>
             {cart.length ? (
@@ -724,7 +729,7 @@ export function PosScreen() {
                 </View>
               ))
             ) : (
-              <EmptyState title="Cart is empty" subtitle="Tap products above to add items." icon="cart-outline" />
+              <EmptyState title="No lines added" subtitle={`Tap ${catalogItemLabel.toLowerCase()}s above to add them.`} icon="cart-outline" />
             )}
 
             <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border, paddingTop: 12, gap: 4 }}>

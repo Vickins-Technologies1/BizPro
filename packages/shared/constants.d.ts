@@ -1,4 +1,4 @@
-export declare const BUSINESS_TYPES: readonly ["retail_shop", "boutique", "cosmetics", "accessories", "wines_spirits", "hardware", "agrovet", "restaurant", "cafe", "bakery", "bar", "salon", "spa", "hotel", "lodge", "clinic", "pharmacy", "dental_clinic", "farm", "feed_store", "garage", "auto_parts", "service_center", "general_service", "consultancy", "agency", "law_firm", "accounting_firm"];
+export declare const BUSINESS_TYPES: readonly ["retail_shop", "boutique", "cosmetics", "accessories", "wines_spirits", "hardware", "agrovet", "restaurant", "cafe", "bakery", "bar", "salon", "spa", "hotel", "lodge", "clinic", "pharmacy", "dental_clinic", "farm", "feed_store", "garage", "auto_parts", "service_center", "tyre_business", "body_shop", "general_service", "consultancy", "agency", "law_firm", "accounting_firm"];
 export declare const PLAN_TIERS: readonly ["command", "pro", "elite", "enterprise"];
 export declare const USER_ROLES: readonly ["owner", "manager", "supervisor", "cashier", "waiter", "receptionist", "stylist", "mechanic", "pharmacist"];
 export declare const PAYMENT_METHODS: readonly ["cash", "mpesa", "bank", "card", "cheque", "other", "credit"];

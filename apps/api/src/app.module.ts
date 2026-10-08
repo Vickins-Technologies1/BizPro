@@ -32,6 +32,7 @@ import { SupportKeyGuard } from "./common/support-key.guard";
 import { HealthController } from "./health.controller";
 import { BootstrapService } from "./bootstrap.service";
 import { SystemState, SystemStateSchema } from "./system-state.schema";
+import { IndustryDomainsModule } from "./modules/industry-domains/industry-domains.module";
 
 @Module({
   imports: [
@@ -68,7 +69,8 @@ import { SystemState, SystemStateSchema } from "./system-state.schema";
     NotificationsModule,
     BusinessOperationsModule,
     InvoicesModule,
-    CommerceModule
+    CommerceModule,
+    IndustryDomainsModule
   ],
   controllers: [HealthController],
   providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]

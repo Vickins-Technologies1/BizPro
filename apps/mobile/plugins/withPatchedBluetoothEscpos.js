@@ -97,7 +97,7 @@ function patchAndroidAppBuildGradle(contents) {
 
   return contents.replace(
     marker,
-    `${marker}\n        // Use the production ARM ABIs by default; local emulator builds may override this property.\n        ndk {\n            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a').split(',') as List)\n        }`
+    `${marker}\n        // Ship ARM ABIs for physical devices and x86_64 for Android emulators.\n        ndk {\n            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86_64').split(',') as List)\n        }`
   );
 }
 
@@ -106,7 +106,7 @@ function patchAndroidGradleProperties(contents) {
     "android.enableProguardInReleaseBuilds=false",
     "android.enableShrinkResourcesInReleaseBuilds=false",
     "android.ndkVersion=28.1.13356709",
-    "reactNativeArchitectures=armeabi-v7a,arm64-v8a",
+    "reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64",
     "versionCode=9",
   ];
 

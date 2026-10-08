@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { Connection, Model } from "mongoose";
 import { Business, BusinessDocument, Customer, CustomerDocument, Payment, PaymentDocument, Product, ProductDocument, Sale, SaleDocument, SaleItem, StockMovement, StockMovementDocument } from "../schemas";
-import { calculateSale, calculateTax, FINANCIAL_CALCULATION_VERSION } from "@vbo/shared";
+import { calculateSale, calculateTax, FINANCIAL_CALCULATION_VERSION, resolveBusinessTypeConfig } from "@vbo/shared";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import {
@@ -61,6 +61,7 @@ export class SalesService {
         ? await this.businessModel.findOne({ ...buildBusinessLookup(input.businessId), deletedAt: null }).session(session).lean()
         : { currency: "KES" };
       if (!business) throw new NotFoundException("Business not found");
+      const tracksInventory = resolveBusinessTypeConfig({ businessType: (business as { businessType?: string }).businessType, industryKey: (business as { industryKey?: string }).industryKey }).capabilities.inventory;
       const serverTaxRate = Number((business as { taxSettings?: { defaultTaxRate?: number } }).taxSettings?.defaultTaxRate ?? 0);
       for (const item of input.items) {
         if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new BadRequestException("Sale quantity must be greater than zero");
@@ -130,6 +131,7 @@ export class SalesService {
         { session }
       ))[0]!;
       for (const { item, product, productId } of resolvedItems) {
+        if (!tracksInventory) continue;
         const updatedProduct = await this.productModel.findOneAndUpdate(
           { _id: product._id, businessId: input.businessId, ...buildBranchMatch(branchId), $expr: { $gte: [{ $ifNull: ["$stockOnHand", 0] }, item.quantity] } } as never,
           { $inc: { stockOnHand: -item.quantity } },
@@ -160,6 +162,22 @@ export class SalesService {
           ],
           { session }
         );
+        for (const recipeIngredient of product.recipeIngredients ?? []) {
+          const ingredientQuantity = Number(recipeIngredient.quantity ?? 0) * item.quantity;
+          if (!recipeIngredient.ingredientId || ingredientQuantity <= 0) continue;
+          const ingredient = await this.productModel.findOne(buildProductLookupQuery({ businessId: input.businessId, identifier: recipeIngredient.ingredientId, branchId })).session(session);
+          if (!ingredient) throw new NotFoundException(`Recipe ingredient ${recipeIngredient.ingredientId} not found`);
+          const updatedIngredient = await this.productModel.findOneAndUpdate(
+            { _id: ingredient._id, businessId: input.businessId, ...buildBranchMatch(branchId), $expr: { $gte: [{ $ifNull: ["$stockOnHand", 0] }, ingredientQuantity] } } as never,
+            { $inc: { stockOnHand: -ingredientQuantity } },
+            { new: true, session }
+          ).lean();
+          if (!updatedIngredient) throw new NotFoundException(`Insufficient ingredient stock for ${ingredient.name}`);
+          await this.movementModel.create(
+            [{ businessId: input.businessId, branchId, productId: ingredient.externalId ?? ingredient._id.toString(), referenceType: "recipe", referenceId: sale._id.toString(), quantityDelta: -ingredientQuantity, unitCost: ingredient.buyingPrice, note: `Recipe consumption for ${product.name}` }],
+            { session }
+          );
+        }
       }
       if (input.customerId && calculation.balanceDue > 0) {
         const customer = await this.customerModel.findOne({ _id: input.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);

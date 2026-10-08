@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 import { secureStore } from "@/storage/secure";
-import { createBusinessOperationDraft, enqueueAction, isOfflineError } from "@/services/offlineQueue";
+import { cacheBusinessOperations, createBusinessOperationDraft, enqueueAction, isOfflineError, listCachedBusinessOperations, listQueuedBusinessOperations } from "@/services/offlineQueue";
 import type {
   AccessPermission,
   BankAccount,
@@ -519,6 +519,16 @@ export async function createBranch(input: {
   email?: string | null;
   managerId?: string | null;
   description?: string | null;
+  variants?: string[];
+  addOns?: string[];
+  recipeIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  serviceDurationMinutes?: number | null;
+  assignedStaffId?: string | null;
+  commissionRate?: number | null;
+  compatibility?: string | null;
+  pricingModel?: "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null;
+  hourlyPrice?: number | null;
+  quantityUnit?: string | null;
   status?: Branch["status"];
   isDefault?: boolean;
 }) {
@@ -596,6 +606,7 @@ export async function createProduct(input: {
   brandId?: string | null;
   supplierId?: string | null;
   name: string;
+  description?: string | null;
   sku?: string | null;
   barcode?: string | null;
   batchNumber?: string | null;
@@ -1205,6 +1216,22 @@ export async function listBusinessOperations(input: { kind?: BusinessOperationKi
   return rows.map(normalizeBusinessOperation);
 }
 
+export async function listBusinessOperationsOfflineFirst(input: { businessId?: string; kind?: BusinessOperationKind; status?: BusinessOperationStatus; branchId?: string | null } = {}) {
+  try {
+    const operations = await listBusinessOperations(input);
+    const businessId = operations[0]?.businessId;
+    if (businessId) await cacheBusinessOperations(businessId, operations);
+    return operations;
+  } catch (error) {
+    if (!isOfflineError(error)) throw error;
+    if (!input.businessId) return [];
+    const cached = await listCachedBusinessOperations(input.businessId, input.branchId);
+    const queued = await listQueuedBusinessOperations(input.businessId, input.branchId);
+    const merged = new Map([...cached, ...queued].map((operation) => [operation.id, operation]));
+    return [...merged.values()].filter((operation) => (!input.kind || operation.kind === input.kind) && (!input.status || operation.status === input.status));
+  }
+}
+
 export async function createBusinessOperation(input: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId?: string | null }) {
   const row = await apiRequest<RawEntity>("/business-operations", { method: "POST", body: input });
   return normalizeBusinessOperation(row);
@@ -1212,11 +1239,17 @@ export async function createBusinessOperation(input: Omit<BusinessOperation, "id
 
 export async function createBusinessOperationSafe(input: Omit<BusinessOperation, "id" | "createdAt" | "updatedAt" | "deletedAt"> & { externalId: string }) {
   try {
-    return await createBusinessOperation(input);
+    const created = await createBusinessOperation(input);
+    const cached = await listCachedBusinessOperations(input.businessId, input.branchId);
+    await cacheBusinessOperations(input.businessId, [...cached.filter((operation) => operation.id !== created.id), created]);
+    return created;
   } catch (error) {
     if (!isOfflineError(error)) throw error;
     await enqueueAction({ id: `operation:${input.externalId}`, businessId: input.businessId, kind: "createBusinessOperation", payload: input, dedupeKey: `operation:${input.businessId}:${input.externalId}` });
-    return createBusinessOperationDraft(input);
+    const draft = createBusinessOperationDraft(input);
+    const cached = await listCachedBusinessOperations(input.businessId, input.branchId);
+    await cacheBusinessOperations(input.businessId, [...cached.filter((operation) => operation.id !== draft.id), draft]);
+    return draft;
   }
 }
 
@@ -1231,7 +1264,10 @@ export async function updateBusinessOperationSafe(businessId: string, id: string
   } catch (error) {
     if (!isOfflineError(error)) throw error;
     await enqueueAction({ id: "operation-update:" + id + ":" + Date.now(), businessId, kind: "updateBusinessOperation", payload: { businessId, operationId: id, patch } });
-    return { id, businessId, ...patch } as BusinessOperation;
+    const cached = await listCachedBusinessOperations(businessId);
+    const updated = cached.map((operation) => operation.id === id ? { ...operation, ...patch, updatedAt: new Date().toISOString() } : operation);
+    await cacheBusinessOperations(businessId, updated);
+    return updated.find((operation) => operation.id === id) ?? ({ id, businessId, ...patch } as BusinessOperation);
   }
 }
 
@@ -1240,9 +1276,73 @@ export async function archiveBusinessOperation(id: string) {
   return normalizeBusinessOperation(row);
 }
 
+export type IndustryDomainPath = "room-types" | "rooms" | "reservations" | "stays" | "room-charges" | "patients" | "visits" | "matters" | "tasks" | "time-entries";
+
+export type IndustryDomainSummary = {
+  rooms: number;
+  roomStatuses: Record<string, number>;
+  patients: number;
+  visits: number;
+  activeVisits: number;
+  completedVisits: number;
+  matters: number;
+  activeMatters: number;
+  tasks: number;
+  pendingTasks: number;
+  overdueTasks: number;
+  billableMinutes: number;
+  nonBillableMinutes: number;
+};
+
+export async function getIndustryDomainSummary(branchId?: string | null) {
+  const suffix = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  return apiRequest<IndustryDomainSummary>(`/industry/summary${suffix}`);
+}
+
+export async function listIndustryDomain(domain: IndustryDomainPath, branchId?: string | null) {
+  const suffix = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  return apiRequest<RawEntity[]>(`/industry/${domain}${suffix}`);
+}
+
+export async function createIndustryDomain(domain: IndustryDomainPath, data: Record<string, unknown>) {
+  return apiRequest<RawEntity>(`/industry/${domain}`, { method: "POST", body: data });
+}
+
+export async function createIndustryDomainSafe(input: { businessId: string; domain: IndustryDomainPath; externalId: string; branchId?: string | null; data: Record<string, unknown> }) {
+  try {
+    return await createIndustryDomain(input.domain, { ...input.data, businessId: input.businessId, externalId: input.externalId, branchId: input.branchId ?? null });
+  } catch (error) {
+    if (!isOfflineError(error)) throw error;
+    await enqueueAction({ id: `industry:${input.domain}:${input.externalId}`, businessId: input.businessId, kind: "createIndustryDomain", payload: input, dedupeKey: `industry:${input.businessId}:${input.domain}:${input.externalId}` });
+    return { ...input.data, id: input.externalId, externalId: input.externalId, businessId: input.businessId, branchId: input.branchId ?? null, offline: true } as RawEntity;
+  }
+}
+
+export async function updateIndustryDomain(domain: IndustryDomainPath, id: string, patch: Record<string, unknown>) {
+  return apiRequest<RawEntity>(`/industry/${domain}/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+}
+
+export async function updateIndustryDomainSafe(input: { businessId: string; domain: IndustryDomainPath; recordId: string; patch: Record<string, unknown> }) {
+  try {
+    return await updateIndustryDomain(input.domain, input.recordId, input.patch);
+  } catch (error) {
+    if (!isOfflineError(error)) throw error;
+    await enqueueAction({ id: `industry-update:${input.domain}:${input.recordId}:${Date.now()}`, businessId: input.businessId, kind: "updateIndustryDomain", payload: input });
+    return { id: input.recordId, businessId: input.businessId, ...input.patch, offline: true } as RawEntity;
+  }
+}
+
+export async function checkInReservation(reservationId: string) {
+  return apiRequest<RawEntity>(`/industry/reservations/${encodeURIComponent(reservationId)}/check-in`, { method: "POST" });
+}
+
+export async function checkOutStay(stayId: string) {
+  return apiRequest<RawEntity>(`/industry/stays/${encodeURIComponent(stayId)}/check-out`, { method: "POST" });
+}
+
 function normalizeBusinessOperation(raw: RawEntity): BusinessOperation {
   return {
-    id: String(raw.id ?? raw._id),
+    id: String(raw.externalId ?? raw.id ?? raw._id),
     externalId: raw.externalId ?? null,
     businessId: String(raw.businessId),
     branchId: raw.branchId ?? null,
@@ -1255,6 +1355,10 @@ function normalizeBusinessOperation(raw: RawEntity): BusinessOperation {
     durationMinutes: raw.durationMinutes == null ? null : Number(raw.durationMinutes),
     tableName: raw.tableName ?? null,
     vehiclePlate: raw.vehiclePlate ?? null,
+    vehicleMake: raw.vehicleMake ?? null,
+    vehicleModel: raw.vehicleModel ?? null,
+    vehicleYear: raw.vehicleYear == null ? null : Number(raw.vehicleYear),
+    vehicleMileage: raw.vehicleMileage == null ? null : Number(raw.vehicleMileage),
     notes: raw.notes ?? null,
     items: Array.isArray(raw.items) ? raw.items : [],
     total: Number(raw.total ?? 0),

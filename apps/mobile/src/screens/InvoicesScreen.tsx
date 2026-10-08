@@ -7,7 +7,7 @@ import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useNavigation } from "@react-navigation/native";
-import type { Customer, Invoice, Payment, Product } from "@shared";
+import { resolveBusinessTypeConfig, type Customer, type Invoice, type Payment, type Product } from "@shared";
 import { tokens } from "@/theme/tokens";
 import {
   AppScrollView,
@@ -231,6 +231,11 @@ export function InvoicesScreen() {
   const products = useAppStore((state) => state.products);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
+  const businessConfig = React.useMemo(
+    () => resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey }),
+    [business?.businessType, business?.industryKey]
+  );
+  const catalogItemLabel = businessConfig.terminology.catalogItem;
 
   const [dashboard, setDashboard] = React.useState<Awaited<ReturnType<typeof getInvoiceDashboard>> | null>(null);
   const [items, setItems] = React.useState<Invoice[]>([]);
@@ -257,10 +262,14 @@ export function InvoicesScreen() {
   const customerOptions = React.useMemo(() => [{ label: "All customers", value: "" }, ...customers.map((customer) => ({ label: customer.name, value: customer.id }))], [customers]);
   const productOptions = React.useMemo(
     () => [
-      { label: "Custom item", value: "__custom__" },
-      ...products.map((product) => ({ label: `${product.name} • ${product.sku ?? "No SKU"}`, value: product.id, description: `Stock ${product.stockOnHand}` }))
+      { label: `Custom ${catalogItemLabel.toLowerCase()}`, value: "__custom__" },
+      ...products.map((product) => ({
+        label: `${product.name}${businessConfig.capabilities.barcode || product.sku ? ` • ${product.sku ?? "No SKU"}` : ""}`,
+        value: product.id,
+        description: businessConfig.capabilities.inventory ? `Stock ${product.stockOnHand}` : `${catalogItemLabel} available for billing`
+      }))
     ],
-    [products]
+    [businessConfig, catalogItemLabel, products]
   );
   const selectedCustomer = React.useMemo(() => customers.find((customer) => customer.id === customerFilter) ?? null, [customers, customerFilter]);
 
@@ -806,7 +815,7 @@ export function InvoicesScreen() {
                       </Pressable>
                     </View>
                     <Dropdown
-                      label="Product or custom item"
+                      label={`${catalogItemLabel} or custom item`}
                       value={line.productId || "__custom__"}
                       options={productOptions}
                       onChange={(value) =>

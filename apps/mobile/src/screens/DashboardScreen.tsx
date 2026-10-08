@@ -8,7 +8,8 @@ import {
   resolveBusinessTypeConfig,
   resolveIndustryModule,
   type DailySummary,
-  type EnterpriseAnalytics
+  type EnterpriseAnalytics,
+  type DashboardWidget
 } from "@shared";
 import {
   AppScrollView,
@@ -30,7 +31,7 @@ import { lightTokens, tokens, type ThemeTokens } from "@/theme/tokens";
 import { useThemeMode, useThemeTokens } from "@/theme";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
-import { getEnterpriseAnalytics, getPaymentBreakdown, getReportsSummary, getTopProducts, listEmployees, listNotificationsPage } from "@/services/apiClient";
+import { getEnterpriseAnalytics, getIndustryDomainSummary, getPaymentBreakdown, getReportsSummary, getTopProducts, listBusinessOperationsOfflineFirst, listEmployees, listNotificationsPage } from "@/services/apiClient";
 import { useMoreDrawer } from "@/navigation/moreDrawerContext";
 
 type ReportRow = { productId: string; productName: string; quantity: number; total: number };
@@ -57,17 +58,38 @@ export function DashboardScreen() {
   const styles = dashboardStyles;
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
+  const themeMode = useAppStore((state) => state.themeMode);
+  const setThemeMode = useAppStore((state) => state.setThemeMode);
   const branches = useAppStore((state) => state.branches);
   const pendingSync = useAppStore((state) => state.pendingSync);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const products = useAppStore((state) => state.products);
   const customers = useAppStore((state) => state.customers);
+  const suppliers = useAppStore((state) => state.suppliers);
   const sales = useAppStore((state) => state.sales);
   const setSelectedBranchId = useAppStore((state) => state.setSelectedBranchId);
   const syncNow = useAppStore((state) => state.syncNow);
   const canViewDashboard = hasPermission(user, "viewDashboard");
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
   const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const isRetail = business?.businessType === "retail_shop";
+  const dashboardWidgets: readonly DashboardWidget[] = business?.businessType === "pharmacy"
+    ? [
+        { key: "pharmacy-sales", label: "Medicine Sales", metric: "salesTotal", tone: "primary", icon: "medkit-outline", description: "Dispensing revenue in the selected period." },
+        { key: "pharmacy-stock", label: "Low Stock", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Medicines below threshold." },
+        { key: "pharmacy-expiry", label: "Expiring Medicines", metric: "expiringCount", tone: "danger", icon: "time-outline", description: "Medicines expiring within 90 days." },
+        { key: "pharmacy-suppliers", label: "Suppliers", metric: "suppliersCount", tone: "success", icon: "business-outline", description: "Medicine suppliers on file." },
+        { key: "pharmacy-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Collections in the selected period." }
+      ]
+    : business?.businessType === "auto_parts"
+      ? [
+          { key: "parts-sales", label: "Parts Sales", metric: "salesTotal", tone: "primary", icon: "settings-outline", description: "Parts revenue in the selected period." },
+          { key: "parts-stock", label: "Stock Value", metric: "inventoryValue", tone: "success", icon: "cube-outline", description: "Parts stock value on hand." },
+          { key: "parts-low-stock", label: "Low Stock", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Parts below reorder threshold." },
+          { key: "parts-suppliers", label: "Suppliers", metric: "suppliersCount", tone: "primary", icon: "business-outline", description: "Parts suppliers on file." },
+          { key: "parts-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Collections in the selected period." }
+        ]
+      : industry.dashboard.widgets;
 
   const [activeFilter, setActiveFilter] = React.useState<Filter>("month");
   const [customRange, setCustomRange] = React.useState<RangeState | null>(null);
@@ -76,6 +98,8 @@ export function DashboardScreen() {
   const [paymentBreakdown, setPaymentBreakdown] = React.useState<PaymentRow[]>([]);
   const [analytics, setAnalytics] = React.useState<EnterpriseAnalytics | null>(null);
   const [employeesCount, setEmployeesCount] = React.useState<number | null>(null);
+  const [operations, setOperations] = React.useState<Array<{ status: string; tableName?: string | null; scheduledAt?: string | null }>>([]);
+  const [domainSummary, setDomainSummary] = React.useState<Awaited<ReturnType<typeof getIndustryDomainSummary>> | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -127,12 +151,18 @@ export function DashboardScreen() {
     else setLoading(true);
 
     try {
-      const [summaryResponse, topProductsResponse, paymentResponse, employeesResponse, analyticsResponse] = await Promise.all([
+      const [summaryResponse, topProductsResponse, paymentResponse, employeesResponse, analyticsResponse, operationsResponse, domainSummaryResponse] = await Promise.all([
         getReportsSummary(from, to, selectedBranchId),
         getTopProducts(from, to, selectedBranchId),
         getPaymentBreakdown(from, to, selectedBranchId),
         listEmployees(selectedBranchId).catch(() => null),
-        getEnterpriseAnalytics(trendRange.from, trendRange.to, selectedBranchId).catch(() => null)
+        getEnterpriseAnalytics(trendRange.from, trendRange.to, selectedBranchId).catch(() => null),
+        businessConfig.capabilities.orders || businessConfig.capabilities.workOrders || businessConfig.capabilities.appointments
+          ? listBusinessOperationsOfflineFirst({ businessId: business?.id ?? "", kind: businessConfig.capabilities.orders ? "order" : businessConfig.capabilities.projects ? "project" : businessConfig.capabilities.workOrders ? "work_order" : "appointment", branchId: selectedBranchId }).catch(() => [])
+          : Promise.resolve([]),
+        ["hospitality", "care", "project"].includes(businessConfig.operatingModel)
+          ? getIndustryDomainSummary(selectedBranchId).catch(() => null)
+          : Promise.resolve(null)
       ]);
       if (requestId !== requestIdRef.current) return;
       setSummary(summaryResponse);
@@ -140,6 +170,8 @@ export function DashboardScreen() {
       setPaymentBreakdown(paymentResponse);
       setEmployeesCount(employeesResponse ? employeesResponse.length : null);
       setAnalytics(analyticsResponse);
+      setOperations(operationsResponse);
+      setDomainSummary(domainSummaryResponse);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : "Unable to load dashboard");
@@ -178,6 +210,7 @@ export function DashboardScreen() {
   const salesCount = analytics?.summary.salesCount ?? sales.length;
   const productCount = analytics?.summary.productCount ?? products.length;
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
+  const expiringCount = products.filter((product) => product.expiryDate && new Date(product.expiryDate).getTime() <= Date.now() + 90 * 24 * 60 * 60 * 1000).length;
   const overdueCustomers = customers.filter((customer) => (customer.balance ?? 0) > 0).length;
   const trendSeries = analytics?.revenueTrend ?? [];
   const trendLabels = trendSeries.map((point) => point.period);
@@ -185,6 +218,10 @@ export function DashboardScreen() {
   const growthPercent = analytics?.summary.monthlyGrowthPercent ?? 0;
   const forecastRevenue = analytics?.summary.forecastRevenue ?? 0;
   const averageOrderValue = analytics?.summary.averageOrderValue ?? 0;
+  const activeOrders = operations.filter((operation) => !["completed", "cancelled"].includes(operation.status));
+  const completedOperationCount = operations.filter((operation) => operation.status === "completed").length;
+  const kitchenQueueCount = operations.filter((operation) => ["open", "preparing", "ready"].includes(operation.status)).length;
+  const occupiedTablesCount = new Set(activeOrders.map((operation) => operation.tableName).filter(Boolean)).size;
   const activeBranchLabel = resolveBranchLabel(branches, selectedBranchId, user?.role);
   const firstName = getFirstName(user?.fullName);
   const isMobile = width < 700;
@@ -197,7 +234,7 @@ export function DashboardScreen() {
       customerCount > 0 ||
       lowStockCount > 0 ||
       trendValues.length > 0 ||
-      topProducts.length > 0);
+      topProducts.length > 0 || activeOrders.length > 0 || Boolean(domainSummary && (domainSummary.rooms || domainSummary.patients || domainSummary.matters || domainSummary.tasks)));
 
   if (!canViewDashboard) {
     return (
@@ -221,12 +258,12 @@ export function DashboardScreen() {
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.scrollContent}>
         <View style={styles.homeHeader}>
           <Pressable
-            onPress={openMore}
+            onPress={() => (navigation.getParent?.() ?? navigation).navigate("Profile")}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
             accessibilityRole="button"
-            accessibilityLabel="Open more menu"
+            accessibilityLabel="Open profile"
           >
-            <Ionicons name="menu-outline" size={24} color={tokens.colors.text} />
+            <Ionicons name="person-circle-outline" size={25} color={tokens.colors.text} />
           </Pressable>
 
           <View style={styles.homeGreeting}>
@@ -235,6 +272,16 @@ export function DashboardScreen() {
               {business?.name ?? activeBranchLabel} · <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success }}>{pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
             </Text>
           </View>
+
+          <Pressable
+            onPress={() => void setThemeMode(themeMode === "dark" ? "light" : "dark")}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: themeMode === "dark" }}
+            accessibilityLabel={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <Ionicons name={themeMode === "dark" ? "moon-outline" : "sunny-outline"} size={20} color={tokens.colors.text} />
+          </Pressable>
 
           <Pressable
             onPress={() => (navigation.getParent?.() ?? navigation).navigate("Notifications")}
@@ -253,11 +300,11 @@ export function DashboardScreen() {
 
         <View style={styles.primarySales}>
           <View style={{ flex: 1, gap: 5 }}>
-            <Text style={styles.primarySalesLabel}>{activeFilter === "today" ? "TODAY'S SALES" : "PERIOD SALES"}</Text>
+            <Text style={styles.primarySalesLabel}>{activeFilter === "today" ? `TODAY'S ${businessConfig.workspace.activityLabel.toUpperCase()}` : `${businessConfig.workspace.activityLabel.toUpperCase()} THIS PERIOD`}</Text>
             <Text style={styles.primarySalesValue}>{formatMoney(summary?.salesTotal ?? revenueTotal, business?.currency)}</Text>
-            <Text style={styles.primarySalesMeta}>{formatPercent(growthPercent)} vs previous period · {salesCount} sale{salesCount === 1 ? "" : "s"}</Text>
+            <Text style={styles.primarySalesMeta}>{formatPercent(growthPercent)} vs previous period · {salesCount} {businessConfig.workspace.primaryEntity.toLowerCase()}{salesCount === 1 ? "" : "s"}</Text>
           </View>
-          <PrimaryButton title="Record sale" iconLeft="add" onPress={() => navigation.navigate("POS")} style={styles.recordSaleButton} />
+          <PrimaryButton title={businessConfig.workspace.primaryAction} iconLeft="add" onPress={() => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS")} style={styles.recordSaleButton} />
         </View>
 
         {isMobile ? (
@@ -315,11 +362,11 @@ export function DashboardScreen() {
         ) : (
           <>
             <View style={styles.metricGrid}>
-              {industry.dashboard.widgets.map((widget) => (
+              {dashboardWidgets.map((widget) => (
                 <View key={widget.key} style={metricWrapStyle}>
                   <MetricCard
                     label={widget.label}
-                    value={dashboardMetricValue(widget.metric, { revenueTotal, paymentTotal, customerCount, lowStockCount, salesCount, productCount, inventoryValue, business, analytics, employeesCount })}
+                    value={dashboardMetricValue(widget.metric, { revenueTotal, paymentTotal, customerCount, lowStockCount, salesCount, productCount, inventoryValue, business, analytics, employeesCount, summary, domainSummary, kitchenQueueCount, occupiedTablesCount, activeOrderCount: activeOrders.length, completedOperationCount, suppliersCount: suppliers.length, expiringCount })}
                     hint={widget.description ?? `${businessConfig.label} activity`}
                     icon={(widget.icon ?? "analytics-outline") as any}
                     tone={widget.tone ?? "primary"}
@@ -328,10 +375,28 @@ export function DashboardScreen() {
               ))}
             </View>
 
+            <IndustryDashboardPanel
+              config={businessConfig}
+              business={business}
+              revenueTotal={revenueTotal}
+              customerCount={customerCount}
+              lowStockCount={lowStockCount}
+              activeOperationCount={activeOrders.length}
+              completedOperationCount={completedOperationCount}
+              kitchenQueueCount={kitchenQueueCount}
+              occupiedTablesCount={occupiedTablesCount}
+              employeesCount={employeesCount ?? analytics?.summary.staffCount ?? 0}
+              outstandingBalance={summary?.debtTotal ?? 0}
+              upcomingOperationCount={operations.filter((operation) => operation.scheduledAt && new Date(operation.scheduledAt).getTime() >= Date.now()).length}
+              topProducts={topProducts}
+              onOperations={() => navigation.navigate("Operations")}
+              onCatalog={() => navigation.navigate("Catalog")}
+            />
+
             <Card style={[styles.chartCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>Revenue Overview</Text>
+                  <Text style={styles.sectionTitle}>{businessConfig.operatingModel === "commerce" ? "Revenue Overview" : `${businessConfig.workspace.activityLabel} Overview`}</Text>
                   <View style={styles.sectionMetaRow}>
                     <Text style={styles.sectionSubtitle}>6-month trend</Text>
                     <InfoIcon message="Revenue trend across the last six completed monthly periods." />
@@ -374,26 +439,59 @@ export function DashboardScreen() {
               </View>
               <View style={styles.actionGrid}>
                 {availableQuickActions({
-                  onNewSale: () => navigation.navigate("POS"),
+                  primaryAction: businessConfig.workspace.primaryAction,
+                  customerLabel: businessConfig.terminology.customers,
+                  primaryIcon: businessConfig.operatingModel === "commerce" ? "scan-outline" : businessConfig.capabilities.appointments ? "calendar-outline" : businessConfig.capabilities.workOrders ? "construct-outline" : "briefcase-outline",
+                  onNewSale: () => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS"),
                   onAddCustomer: () => navigation.navigate("Customers"),
                   onInventory: () => navigation.navigate("Catalog"),
                   onFinance: () => navigation.navigate("Finance"),
+                  onPurchasing: () => (navigation.getParent?.() ?? navigation).navigate("PurchaseOrders"),
+                  onSuppliers: () => (navigation.getParent?.() ?? navigation).navigate("Suppliers"),
+                  onBranchTransfer: () => (navigation.getParent?.() ?? navigation).navigate("StockTransfers"),
                   onMore: openMore,
+                  isRetail,
                   canCreateSales: hasPermission(user, "createSales"),
                   canManageCustomers: hasPermission(user, "manageCustomers"),
                   canManageInventory: hasPermission(user, "manageInventory"),
-                  canManageExpenses: hasPermission(user, "manageExpenses")
+                  canManageExpenses: hasPermission(user, "manageExpenses"),
+                  canManagePurchasing: isRetail && hasPermission(user, "manageInventory"),
+                  canManageSuppliers: isRetail && hasPermission(user, "manageSuppliers"),
+                  canManageTransfers: isRetail && hasPermission(user, "manageInventory")
                 }).map((action) => (
                   <QuickAction key={action.label} {...action} />
                 ))}
               </View>
             </Card>
 
-            <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+            {isRetail && branches.length > 1 ? (
+              <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
+                <View style={styles.sectionHeadingRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sectionTitle}>Branch Performance</Text>
+                    <Text style={styles.sectionSubtitle}>Revenue by branch in the selected period</Text>
+                  </View>
+                  <Badge label={`${branches.length} branches`} tone="primary" />
+                </View>
+                <View style={{ gap: 12 }}>
+                  {[...branches].sort((a, b) => (b.salesTotal ?? 0) - (a.salesTotal ?? 0)).slice(0, 4).map((branch) => (
+                    <View key={branch.id} style={styles.statusRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.statusLabel}>{branch.name}</Text>
+                        <Text style={styles.sectionSubtitle}>{branch.salesCount ?? 0} transactions</Text>
+                      </View>
+                      <Text style={styles.statusValue}>{formatMoney(branch.salesTotal ?? 0, business?.currency)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            ) : null}
+
+            {businessConfig.capabilities.products ? <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>Top Products</Text>
-                  <Text style={styles.sectionSubtitle}>Best sellers</Text>
+                  <Text style={styles.sectionTitle}>{businessConfig.workspace.catalogMode === "products" ? "Top Products" : `Top ${businessConfig.navigation.catalogLabel}`}</Text>
+                  <Text style={styles.sectionSubtitle}>{businessConfig.operatingModel === "commerce" ? "Best sellers" : "Most used or booked"}</Text>
                 </View>
                 <Badge label={`${topProducts.length} items`} tone="primary" />
               </View>
@@ -405,16 +503,28 @@ export function DashboardScreen() {
                         <Text style={styles.productName} numberOfLines={1}>
                           {row.productName}
                         </Text>
-                        <Text style={styles.productMeta}>{row.quantity} sold</Text>
+                        <Text style={styles.productMeta}>{row.quantity} {businessConfig.operatingModel === "commerce" ? "sold" : "used or booked"}</Text>
                       </View>
                       <Text style={styles.productValue}>{formatMoney(row.total, business?.currency)}</Text>
                     </View>
                   ))}
                 </View>
               ) : (
-                <Text style={styles.emptyCopy}>No product movement yet. Sales activity will populate this list automatically.</Text>
+                <Text style={styles.emptyCopy}>No {businessConfig.navigation.catalogLabel.toLowerCase()} activity yet. {businessConfig.workspace.activityLabel} will populate this list automatically.</Text>
               )}
-            </Card>
+            </Card> : (
+              <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+                <View style={styles.sectionHeadingRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sectionTitle}>{businessConfig.workspace.activityLabel} Pipeline</Text>
+                    <Text style={styles.sectionSubtitle}>{businessConfig.workflow.headline}</Text>
+                  </View>
+                  <Badge label={businessConfig.operatingModel} tone="primary" />
+                </View>
+                <Text style={styles.emptyCopy}>{businessConfig.workflow.steps.join("  →  ")}</Text>
+                <PrimaryButton title={`Open ${businessConfig.workspace.activityLabel.toLowerCase()}`} variant="secondary" onPress={() => navigation.navigate("Operations")} />
+              </Card>
+            )}
 
             <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
@@ -642,6 +752,137 @@ function QuickAction({
       </View>
       <Text style={styles.actionLabel}>{label}</Text>
     </Pressable>
+  );
+}
+
+function IndustryDashboardPanel({
+  config,
+  business,
+  revenueTotal,
+  customerCount,
+  lowStockCount,
+  activeOperationCount,
+  completedOperationCount,
+  kitchenQueueCount,
+  occupiedTablesCount,
+  employeesCount,
+  outstandingBalance,
+  upcomingOperationCount,
+  topProducts,
+  onOperations,
+  onCatalog
+}: {
+  config: ReturnType<typeof resolveBusinessTypeConfig>;
+  business: { currency?: string | null } | null;
+  revenueTotal: number;
+  customerCount: number;
+  lowStockCount: number;
+  activeOperationCount: number;
+  completedOperationCount: number;
+  kitchenQueueCount: number;
+  occupiedTablesCount: number;
+  employeesCount: number;
+  outstandingBalance: number;
+  upcomingOperationCount: number;
+  topProducts: ReportRow[];
+  onOperations: () => void;
+  onCatalog: () => void;
+}) {
+  const styles = useDashboardStyles();
+  const isLightTheme = useThemeMode() === "light";
+  const currency = business?.currency ?? undefined;
+  const model = config.operatingModel;
+  const isFood = model === "service" && config.capabilities.kitchen;
+  const isBeauty = model === "appointment";
+  const isCare = model === "care";
+  const isPharmacy = config.businessType === "pharmacy";
+  const isHospitality = model === "hospitality";
+  const isAutomotive = model === "work_order";
+  const isProfessional = model === "project";
+  const title = isFood ? "Service floor" : isBeauty ? "Appointments and staff" : isHospitality ? "Stay operations" : isAutomotive ? "Workshop control" : isProfessional ? "Billable work" : isCare ? (isPharmacy ? "Dispensary control" : "Patient care") : `${config.workspace.activityLabel} summary`;
+  const subtitle = isFood ? "Orders, kitchen, tables, and ingredient pressure" : isBeauty ? "Upcoming visits, completed services, and capacity" : isHospitality ? "Reservations, guest stays, and folio balances" : isAutomotive ? "Job cards, vehicles, technicians, and invoices" : isProfessional ? "Matters, projects, deadlines, and collections" : isCare ? (isPharmacy ? "Medicine sales, stock, expiry, and suppliers" : "Appointments, visits, providers, and billing") : "Operational activity and follow-up";
+  const items: Array<[string, string]> = isFood
+    ? [
+        ["Open orders", activeOperationCount.toString()],
+        ["Kitchen queue", kitchenQueueCount.toString()],
+        ["Occupied tables", occupiedTablesCount.toString()],
+        ["Ingredient alerts", lowStockCount.toString()]
+      ]
+    : isBeauty
+      ? [
+          ["Upcoming appointments", upcomingOperationCount.toString()],
+          ["Services completed", completedOperationCount.toString()],
+          ["Staff workload", employeesCount.toString()],
+          ["Clients served", customerCount.toString()]
+        ]
+      : isHospitality
+        ? [
+            ["Active stays", activeOperationCount.toString()],
+            ["Upcoming arrivals", upcomingOperationCount.toString()],
+            ["Guest balances", formatMoney(outstandingBalance, currency)],
+            ["Available rooms", "—"]
+          ]
+        : isAutomotive
+          ? [
+              ["Active job cards", activeOperationCount.toString()],
+              ["Vehicles in service", activeOperationCount.toString()],
+              ["Completed jobs", completedOperationCount.toString()],
+              ["Technicians", employeesCount.toString()]
+            ]
+          : isProfessional
+            ? [
+                ["Active matters/projects", activeOperationCount.toString()],
+                ["Billable work", activeOperationCount.toString()],
+                ["Clients", customerCount.toString()],
+                ["Upcoming deadlines", upcomingOperationCount.toString()]
+              ]
+            : isCare
+              ? [
+                  [isPharmacy ? "Medicine sales" : "Patients", isPharmacy ? formatMoney(revenueTotal, currency) : customerCount.toString()],
+                  [isPharmacy ? "Low stock" : "Appointments", isPharmacy ? lowStockCount.toString() : activeOperationCount.toString()],
+                  [isPharmacy ? "Suppliers" : "Visits", isPharmacy ? "—" : completedOperationCount.toString()],
+                  [isPharmacy ? "Expiring medicines" : "Outstanding billing", isPharmacy ? "—" : formatMoney(outstandingBalance, currency)]
+                ]
+              : [
+                [config.workspace.activityLabel, activeOperationCount.toString()],
+                ["Completed", completedOperationCount.toString()],
+                ["Clients", customerCount.toString()],
+                ["Outstanding", formatMoney(outstandingBalance, currency)]
+              ];
+  const alert = isFood && lowStockCount > 0
+    ? `${lowStockCount} ingredients need attention.`
+    : isHospitality && outstandingBalance > 0
+      ? `${formatMoney(outstandingBalance, currency)} in guest balances is outstanding.`
+      : (isAutomotive || isProfessional) && outstandingBalance > 0
+        ? `${formatMoney(outstandingBalance, currency)} remains to be billed or collected.`
+        : upcomingOperationCount > 0
+          ? `${upcomingOperationCount} upcoming ${config.workspace.activityLabel.toLowerCase()} scheduled.`
+          : "No operational alerts right now.";
+
+  return (
+    <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+      <View style={styles.sectionHeadingRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+        <Badge label={formatMoney(revenueTotal, currency)} tone="primary" />
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        {items.map(([label, value]) => <InfoPill key={label} label={label} value={value} tone="primary" />)}
+      </View>
+      <View style={{ padding: 10, borderRadius: 12, backgroundColor: `${tokens.colors.warning}12` }}>
+        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>{alert}</Text>
+      </View>
+      {topProducts.length ? <View style={{ gap: 7 }}>
+        <Text style={styles.sectionSubtitle}>{config.workspace.catalogMode === "menu" ? "Popular menu items" : config.workspace.catalogMode === "services" ? "Popular services" : config.operatingModel === "work_order" ? "Top parts" : "Recent activity"}</Text>
+        {topProducts.slice(0, 3).map((item) => <View key={item.productId} style={styles.statusRow}><Text style={styles.statusLabel}>{item.productName}</Text><Text style={styles.statusValue}>{item.quantity}</Text></View>)}
+      </View> : null}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <PrimaryButton title={config.workspace.primaryAction} onPress={onOperations} />
+        <PrimaryButton title={config.navigation.catalogLabel} variant="secondary" onPress={onCatalog} />
+      </View>
+    </Card>
   );
 }
 
@@ -920,25 +1161,44 @@ function resolveBranchLabel(
 }
 
 function availableQuickActions(input: {
+  primaryAction: string;
+  customerLabel: string;
+  primaryIcon: keyof typeof Ionicons.glyphMap;
   canCreateSales: boolean;
   canManageCustomers: boolean;
   canManageInventory: boolean;
   canManageExpenses: boolean;
+  isRetail: boolean;
+  canManagePurchasing: boolean;
+  canManageSuppliers: boolean;
+  canManageTransfers: boolean;
   onNewSale: () => void;
   onAddCustomer: () => void;
   onInventory: () => void;
   onFinance: () => void;
+  onPurchasing: () => void;
+  onSuppliers: () => void;
+  onBranchTransfer: () => void;
   onMore: () => void;
 }) {
   return [
     input.canCreateSales
-      ? { label: "New Sale", icon: "scan-outline" as const, tone: "primary" as const, onPress: input.onNewSale }
+      ? { label: input.primaryAction, icon: input.primaryIcon, tone: "primary" as const, onPress: input.onNewSale }
       : null,
     input.canManageCustomers
-      ? { label: "Add Customer", icon: "person-add-outline" as const, tone: "success" as const, onPress: input.onAddCustomer }
+      ? { label: `Add ${input.customerLabel.slice(0, -1) || input.customerLabel}`, icon: "person-add-outline" as const, tone: "success" as const, onPress: input.onAddCustomer }
       : null,
     input.canManageInventory
-      ? { label: "Inventory", icon: "cube-outline" as const, tone: "warning" as const, onPress: input.onInventory }
+      ? { label: input.isRetail ? "Stock adjustment" : "Inventory", icon: input.isRetail ? "create-outline" as const : "cube-outline" as const, tone: "warning" as const, onPress: input.onInventory }
+      : null,
+    input.canManagePurchasing
+      ? { label: "Purchase stock", icon: "download-outline" as const, tone: "primary" as const, onPress: input.onPurchasing }
+      : null,
+    input.canManageSuppliers
+      ? { label: "Suppliers", icon: "business-outline" as const, tone: "success" as const, onPress: input.onSuppliers }
+      : null,
+    input.canManageTransfers
+      ? { label: "Branch transfer", icon: "swap-horizontal-outline" as const, tone: "primary" as const, onPress: input.onBranchTransfer }
       : null,
     input.canManageExpenses
       ? { label: "Finance", icon: "wallet-outline" as const, tone: "danger" as const, onPress: input.onFinance }
@@ -972,22 +1232,66 @@ function dashboardMetricValue(
     business: { currency?: string | null } | null;
     analytics: EnterpriseAnalytics | null;
     employeesCount: number | null;
+    summary: DailySummary | null;
+    domainSummary: Awaited<ReturnType<typeof getIndustryDomainSummary>> | null;
+    kitchenQueueCount: number;
+    occupiedTablesCount: number;
+    activeOrderCount: number;
+    suppliersCount: number;
+    expiringCount: number;
+    completedOperationCount: number;
   }
 ) {
   switch (metric) {
     case "salesTotal":
     case "revenueTotal":
       return formatMoney(input.revenueTotal, input.business?.currency ?? undefined);
+    case "transactionsCount":
+      return String(input.summary?.transactionsCount ?? input.salesCount);
+    case "grossProfit":
+      return formatMoney(input.summary?.grossProfit ?? 0, input.business?.currency ?? undefined);
     case "inventoryValue":
       return formatMoney(input.inventoryValue, input.business?.currency ?? undefined);
     case "customersCount":
     case "clientsCount":
     case "patientsCount":
-      return String(input.customerCount);
+      return String(input.domainSummary?.patients ?? input.customerCount);
     case "lowStockCount":
       return String(input.lowStockCount);
     case "ordersCount":
-      return String(input.salesCount);
+      return String(input.activeOrderCount || input.salesCount);
+    case "kitchenQueueCount":
+      return String(input.kitchenQueueCount);
+    case "tablesCount":
+      return String(input.occupiedTablesCount);
+    case "occupancyCount":
+      return String(input.domainSummary?.roomStatuses?.occupied ?? input.activeOrderCount);
+    case "appointmentsCount":
+    case "foliosCount":
+    case "jobsCount":
+      return String(input.activeOrderCount);
+    case "repairsCount":
+      return String(input.activeOrderCount);
+    case "partsCount":
+      return String(input.productCount);
+    case "projectsCount":
+      return String(input.domainSummary?.activeMatters ?? input.activeOrderCount);
+    case "tasksCount":
+      return String(input.domainSummary?.pendingTasks ?? input.activeOrderCount);
+    case "billableWorkCount":
+      return `${Math.round((input.domainSummary?.billableMinutes ?? 0) / 60)}h`;
+    case "deadlinesCount":
+      return String(input.domainSummary?.overdueTasks ?? input.activeOrderCount);
+    case "roomsCount":
+      return String(input.domainSummary?.rooms ?? 0);
+    case "suppliersCount":
+      return String(input.suppliersCount);
+    case "expiringCount":
+      return String(input.expiringCount);
+    case "completedJobsCount":
+      return String(input.completedOperationCount);
+    case "receivablesCount":
+      return formatMoney(input.summary?.debtTotal ?? 0, input.business?.currency ?? undefined);
     case "staffCount":
     case "stylistsCount":
     case "mechanicsCount":

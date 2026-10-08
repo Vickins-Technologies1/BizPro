@@ -8,7 +8,7 @@ export type IndustryBusinessTypeOption = {
     label: string;
     description: string;
 };
-export type BusinessCapability = "catalog" | "inventory" | "barcode" | "purchasing" | "customers" | "appointments" | "orders" | "tables" | "kitchen" | "workOrders" | "pharmacy" | "projects" | "payments";
+export type BusinessCapability = "catalog" | "products" | "inventory" | "pos" | "barcode" | "purchasing" | "menu" | "recipes" | "ingredients" | "customers" | "patients" | "guests" | "appointments" | "services" | "orders" | "tables" | "kitchen" | "rooms" | "reservations" | "housekeeping" | "vehicles" | "workOrders" | "jobCards" | "technicians" | "pharmacy" | "projects" | "matters" | "tasks" | "timeTracking" | "invoices" | "expenses" | "staffScheduling" | "suppliers" | "payments";
 export type BusinessField = {
     key: string;
     label: string;
@@ -17,6 +17,12 @@ export type BusinessField = {
     help?: string;
 };
 export type WorkspaceRoute = "Dashboard" | "POS" | "Catalog" | "Customers" | "Employees" | "Reports" | "Finance" | "Insights" | "Settings" | "Operations" | "More";
+/** The operating model is deliberately separate from the industry name.
+ * An industry may sell items, deliver appointments, run jobs, host stays, or
+ * manage projects. Screens use this model to avoid falling back to retail POS
+ * language just because a business has a catalogue or accepts payments.
+ */
+export type OperatingModel = "commerce" | "service" | "appointment" | "work_order" | "hospitality" | "care" | "production" | "project";
 export type BusinessTypeConfig = {
     businessType: BusinessType;
     industryKey: IndustryKey;
@@ -42,11 +48,18 @@ export type BusinessTypeConfig = {
         primaryRoutes: readonly WorkspaceRoute[];
         sidebarRoutes: readonly WorkspaceRoute[];
     };
+    operatingModel: OperatingModel;
+    workspace: {
+        primaryAction: string;
+        primaryEntity: string;
+        activityLabel: string;
+        catalogMode: "products" | "services" | "menu" | "parts" | "resources" | "lots";
+    };
     reports: readonly string[];
     onboarding: readonly string[];
     roles: readonly string[];
 };
-export type DashboardMetricKey = "salesTotal" | "inventoryValue" | "customersCount" | "lowStockCount" | "ordersCount" | "kitchenQueueCount" | "tablesCount" | "appointmentsCount" | "stylistsCount" | "repairsCount" | "mechanicsCount" | "partsCount" | "revenueTotal" | "clientsCount" | "patientsCount" | "foliosCount" | "occupancyCount" | "projectsCount" | "retainersCount" | "receivablesCount" | "jobsCount" | "staffCount";
+export type DashboardMetricKey = "salesTotal" | "transactionsCount" | "grossProfit" | "inventoryValue" | "customersCount" | "lowStockCount" | "ordersCount" | "kitchenQueueCount" | "tablesCount" | "appointmentsCount" | "stylistsCount" | "repairsCount" | "mechanicsCount" | "partsCount" | "revenueTotal" | "clientsCount" | "patientsCount" | "foliosCount" | "roomsCount" | "suppliersCount" | "expiringCount" | "completedJobsCount" | "tasksCount" | "billableWorkCount" | "deadlinesCount" | "occupancyCount" | "projectsCount" | "retainersCount" | "receivablesCount" | "jobsCount" | "staffCount";
 export type DashboardWidget = {
     key: string;
     label: string;
@@ -102,6 +115,10 @@ export declare function getBusinessTypeCapabilities(input: {
     businessType?: string | null;
     industryKey?: string | null;
 }): Readonly<Record<BusinessCapability, boolean>>;
+export declare function hasBusinessCapability(input: {
+    businessType?: string | null;
+    industryKey?: string | null;
+} | BusinessTypeConfig, capability: BusinessCapability): boolean;
 export declare function isIndustryKey(value: string): value is IndustryKey;
 export declare function isBusinessType(value: string): value is BusinessType;
 export {};

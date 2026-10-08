@@ -8,6 +8,7 @@ exports.resolveIndustryKey = resolveIndustryKey;
 exports.resolveIndustryModule = resolveIndustryModule;
 exports.resolveBusinessTypeConfig = resolveBusinessTypeConfig;
 exports.getBusinessTypeCapabilities = getBusinessTypeCapabilities;
+exports.hasBusinessCapability = hasBusinessCapability;
 exports.isIndustryKey = isIndustryKey;
 exports.isBusinessType = isBusinessType;
 const constants_1 = require("./constants");
@@ -56,42 +57,152 @@ function resolveIndustryModule(input = {}) {
     return getIndustryModule(key) ?? getIndustryModule(input.fallback ?? "services") ?? listIndustryModules()[0];
 }
 const BUSINESS_TYPE_OVERRIDES = {
+    law_firm: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, services: true, projects: true, matters: true, tasks: true, timeTracking: true, appointments: false, invoices: true, payments: true, expenses: true, customers: true, suppliers: false },
+        terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Matter", staff: "Team" },
+        navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable legal services and fee arrangements", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"], sidebarRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        operatingModel: "project",
+        workspace: { primaryAction: "Open matter", primaryEntity: "Matter", activityLabel: "Matters", catalogMode: "services" },
+        workflow: { headline: "Client to collection", steps: ["Client", "Matter", "Tasks, time, and expenses", "Invoice", "Payment"] },
+        onboarding: ["Matter types", "Fee arrangements", "Team", "Invoice terms"],
+        roles: ["Owner", "Partner", "Manager", "Associate"]
+    },
+    accounting_firm: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, services: true, projects: true, matters: false, tasks: true, timeTracking: true, appointments: false, invoices: true, payments: true, expenses: true, customers: true, suppliers: false },
+        terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Engagement", staff: "Team" },
+        navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable accounting services and fee arrangements", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"] },
+        operatingModel: "project",
+        workspace: { primaryAction: "Start engagement", primaryEntity: "Engagement", activityLabel: "Engagements", catalogMode: "services" },
+        workflow: { headline: "Engagement to collection", steps: ["Client", "Engagement", "Services and tasks", "Billing", "Payment"] }
+    },
+    general_service: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, services: true, workOrders: true, tasks: true, appointments: true, invoices: true, payments: true, expenses: true, customers: true, suppliers: false },
+        terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Job", staff: "Staff" },
+        navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Services, pricing models, durations, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"], sidebarRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        operatingModel: "service",
+        workspace: { primaryAction: "New job", primaryEntity: "Job", activityLabel: "Jobs", catalogMode: "services" },
+        workflow: { headline: "Client to payment", steps: ["Client", "Job or service", "Assigned staff", "Work", "Completion", "Invoice", "Payment"] },
+        onboarding: ["Services", "Staff", "Job statuses", "Invoice terms"],
+        roles: ["Owner", "Manager", "Coordinator", "Staff"]
+    },
+    agency: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, services: true, projects: true, workOrders: true, tasks: true, appointments: true, invoices: true, payments: true, expenses: true, customers: true, suppliers: false },
+        terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Project", staff: "Team" },
+        navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Creative and professional services, pricing, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"] },
+        operatingModel: "project",
+        workspace: { primaryAction: "Start project", primaryEntity: "Project", activityLabel: "Projects", catalogMode: "services" }
+    },
+    auto_parts: {
+        capabilities: { catalog: true, products: true, inventory: true, pos: true, barcode: true, purchasing: true, suppliers: true, customers: true, workOrders: false, jobCards: false, vehicles: false, services: false, appointments: false },
+        terminology: { catalog: "Parts", catalogItem: "Part", customers: "Customers", transaction: "Sale", staff: "Team" },
+        navigation: { catalogLabel: "Parts", posLabel: "Sales", customersLabel: "Customers", catalogDescription: "Parts, fitment, stock, pricing, and suppliers" },
+        operatingModel: "commerce",
+        workspace: { primaryAction: "Record parts sale", primaryEntity: "Sale", activityLabel: "Parts sales", catalogMode: "parts" }
+    },
+    service_center: {
+        capabilities: { catalog: true, products: true, inventory: true, pos: true, workOrders: true, jobCards: true, vehicles: true, services: true, appointments: true, customers: true, purchasing: true, suppliers: true, barcode: false },
+        terminology: { catalog: "Parts & Services", catalogItem: "Part or service", customers: "Customers", transaction: "Job card", staff: "Technicians" },
+        navigation: { catalogLabel: "Parts & Services", posLabel: "Invoices", customersLabel: "Customers", catalogDescription: "Parts, labour, service packages, and workshop stock" },
+        operatingModel: "work_order",
+        workspace: { primaryAction: "Open job card", primaryEntity: "Job card", activityLabel: "Job cards", catalogMode: "parts" }
+    },
+    tyre_business: {
+        capabilities: { catalog: true, products: true, inventory: true, pos: true, workOrders: true, jobCards: true, vehicles: true, services: true, appointments: true, customers: true, purchasing: true, suppliers: true, barcode: true },
+        terminology: { catalog: "Tyres & Services", catalogItem: "Tyre or service", customers: "Customers", transaction: "Job card", staff: "Technicians" },
+        navigation: { catalogLabel: "Tyres & Services", posLabel: "Invoices", customersLabel: "Customers", catalogDescription: "Tyres, fitment services, stock, and compatibility" },
+        operatingModel: "work_order",
+        workspace: { primaryAction: "Open job card", primaryEntity: "Job card", activityLabel: "Job cards", catalogMode: "parts" }
+    },
+    body_shop: {
+        capabilities: { catalog: true, products: true, inventory: true, pos: true, workOrders: true, jobCards: true, vehicles: true, services: true, appointments: true, customers: true, purchasing: true, suppliers: true, barcode: false },
+        terminology: { catalog: "Parts & Labour", catalogItem: "Part or labour", customers: "Customers", transaction: "Job card", staff: "Technicians" },
+        navigation: { catalogLabel: "Parts & Labour", posLabel: "Invoices", customersLabel: "Customers", catalogDescription: "Repair parts, labour, estimates, and workshop stock" },
+        operatingModel: "work_order",
+        workspace: { primaryAction: "Open job card", primaryEntity: "Job card", activityLabel: "Job cards", catalogMode: "parts" }
+    },
+    clinic: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, patients: true, customers: true, services: true, appointments: true, reservations: true, invoices: true, payments: true, suppliers: false, pharmacy: false, barcode: false, purchasing: false },
+        terminology: { catalog: "Services", catalogItem: "Service", customers: "Patients", transaction: "Visit", staff: "Providers" },
+        navigation: { catalogLabel: "Services", posLabel: "Billing", customersLabel: "Patients", catalogDescription: "Clinical services, duration, pricing, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"], sidebarRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        operatingModel: "care",
+        workspace: { primaryAction: "New appointment", primaryEntity: "Appointment", activityLabel: "Appointments", catalogMode: "services" },
+        workflow: { headline: "Patient to payment", steps: ["Patient", "Appointment or walk-in", "Visit", "Consultation or treatment", "Billing", "Payment"] },
+        onboarding: ["Services", "Providers", "Appointment schedule", "Visit workflow"],
+        roles: ["Owner", "Manager", "Reception", "Provider"]
+    },
+    dental_clinic: {
+        capabilities: { catalog: true, products: true, inventory: false, pos: false, patients: true, customers: true, services: true, appointments: true, reservations: true, invoices: true, payments: true, suppliers: false, pharmacy: false, barcode: false, purchasing: false },
+        terminology: { catalog: "Treatments", catalogItem: "Treatment", customers: "Patients", transaction: "Visit", staff: "Providers" },
+        navigation: { catalogLabel: "Treatments", posLabel: "Billing", customersLabel: "Patients", catalogDescription: "Treatments, duration, pricing, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"] },
+        operatingModel: "care",
+        workspace: { primaryAction: "New appointment", primaryEntity: "Appointment", activityLabel: "Appointments", catalogMode: "services" },
+        workflow: { headline: "Patient to payment", steps: ["Patient", "Appointment", "Visit", "Treatment", "Billing", "Payment"] }
+    },
+    hotel: {
+        capabilities: { catalog: true, products: false, inventory: false, pos: false, rooms: true, guests: true, reservations: true, appointments: true, services: true, housekeeping: true, invoices: true, payments: true, expenses: true, customers: true },
+        terminology: { catalog: "Rooms", catalogItem: "Room", customers: "Guests", transaction: "Reservation", staff: "Staff" },
+        navigation: { catalogLabel: "Rooms", posLabel: "Folio charges", customersLabel: "Guests", catalogDescription: "Rooms, room types, rates, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"], sidebarRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        operatingModel: "hospitality",
+        workspace: { primaryAction: "New reservation", primaryEntity: "Reservation", activityLabel: "Reservations", catalogMode: "resources" },
+        workflow: { headline: "Reservation to check-out", steps: ["Guest", "Reservation", "Check-in", "Stay and charges", "Payment", "Check-out"] },
+        onboarding: ["Room types", "Rooms", "Rates", "Housekeeping statuses"],
+        roles: ["Owner", "Manager", "Front desk", "Housekeeping"]
+    },
+    lodge: {
+        capabilities: { catalog: true, products: false, inventory: false, pos: false, rooms: true, guests: true, reservations: true, appointments: true, services: true, housekeeping: true, invoices: true, payments: true, expenses: true, customers: true },
+        terminology: { catalog: "Rooms", catalogItem: "Room", customers: "Guests", transaction: "Reservation", staff: "Staff" },
+        navigation: { catalogLabel: "Rooms", posLabel: "Folio charges", customersLabel: "Guests", catalogDescription: "Rooms, cabins, rates, and availability", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "More"] },
+        operatingModel: "hospitality",
+        workspace: { primaryAction: "New reservation", primaryEntity: "Reservation", activityLabel: "Reservations", catalogMode: "resources" },
+        workflow: { headline: "Reservation to check-out", steps: ["Guest", "Reservation", "Check-in", "Stay and charges", "Payment", "Check-out"] }
+    },
+    retail_shop: {
+        capabilities: { catalog: true, products: true, inventory: true, pos: true, barcode: true, purchasing: true, customers: true, suppliers: true, invoices: true, expenses: true, payments: true },
+        navigation: { catalogLabel: "Products", posLabel: "Sales", customersLabel: "Customers", catalogDescription: "Products, prices, stock, and reorder levels", primaryRoutes: ["Dashboard", "POS", "Catalog", "Customers", "Finance", "Reports", "More"], sidebarRoutes: ["Dashboard", "POS", "Catalog", "Customers", "Employees", "Finance", "Reports", "Insights", "Settings", "More"] },
+        operatingModel: "commerce",
+        workspace: { primaryAction: "Record sale", primaryEntity: "Sale", activityLabel: "Transactions", catalogMode: "products" }
+    },
     restaurant: {
         terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
-        capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items, modifiers, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"], sidebarRoutes: ["Dashboard", "POS", "Operations", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        capabilities: { menu: true, recipes: true, ingredients: true, orders: true, tables: true, kitchen: true, suppliers: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+        navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items, modifiers, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "Customers", "Finance", "Reports", "More"], sidebarRoutes: ["Dashboard", "POS", "Operations", "Catalog", "Customers", "Employees", "Finance", "Reports", "Insights", "Settings", "More"] },
         workflow: { headline: "Table to payment", steps: ["Table or takeaway", "Create order", "Kitchen", "Serve", "Payment"] },
         onboarding: ["Dining areas", "Tables", "Initial menu", "Kitchen workflow"],
-        roles: ["Owner", "Manager", "Cashier", "Waiter", "Kitchen"]
+        roles: ["Owner", "Manager", "Cashier", "Waiter", "Kitchen"],
+        operatingModel: "service", workspace: { primaryAction: "Open order", primaryEntity: "Order", activityLabel: "Orders", catalogMode: "menu" }
     },
     cafe: {
         terminology: { catalog: "Menu", catalogItem: "Menu item", customers: "Guests", transaction: "Order", staff: "Team" },
-        capabilities: { orders: true, tables: true, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items and quick-service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
+        capabilities: { menu: true, recipes: true, ingredients: true, orders: true, tables: true, kitchen: true, suppliers: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+        navigation: { catalogLabel: "Menu", posLabel: "Orders", customersLabel: "Guests", catalogDescription: "Menu items and quick-service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] },
+        operatingModel: "service", workspace: { primaryAction: "Open order", primaryEntity: "Order", activityLabel: "Orders", catalogMode: "menu" }
     },
     bakery: {
         terminology: { catalog: "Bake list", catalogItem: "Baked good", customers: "Customers", transaction: "Order", staff: "Team" },
-        capabilities: { orders: true, tables: false, kitchen: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Bake list", posLabel: "Orders", customersLabel: "Customers", catalogDescription: "Baked goods, batches, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
+        capabilities: { menu: true, recipes: true, ingredients: true, orders: true, tables: false, kitchen: true, suppliers: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+        navigation: { catalogLabel: "Bake list", posLabel: "Orders", customersLabel: "Customers", catalogDescription: "Baked goods, batches, and availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] },
+        operatingModel: "production", workspace: { primaryAction: "Create production order", primaryEntity: "Order", activityLabel: "Production orders", catalogMode: "lots" }
     },
     bar: {
         terminology: { catalog: "Drinks", catalogItem: "Drink", customers: "Guests", transaction: "Tab", staff: "Team" },
-        capabilities: { orders: true, tables: true, kitchen: false, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Drinks", posLabel: "Tabs", customersLabel: "Guests", catalogDescription: "Drinks, tabs, and service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] }
+        capabilities: { menu: true, recipes: false, ingredients: true, orders: true, tables: true, kitchen: false, suppliers: true, barcode: false, appointments: false, workOrders: false, pharmacy: false, projects: false },
+        navigation: { catalogLabel: "Drinks", posLabel: "Tabs", customersLabel: "Guests", catalogDescription: "Drinks, tabs, and service availability", primaryRoutes: ["Dashboard", "POS", "Operations", "Catalog", "More"] },
+        operatingModel: "hospitality", workspace: { primaryAction: "Open tab", primaryEntity: "Tab", activityLabel: "Open tabs", catalogMode: "menu" }
     },
     salon: {
         terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Appointment", staff: "Staff" },
-        capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Services", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Services, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"], sidebarRoutes: ["Dashboard", "Operations", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
+        capabilities: { appointments: true, customers: true, catalog: true, products: true, services: true, pos: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false, suppliers: false },
+        navigation: { catalogLabel: "Services", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Services, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Reports", "More"], sidebarRoutes: ["Dashboard", "Operations", "POS", "Catalog", "Customers", "Employees", "Finance", "Reports", "Insights", "Settings", "More"] },
         workflow: { headline: "Client to completion", steps: ["Client", "Appointment", "Staff", "Service", "Payment"] },
         fields: [{ key: "duration", label: "Service duration", type: "duration", required: true }, { key: "assignedStaff", label: "Assigned staff", type: "text" }],
         onboarding: ["Services", "Staff", "Booking calendar", "Appointment duration"],
-        roles: ["Owner", "Manager", "Reception", "Stylist"]
+        roles: ["Owner", "Manager", "Reception", "Stylist"], operatingModel: "appointment", workspace: { primaryAction: "Book appointment", primaryEntity: "Appointment", activityLabel: "Appointments", catalogMode: "services" }
     },
     spa: {
         terminology: { catalog: "Treatments", catalogItem: "Treatment", customers: "Clients", transaction: "Booking", staff: "Therapists" },
-        capabilities: { appointments: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
-        navigation: { catalogLabel: "Treatments", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Treatments, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"] }
+        capabilities: { appointments: true, customers: true, catalog: true, products: true, services: true, pos: true, inventory: false, barcode: false, purchasing: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false, suppliers: false },
+        navigation: { catalogLabel: "Treatments", posLabel: "Checkout", customersLabel: "Clients", catalogDescription: "Treatments, durations, and pricing", primaryRoutes: ["Dashboard", "Operations", "Catalog", "Customers", "Employees", "Finance", "Reports", "More"] },
+        operatingModel: "appointment", workspace: { primaryAction: "Book treatment", primaryEntity: "Booking", activityLabel: "Bookings", catalogMode: "services" }
     },
     pharmacy: {
         terminology: { catalog: "Medicines", catalogItem: "Medicine", customers: "Patients", transaction: "Dispensing", staff: "Pharmacists" },
@@ -99,13 +210,14 @@ const BUSINESS_TYPE_OVERRIDES = {
         navigation: { catalogLabel: "Medicines", posLabel: "Dispense", customersLabel: "Patients", catalogDescription: "Medicines, batches, expiry, and stock", primaryRoutes: ["Dashboard", "POS", "Catalog", "Customers", "More"] },
         fields: [{ key: "batchNumber", label: "Batch number", type: "text", required: true }, { key: "expiryDate", label: "Expiry date", type: "text", required: true }],
         onboarding: ["Dispensing workflow", "Expiry tracking", "Suppliers", "Pharmacy staff"],
-        roles: ["Owner", "Manager", "Pharmacist", "Cashier"]
+        roles: ["Owner", "Manager", "Pharmacist", "Cashier"], operatingModel: "care", workspace: { primaryAction: "Start dispensing", primaryEntity: "Dispensing", activityLabel: "Dispensing", catalogMode: "products" }
     },
     hardware: {
         terminology: { catalog: "Stock", catalogItem: "Product", customers: "Customers", transaction: "Sale", staff: "Team" },
         capabilities: { inventory: true, barcode: true, purchasing: true, catalog: true, customers: true, appointments: false, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, projects: false },
         navigation: { catalogLabel: "Stock", posLabel: "Sales", customersLabel: "Customers", catalogDescription: "SKUs, units, variants, and reorder levels" },
-        fields: [{ key: "sku", label: "SKU", type: "text", required: true }, { key: "unit", label: "Unit of measure", type: "text", required: true }, { key: "reorderLevel", label: "Reorder level", type: "number" }]
+        fields: [{ key: "sku", label: "SKU", type: "text", required: true }, { key: "unit", label: "Unit of measure", type: "text", required: true }, { key: "reorderLevel", label: "Reorder level", type: "number" }],
+        operatingModel: "commerce", workspace: { primaryAction: "Start sale", primaryEntity: "Sale", activityLabel: "Sales", catalogMode: "products" }
     },
     garage: {
         terminology: { catalog: "Parts", catalogItem: "Part", customers: "Vehicle owners", transaction: "Job", staff: "Mechanics" },
@@ -113,15 +225,15 @@ const BUSINESS_TYPE_OVERRIDES = {
         navigation: { catalogLabel: "Parts", posLabel: "Checkout", customersLabel: "Vehicle owners", catalogDescription: "Parts, labour, and workshop stock", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"], sidebarRoutes: ["Dashboard", "Operations", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"] },
         workflow: { headline: "Job card to handover", steps: ["Open job", "Inspect vehicle", "Add parts and labour", "Complete work", "Payment"] },
         onboarding: ["Service bays", "Mechanics", "Job card statuses", "Parts catalog"],
-        roles: ["Owner", "Manager", "Reception", "Mechanic"]
+        roles: ["Owner", "Manager", "Reception", "Mechanic"], operatingModel: "work_order", workspace: { primaryAction: "Open job card", primaryEntity: "Job", activityLabel: "Job cards", catalogMode: "parts" }
     },
     consultancy: {
         terminology: { catalog: "Services", catalogItem: "Service", customers: "Clients", transaction: "Invoice", staff: "Team" },
-        capabilities: { projects: true, customers: true, catalog: true, inventory: false, barcode: false, purchasing: false, appointments: true, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false },
+        capabilities: { projects: true, customers: true, catalog: true, products: false, services: true, pos: false, inventory: false, barcode: false, purchasing: false, appointments: true, orders: false, tables: false, kitchen: false, workOrders: false, pharmacy: false, suppliers: false, invoices: true, matters: false, tasks: true, timeTracking: true },
         navigation: { catalogLabel: "Services", posLabel: "Invoices", customersLabel: "Clients", catalogDescription: "Billable services, retainers, and scopes", primaryRoutes: ["Dashboard", "Operations", "POS", "Catalog", "More"] },
         workflow: { headline: "Engagement to collection", steps: ["Engagement", "Scope", "Invoice", "Payment", "Follow-up"] },
         onboarding: ["Service catalog", "Retainer settings", "Team", "Invoice terms"],
-        roles: ["Owner", "Manager", "Consultant"]
+        roles: ["Owner", "Manager", "Consultant"], operatingModel: "project", workspace: { primaryAction: "Start engagement", primaryEntity: "Engagement", activityLabel: "Engagements", catalogMode: "services" }
     }
 };
 function resolveBusinessTypeConfig(input = {}) {
@@ -129,17 +241,38 @@ function resolveBusinessTypeConfig(input = {}) {
     const businessType = isBusinessType(input.businessType ?? "") ? input.businessType : module.businessTypes[0]?.value ?? "general_service";
     const baseCapabilities = {
         catalog: true,
+        products: module.key !== "services" && module.key !== "professional_services",
         inventory: module.key !== "services" && module.key !== "professional_services",
+        pos: module.key !== "services" && module.key !== "professional_services",
         barcode: module.key === "retail" || module.key === "healthcare" || module.key === "agriculture" || module.key === "automotive",
         purchasing: module.key !== "services" && module.key !== "professional_services",
+        menu: module.key === "food_beverage",
+        recipes: module.key === "food_beverage",
+        ingredients: module.key === "food_beverage" || module.key === "agriculture",
         customers: true,
+        patients: module.key === "healthcare",
+        guests: module.key === "food_beverage" || module.key === "hospitality",
         appointments: module.key === "beauty" || module.key === "healthcare" || module.key === "services" || module.key === "professional_services",
+        services: module.key === "beauty" || module.key === "healthcare" || module.key === "automotive" || module.key === "services" || module.key === "professional_services",
         orders: module.key === "food_beverage",
         tables: module.key === "food_beverage",
         kitchen: module.key === "food_beverage",
+        rooms: module.key === "hospitality",
+        reservations: module.key === "hospitality" || module.key === "beauty" || module.key === "healthcare",
+        housekeeping: module.key === "hospitality",
+        vehicles: module.key === "automotive",
         workOrders: module.key === "automotive" || module.key === "services",
+        jobCards: module.key === "automotive",
+        technicians: module.key === "automotive",
         pharmacy: module.key === "healthcare" && businessType === "pharmacy",
         projects: module.key === "professional_services",
+        matters: module.key === "professional_services" && ["law_firm", "accounting_firm"].includes(businessType),
+        tasks: module.key === "professional_services" || module.key === "services",
+        timeTracking: module.key === "professional_services" || module.key === "services" || module.key === "automotive",
+        invoices: true,
+        expenses: true,
+        staffScheduling: module.key !== "retail",
+        suppliers: module.key !== "services" && module.key !== "professional_services",
         payments: true
     };
     const override = BUSINESS_TYPE_OVERRIDES[businessType] ?? {};
@@ -158,6 +291,11 @@ function resolveBusinessTypeConfig(input = {}) {
         sidebarRoutes: ["Dashboard", "POS", "Catalog", "Customers", "Employees", "Finance", "Insights", "Settings", "More"]
     };
     const navigation = { ...defaultNavigation, ...(override.navigation ?? {}) };
+    const operatingModel = override.operatingModel ?? defaultOperatingModel(module.key);
+    const workspace = {
+        ...defaultWorkspace(operatingModel, terminology),
+        ...(override.workspace ?? {})
+    };
     return {
         businessType,
         industryKey: module.key,
@@ -167,13 +305,44 @@ function resolveBusinessTypeConfig(input = {}) {
         workflow: override.workflow ?? { headline: `${terminology.catalogItem} to payment`, steps: module.salesWorkflow.steps },
         fields: override.fields ?? [],
         navigation,
+        operatingModel,
+        workspace,
         reports: module.reports,
         onboarding: override.onboarding ?? [terminology.catalog, terminology.customers, terminology.staff],
         roles: override.roles ?? ["Owner", "Manager", "Cashier"]
     };
 }
+function defaultOperatingModel(industryKey) {
+    switch (industryKey) {
+        case "food_beverage": return "service";
+        case "beauty": return "appointment";
+        case "hospitality": return "hospitality";
+        case "healthcare": return "care";
+        case "agriculture": return "production";
+        case "automotive": return "work_order";
+        case "services": return "service";
+        case "professional_services": return "project";
+        default: return "commerce";
+    }
+}
+function defaultWorkspace(model, terminology) {
+    switch (model) {
+        case "appointment": return { primaryAction: "Book appointment", primaryEntity: "Appointment", activityLabel: "Appointments", catalogMode: "services" };
+        case "work_order": return { primaryAction: "Open job", primaryEntity: "Job", activityLabel: "Jobs", catalogMode: "parts" };
+        case "hospitality": return { primaryAction: "Open folio", primaryEntity: "Folio", activityLabel: "Open folios", catalogMode: "resources" };
+        case "care": return { primaryAction: "Open visit", primaryEntity: "Visit", activityLabel: "Visits", catalogMode: "services" };
+        case "production": return { primaryAction: "Record production", primaryEntity: "Production run", activityLabel: "Production", catalogMode: "lots" };
+        case "project": return { primaryAction: "Start project", primaryEntity: "Project", activityLabel: "Projects", catalogMode: "services" };
+        case "service": return { primaryAction: `Create ${terminology.transaction.toLowerCase()}`, primaryEntity: terminology.transaction, activityLabel: `${terminology.transaction}s`, catalogMode: "services" };
+        default: return { primaryAction: "Start sale", primaryEntity: "Sale", activityLabel: "Sales", catalogMode: "products" };
+    }
+}
 function getBusinessTypeCapabilities(input) {
     return resolveBusinessTypeConfig(input).capabilities;
+}
+function hasBusinessCapability(input, capability) {
+    const capabilities = "capabilities" in input ? input.capabilities : resolveBusinessTypeConfig(input).capabilities;
+    return Boolean(capabilities[capability]);
 }
 function isIndustryKey(value) {
     return exports.INDUSTRY_KEYS.includes(value);
@@ -200,6 +369,8 @@ register({
         summary: "Track tills, stock movement, and margin pressure in one place.",
         widgets: [
             dashboardWidget({ key: "retail-sales", label: "Today's Sales", metric: "salesTotal", tone: "primary", icon: "cash-outline", description: "Sales closed today." }),
+            dashboardWidget({ key: "retail-transactions", label: "Transactions", metric: "transactionsCount", tone: "primary", icon: "receipt-outline", description: "Sales transactions in the selected range." }),
+            dashboardWidget({ key: "retail-gross-profit", label: "Gross Profit", metric: "grossProfit", tone: "success", icon: "trending-up-outline", description: "Sales less product cost." }),
             dashboardWidget({ key: "retail-inventory", label: "Inventory Value", metric: "inventoryValue", tone: "success", icon: "cube-outline", description: "Stock value on hand." }),
             dashboardWidget({ key: "retail-customers", label: "Customers", metric: "customersCount", tone: "primary", icon: "people-outline", description: "Active customer records." }),
             dashboardWidget({ key: "retail-low-stock", label: "Low Stock", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Items below threshold." })
@@ -238,7 +409,9 @@ register({
             dashboardWidget({ key: "fnb-kitchen", label: "Kitchen", metric: "kitchenQueueCount", tone: "warning", icon: "restaurant-outline", description: "Orders awaiting service." }),
             dashboardWidget({ key: "fnb-orders", label: "Orders", metric: "ordersCount", tone: "primary", icon: "receipt-outline", description: "Orders in the selected range." }),
             dashboardWidget({ key: "fnb-tables", label: "Tables", metric: "tablesCount", tone: "success", icon: "grid-outline", description: "Tables or service stations in use." }),
-            dashboardWidget({ key: "fnb-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Revenue in the selected range." })
+            dashboardWidget({ key: "fnb-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Revenue in the selected range." }),
+            dashboardWidget({ key: "fnb-shortages", label: "Ingredient Shortages", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Ingredients below their par level." }),
+            dashboardWidget({ key: "fnb-transactions", label: "Transactions", metric: "transactionsCount", tone: "primary", icon: "card-outline", description: "Payments and completed transactions." })
         ],
     },
     features: ["Menu modifiers", "Table orders", "Kitchen tickets", "Recipe depletion"],
@@ -308,6 +481,10 @@ register({
         summary: "Monitor occupancy, spend, and guest service movement together.",
         widgets: [
             dashboardWidget({ key: "hospitality-occupancy", label: "Occupancy", metric: "occupancyCount", tone: "primary", icon: "bed-outline", description: "Rooms or stays in use." }),
+            dashboardWidget({ key: "hospitality-arrivals", label: "Arrivals", metric: "appointmentsCount", tone: "success", icon: "log-in-outline", description: "Guests expected to check in." }),
+            dashboardWidget({ key: "hospitality-departures", label: "Departures", metric: "jobsCount", tone: "warning", icon: "log-out-outline", description: "Guests expected to check out." }),
+            dashboardWidget({ key: "hospitality-guests", label: "Current Guests", metric: "foliosCount", tone: "primary", icon: "people-outline", description: "Active guest stays and folios." }),
+            dashboardWidget({ key: "hospitality-rooms", label: "Available Rooms", metric: "roomsCount", tone: "success", icon: "bed-outline", description: "Rooms ready to sell." }),
             dashboardWidget({ key: "hospitality-folios", label: "Folios", metric: "foliosCount", tone: "warning", icon: "document-text-outline", description: "Open guest accounts." }),
             dashboardWidget({ key: "hospitality-staff", label: "Staff", metric: "staffCount", tone: "success", icon: "people-outline", description: "Assigned team members." }),
             dashboardWidget({ key: "hospitality-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Revenue in the selected range." })
@@ -344,7 +521,9 @@ register({
         widgets: [
             dashboardWidget({ key: "healthcare-patients", label: "Patients", metric: "patientsCount", tone: "primary", icon: "person-outline", description: "Patient records on file." }),
             dashboardWidget({ key: "healthcare-appointments", label: "Appointments", metric: "appointmentsCount", tone: "success", icon: "calendar-outline", description: "Booked visits in the period." }),
-            dashboardWidget({ key: "healthcare-stock", label: "Stock", metric: "inventoryValue", tone: "warning", icon: "medkit-outline", description: "Clinical stock value." }),
+            dashboardWidget({ key: "healthcare-visits", label: "Visits", metric: "ordersCount", tone: "warning", icon: "clipboard-outline", description: "Visits and consultations in the period." }),
+            dashboardWidget({ key: "healthcare-providers", label: "Providers", metric: "staffCount", tone: "success", icon: "medkit-outline", description: "Providers and care staff." }),
+            dashboardWidget({ key: "healthcare-billing", label: "Outstanding Billing", metric: "receivablesCount", tone: "warning", icon: "wallet-outline", description: "Patient balances awaiting payment." }),
             dashboardWidget({ key: "healthcare-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Collections and service income." })
         ],
     },
@@ -407,6 +586,8 @@ register({
         typeOption("garage", "Garage", "Vehicle repair and workshop operations."),
         typeOption("auto_parts", "Auto Parts", "Vehicle parts, spares, and accessories."),
         typeOption("service_center", "Service Center", "Routine maintenance and service bays."),
+        typeOption("tyre_business", "Tyre Business", "Tyre sales, fitting, balancing, and repairs."),
+        typeOption("body_shop", "Body Shop", "Collision repair, paint, and bodywork."),
     ],
     dashboard: {
         headline: "Workshop and parts flow",
@@ -446,7 +627,10 @@ register({
         summary: "Monitor jobs, invoices, and collections with minimal clutter.",
         widgets: [
             dashboardWidget({ key: "services-jobs", label: "Jobs", metric: "jobsCount", tone: "primary", icon: "briefcase-outline", description: "Active jobs or service tickets." }),
+            dashboardWidget({ key: "services-upcoming", label: "Upcoming Work", metric: "appointmentsCount", tone: "success", icon: "calendar-outline", description: "Scheduled work and appointments." }),
+            dashboardWidget({ key: "services-completed", label: "Completed Jobs", metric: "completedJobsCount", tone: "warning", icon: "checkmark-circle-outline", description: "Completed jobs in the selected period." }),
             dashboardWidget({ key: "services-clients", label: "Clients", metric: "clientsCount", tone: "success", icon: "people-outline", description: "Active client records." }),
+            dashboardWidget({ key: "services-unpaid", label: "Unpaid Invoices", metric: "receivablesCount", tone: "danger", icon: "wallet-outline", description: "Outstanding client invoices." }),
             dashboardWidget({ key: "services-staff", label: "Staff", metric: "staffCount", tone: "warning", icon: "person-outline", description: "Team capacity available." }),
             dashboardWidget({ key: "services-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Service revenue collected." })
         ],
@@ -482,6 +666,8 @@ register({
         summary: "Track client engagements, receivables, and delivery health in one view.",
         widgets: [
             dashboardWidget({ key: "pro-projects", label: "Projects", metric: "projectsCount", tone: "primary", icon: "folder-open-outline", description: "Open client projects." }),
+            dashboardWidget({ key: "pro-tasks", label: "Billable Work", metric: "billableWorkCount", tone: "success", icon: "time-outline", description: "Active billable tasks and time work." }),
+            dashboardWidget({ key: "pro-deadlines", label: "Upcoming Deadlines", metric: "deadlinesCount", tone: "warning", icon: "calendar-outline", description: "Projects and matters with scheduled work." }),
             dashboardWidget({ key: "pro-retainers", label: "Retainers", metric: "retainersCount", tone: "success", icon: "repeat-outline", description: "Active retainer clients." }),
             dashboardWidget({ key: "pro-receivables", label: "Receivables", metric: "receivablesCount", tone: "warning", icon: "wallet-outline", description: "Outstanding client balances." }),
             dashboardWidget({ key: "pro-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Billings and cash collected." })

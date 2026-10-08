@@ -29,8 +29,8 @@ export class BusinessOperation {
   @Prop({ type: String, default: null, index: true })
   branchId?: string | null;
 
-  @Prop({ required: true, enum: ["order", "appointment", "work_order"], index: true })
-  kind!: "order" | "appointment" | "work_order";
+  @Prop({ required: true, enum: ["order", "appointment", "work_order", "project"], index: true })
+  kind!: "order" | "appointment" | "work_order" | "project";
 
   @Prop({ required: true, enum: ["draft", "open", "preparing", "ready", "confirmed", "in_progress", "completed", "cancelled"], index: true })
   status!: string;
@@ -55,6 +55,18 @@ export class BusinessOperation {
 
   @Prop({ type: String, default: null })
   vehiclePlate?: string | null;
+
+  @Prop({ type: String, default: null })
+  vehicleMake?: string | null;
+
+  @Prop({ type: String, default: null })
+  vehicleModel?: string | null;
+
+  @Prop({ type: Number, default: null })
+  vehicleYear?: number | null;
+
+  @Prop({ type: Number, default: null })
+  vehicleMileage?: number | null;
 
   @Prop({ type: String, default: null })
   notes?: string | null;

@@ -6,7 +6,7 @@ export type { IndustryKey } from "./industries";
 
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 
-export type BusinessOperationKind = "order" | "appointment" | "work_order";
+export type BusinessOperationKind = "order" | "appointment" | "work_order" | "project";
 export type BusinessOperationStatus = "draft" | "open" | "preparing" | "ready" | "confirmed" | "in_progress" | "completed" | "cancelled";
 
 export interface BusinessOperation {
@@ -23,6 +23,10 @@ export interface BusinessOperation {
   durationMinutes?: number | null;
   tableName?: string | null;
   vehiclePlate?: string | null;
+  vehicleMake?: string | null;
+  vehicleModel?: string | null;
+  vehicleYear?: number | null;
+  vehicleMileage?: number | null;
   notes?: string | null;
   items: Array<{ productId?: string | null; name: string; quantity: number; unitPrice: number }>;
   total: number;
@@ -281,6 +285,17 @@ export interface Product extends BaseEntity {
   brandId?: string | null;
   supplierId?: string | null;
   name: string;
+  description?: string | null;
+  variants?: string[];
+  addOns?: string[];
+  recipeIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  serviceDurationMinutes?: number | null;
+  assignedStaffId?: string | null;
+  commissionRate?: number | null;
+  compatibility?: string | null;
+  pricingModel?: "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null;
+  hourlyPrice?: number | null;
+  quantityUnit?: string | null;
   sku?: string | null;
   barcode?: string | null;
   batchNumber?: string | null;
@@ -705,6 +720,8 @@ export interface SyncCheckpoint {
 export interface DailySummary {
   date: string;
   salesTotal: number;
+  transactionsCount?: number;
+  grossProfit?: number;
   expensesTotal: number;
   cogsTotal: number;
   estimatedProfit: number;

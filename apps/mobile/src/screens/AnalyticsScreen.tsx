@@ -3,7 +3,7 @@ import { Animated, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
-import { hasPermission } from "@shared";
+import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 import type { EnterpriseAnalytics } from "@shared";
 import { AppScrollView, Badge, Card, DateRangePickerModal, EmptyState, ErrorState, GradientHeader, PrimaryButton, Screen, SkeletonBlock, StatCard, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
@@ -21,6 +21,7 @@ export function AnalyticsScreen() {
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const liveDataVersion = useAppStore((state) => `${state.sales.length}:${state.expenses.length}:${state.products.length}:${state.customers.length}`);
   const canViewAnalytics = hasPermission(user, "viewReports");
+  const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
 
   const [activeFilter, setActiveFilter] = React.useState<Filter>("month");
   const [customRange, setCustomRange] = React.useState<RangeState | null>(null);
@@ -193,7 +194,7 @@ export function AnalyticsScreen() {
           />
         ) : (
           <>
-            <SummaryGrid analytics={analytics} currency={business?.currency ?? "KES"} />
+            <SummaryGrid analytics={analytics} currency={business?.currency ?? "KES"} config={businessConfig} />
             <AnimatedSection index={0}>
               <TrendCard
                 title="Revenue"
@@ -212,7 +213,7 @@ export function AnalyticsScreen() {
                 valueFormatter={(value) => formatCount(value)}
               />
             </AnimatedSection>
-            <AnimatedSection index={2}>
+            {businessConfig.capabilities.products ? <AnimatedSection index={2}>
               <RankedChart
                 title="Products"
                 subtitle="Top product performers"
@@ -221,7 +222,14 @@ export function AnalyticsScreen() {
                 valueFormatter={(value) => formatMoney(value, business?.currency)}
                 secondaryFormatter={(row) => `${formatCount(row.secondaryValue ?? 0)} units`}
               />
-            </AnimatedSection>
+            </AnimatedSection> : (
+              <AnimatedSection index={2}>
+                <Card style={{ gap: 8 }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{businessConfig.workspace.activityLabel} analytics</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{businessConfig.workflow.steps.join("  →  ")}</Text>
+                </Card>
+              </AnimatedSection>
+            )}
             <AnimatedSection index={3}>
               <RankedChart
                 title="Customers"
@@ -254,7 +262,7 @@ export function AnalyticsScreen() {
                 tertiaryFormatter={(row) => `${formatMoney(row.averageTicket ?? 0, business?.currency)} avg ticket`}
               />
             </AnimatedSection>
-            <AnimatedSection index={6}>
+            {businessConfig.capabilities.inventory ? <AnimatedSection index={6}>
               <RankedChart
                 title="Inventory Turnover"
                 subtitle="Fast-moving stock and sell-through"
@@ -264,7 +272,7 @@ export function AnalyticsScreen() {
                 secondaryFormatter={(row) => `${formatCount(row.secondaryValue ?? 0)} sold`}
                 tertiaryFormatter={(row) => `${formatCount(row.stockOnHand ?? 0)} on hand`}
               />
-            </AnimatedSection>
+            </AnimatedSection> : null}
             <AnimatedSection index={7}>
               <TrendCard
                 title="Profit Trends"
@@ -296,7 +304,7 @@ export function AnalyticsScreen() {
   );
 }
 
-function SummaryGrid({ analytics, currency }: { analytics: EnterpriseAnalytics | null; currency: string }) {
+function SummaryGrid({ analytics, currency, config }: { analytics: EnterpriseAnalytics | null; currency: string; config: ReturnType<typeof resolveBusinessTypeConfig> }) {
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", gap: 12 }}>
@@ -304,12 +312,12 @@ function SummaryGrid({ analytics, currency }: { analytics: EnterpriseAnalytics |
           <StatCard label="Revenue" value={formatMoney(analytics?.summary.revenueTotal ?? 0, currency)} icon="cash-outline" tone="primary" />
         </View>
         <View style={{ flex: 1 }}>
-          <StatCard label="Sales" value={formatCount(analytics?.summary.salesCount ?? 0)} icon="cart-outline" tone="success" />
+          <StatCard label={config.workspace.activityLabel} value={formatCount(analytics?.summary.salesCount ?? 0)} icon="cart-outline" tone="success" />
         </View>
       </View>
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <StatCard label="Products" value={formatCount(analytics?.summary.productCount ?? 0)} icon="cube-outline" tone="warning" />
+          <StatCard label={config.capabilities.products ? "Products" : config.navigation.catalogLabel} value={formatCount(analytics?.summary.productCount ?? 0)} icon="cube-outline" tone="warning" />
         </View>
         <View style={{ flex: 1 }}>
           <StatCard label="Customers" value={formatCount(analytics?.summary.customerCount ?? 0)} icon="people-outline" tone="primary" />
@@ -326,9 +334,9 @@ function SummaryGrid({ analytics, currency }: { analytics: EnterpriseAnalytics |
       <Card style={{ gap: 10 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <Badge label={`Peak hour ${analytics?.summary.peakHour ?? "n/a"}`} tone="primary" />
-          <Badge label={`${formatCount(analytics?.summary.peakHourSales ?? 0)} sales at peak`} tone="success" />
+          <Badge label={`${formatCount(analytics?.summary.peakHourSales ?? 0)} ${config.workspace.primaryEntity.toLowerCase()} at peak`} tone="success" />
           <Badge label={`Growth ${formatPercent(analytics?.summary.monthlyGrowthPercent ?? 0)}`} tone="warning" />
-          <Badge label={`Inventory turnover ${formatDecimal(analytics?.summary.inventoryTurnover ?? 0, 2)}`} tone="danger" />
+          {config.capabilities.inventory ? <Badge label={`Inventory turnover ${formatDecimal(analytics?.summary.inventoryTurnover ?? 0, 2)}`} tone="danger" /> : null}
         </View>
         <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
           {analytics?.summary.averageOrderValue ? `Average order value is ${formatMoney(analytics.summary.averageOrderValue, currency)}.` : "Average order value will appear as sales come in."}

@@ -5,7 +5,7 @@ import { secureStore } from "@/storage/secure";
 import { createId } from "@/utils/id";
 import { dateKey } from "@/utils/date";
 import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receiptService";
-import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, getReportsSummary, getTopProducts } from "@/services/apiClient";
+import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, createIndustryDomain, updateIndustryDomain, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
 import { initialThemeMode, resolveThemeMode, setThemeTokens, type ThemeMode, type ThemePreference } from "@/theme/tokens";
@@ -834,6 +834,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       brandId: input.brandId ?? null,
       supplierId: input.supplierId ?? null,
       name: input.name,
+      description: input.description ?? null,
+      variants: input.variants ?? [],
+      addOns: input.addOns ?? [],
+      recipeIngredients: input.recipeIngredients ?? [],
+      serviceDurationMinutes: input.serviceDurationMinutes ?? null,
+      assignedStaffId: input.assignedStaffId ?? null,
+      commissionRate: input.commissionRate ?? null,
+      compatibility: input.compatibility ?? null,
+      pricingModel: input.pricingModel ?? null,
+      hourlyPrice: input.hourlyPrice ?? null,
+      quantityUnit: input.quantityUnit ?? null,
       sku: input.sku ?? null,
       barcode: input.barcode ?? null,
       batchNumber: input.batchNumber ?? null,
@@ -1312,6 +1323,12 @@ export const useAppStore = create<AppState>((set, get) => ({
               break;
             case "updateBusinessOperation":
               await updateBusinessOperation(action.payload.operationId, action.payload.patch);
+              break;
+            case "createIndustryDomain":
+              await createIndustryDomain(action.payload.domain as never, { ...action.payload.data, businessId: action.payload.businessId, externalId: action.payload.externalId, branchId: action.payload.branchId ?? null });
+              break;
+            case "updateIndustryDomain":
+              await updateIndustryDomain(action.payload.domain as never, action.payload.recordId, action.payload.patch);
               break;
           }
           await removeAction(action.id);

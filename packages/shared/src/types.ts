@@ -281,6 +281,8 @@ export interface Category extends BaseEntity {
 export interface Product extends BaseEntity {
   serverId?: string | null;
   branchId?: string | null;
+  catalogEntityType?: "product" | "service" | "menu_item" | "part" | null;
+  industryKey?: IndustryKey | null;
   categoryId?: string | null;
   brandId?: string | null;
   supplierId?: string | null;

@@ -12,6 +12,7 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:smoke": "node test/offline-queue.smoke.cjs",
+    "test:secure-storage": "node test/secure-store.smoke.cjs",
     "clean": "node -e \"process.exit(0)\""
   },
   "dependencies": {

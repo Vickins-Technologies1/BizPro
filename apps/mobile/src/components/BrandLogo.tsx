@@ -3,8 +3,10 @@ import { Image, type ImageStyle, type StyleProp } from "react-native";
 import { useThemeMode } from "@/theme";
 
 export const brandLogoAssets = {
-  light: require("../../assets/brand/dira-os-logo.png"),
-  dark: require("../../assets/brand/dira-os-logo.png")
+  // Use the opaque, tightly-cropped mark for in-app rendering. The original
+  // transparent logo can be decoded as an empty image by some Android builds.
+  light: require("../../assets/brand/dira-os-mobile-icon.png"),
+  dark: require("../../assets/brand/dira-os-mobile-icon.png")
 } as const;
 
 export function getBrandLogo(mode: "light" | "dark") {

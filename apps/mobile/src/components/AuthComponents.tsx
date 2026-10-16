@@ -94,18 +94,15 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 440,
     alignSelf: "center",
-    gap: 14,
-    justifyContent: "center",
-    flexGrow: 1
+    gap: 14
   },
   brandPanel: {
-    minHeight: 68,
+    minHeight: 106,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 11,
+    gap: 7,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "transparent"
   },
@@ -118,7 +115,7 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   logo: { width: 38, height: 38 },
-  brandCopy: { gap: 2 },
+  brandCopy: { alignItems: "center", gap: 2 },
   brandName: { fontSize: 15, fontWeight: "900", letterSpacing: -0.25 },
   eyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 0.65, textTransform: "uppercase" },
   heading: { gap: 5, paddingHorizontal: 2 },

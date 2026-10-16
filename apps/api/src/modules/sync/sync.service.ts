@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { BadRequestException, Optional } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import {
@@ -37,6 +38,9 @@ import {
 } from "../schemas";
 import { BusinessOperation as BusinessOperationModel, BusinessOperationDocument } from "../business-operations.schemas";
 import { SalesService } from "../sales/sales.service";
+import { resolveCatalogCreationContext } from "@vbo/shared";
+import { Business, BusinessDocument } from "../schemas";
+import { findBusinessByIdentifier } from "../../common/business-lookup";
 
 @Injectable()
 export class SyncService {
@@ -58,7 +62,8 @@ export class SyncService {
     @InjectModel(StockMovement.name) private readonly stockMovementModel: Model<StockMovementDocument>,
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
     @InjectModel(BusinessOperationModel.name) private readonly businessOperationModel: Model<BusinessOperationDocument>,
-    private readonly salesService: SalesService
+    private readonly salesService: SalesService,
+    @Optional() @InjectModel(Business.name) private readonly businessModel?: Model<BusinessDocument>
   ) {}
 
   async push(businessId: string, deviceId: string, events: Array<{ eventId: string; entityType: string; entityId: string; action: string; payload: Record<string, unknown>; createdAt: string; entityVersion?: number }>) {
@@ -203,38 +208,13 @@ export class SyncService {
       return;
     }
     if (event.entityType === "product") {
+      const productPayload = await this.normalizeProductSyncPayload(businessId, event.payload);
       await this.productModel.findOneAndUpdate(
         { businessId, externalId: event.entityId },
         {
           externalId: event.entityId,
           businessId,
-          categoryId: (event.payload.categoryId as string | null) ?? null,
-          brandId: (event.payload.brandId as string | null) ?? null,
-          supplierId: (event.payload.supplierId as string | null) ?? null,
-          name: String(event.payload.name),
-          description: (event.payload.description as string | null) ?? null,
-          variants: Array.isArray(event.payload.variants) ? event.payload.variants : [],
-          addOns: Array.isArray(event.payload.addOns) ? event.payload.addOns : [],
-          recipeIngredients: Array.isArray(event.payload.recipeIngredients) ? event.payload.recipeIngredients : [],
-          serviceDurationMinutes: event.payload.serviceDurationMinutes == null ? null : Number(event.payload.serviceDurationMinutes),
-          assignedStaffId: (event.payload.assignedStaffId as string | null) ?? null,
-          commissionRate: event.payload.commissionRate == null ? null : Number(event.payload.commissionRate),
-          compatibility: (event.payload.compatibility as string | null) ?? null,
-          pricingModel: (event.payload.pricingModel as "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null) ?? null,
-          hourlyPrice: event.payload.hourlyPrice == null ? null : Number(event.payload.hourlyPrice),
-          quantityUnit: (event.payload.quantityUnit as string | null) ?? null,
-          sku: (event.payload.sku as string | null) ?? null,
-          barcode: (event.payload.barcode as string | null) ?? null,
-          batchNumber: (event.payload.batchNumber as string | null) ?? null,
-          expiryDate: event.payload.expiryDate ? new Date(String(event.payload.expiryDate)) : null,
-          serialNumber: (event.payload.serialNumber as string | null) ?? null,
-          unit: String(event.payload.unit ?? "pcs"),
-          buyingPrice: Number(event.payload.buyingPrice ?? 0),
-          sellingPrice: Number(event.payload.sellingPrice ?? 0),
-          stockOnHand: Number(event.payload.stockOnHand ?? 0),
-          lowStockThreshold: Number(event.payload.lowStockThreshold ?? 5),
-          isActive: Boolean(event.payload.isActive ?? true),
-          deletedAt: (event.payload.deletedAt as string | null) ? new Date(String(event.payload.deletedAt)) : null
+          ...productPayload
         },
         { upsert: true, new: true }
       );
@@ -462,5 +442,54 @@ export class SyncService {
         { $inc: { stockOnHand: Number(event.payload.quantityDelta ?? 0) } }
       );
     }
+  }
+
+  private async normalizeProductSyncPayload(businessId: string, payload: Record<string, unknown>) {
+    if (!this.businessModel) throw new BadRequestException("Business industry context is unavailable for synchronization.");
+    const business = await findBusinessByIdentifier(this.businessModel, businessId);
+    if (!business) throw new BadRequestException("Business context could not be resolved for synchronization.");
+    const resolution = resolveCatalogCreationContext({
+      industryKey: business.industryKey ?? null,
+      businessType: business.businessType ?? null,
+      ...(typeof payload.catalogEntityType === "string" ? { entityType: payload.catalogEntityType } : {})
+    });
+    if (resolution.status !== "ready") throw new BadRequestException(resolution.message);
+    if (payload.industryKey && payload.industryKey !== resolution.context.industryKey) {
+      throw new BadRequestException("Queued catalog data belongs to a different industry context.");
+    }
+    const config = resolution.context.config;
+    const name = String(payload.name ?? "").trim();
+    if (name.length < 2) throw new BadRequestException("Queued catalog data is missing a valid name.");
+    return {
+      catalogEntityType: config.entityType,
+      industryKey: resolution.context.industryKey,
+      categoryId: (payload.categoryId as string | null) ?? null,
+      brandId: (payload.brandId as string | null) ?? null,
+      supplierId: (payload.supplierId as string | null) ?? null,
+      name,
+      description: (payload.description as string | null) ?? null,
+      variants: Array.isArray(payload.variants) ? payload.variants : [],
+      addOns: Array.isArray(payload.addOns) ? payload.addOns : [],
+      recipeIngredients: Array.isArray(payload.recipeIngredients) ? payload.recipeIngredients : [],
+      serviceDurationMinutes: payload.serviceDurationMinutes == null ? null : Number(payload.serviceDurationMinutes),
+      assignedStaffId: (payload.assignedStaffId as string | null) ?? null,
+      commissionRate: payload.commissionRate == null ? null : Number(payload.commissionRate),
+      compatibility: (payload.compatibility as string | null) ?? null,
+      pricingModel: (payload.pricingModel as "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | "custom" | null) ?? null,
+      hourlyPrice: payload.hourlyPrice == null ? null : Number(payload.hourlyPrice),
+      quantityUnit: (payload.quantityUnit as string | null) ?? null,
+      sku: (payload.sku as string | null) ?? null,
+      barcode: (payload.barcode as string | null) ?? null,
+      batchNumber: (payload.batchNumber as string | null) ?? null,
+      expiryDate: payload.expiryDate ? new Date(String(payload.expiryDate)) : null,
+      serialNumber: (payload.serialNumber as string | null) ?? null,
+      unit: String(payload.unit ?? config.defaultUnit),
+      buyingPrice: Number(payload.buyingPrice ?? 0),
+      sellingPrice: Number(payload.sellingPrice ?? 0),
+      stockOnHand: config.supportsInventory ? Number(payload.stockOnHand ?? 0) : 0,
+      lowStockThreshold: config.supportsInventory ? Number(payload.lowStockThreshold ?? 0) : 0,
+      isActive: Boolean(payload.isActive ?? true),
+      deletedAt: (payload.deletedAt as string | null) ? new Date(String(payload.deletedAt)) : null
+    };
   }
 }

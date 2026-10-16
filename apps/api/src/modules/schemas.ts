@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
-import type { BusinessType, IndustryKey, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
+import type { BusinessType, CatalogEntityType, IndustryKey, PlanTier, UserRole, PaymentMethod, PaymentStatus, AccessPermission } from "@vbo/shared";
 import { BUSINESS_TYPES, INDUSTRY_KEYS, PLAN_TIERS, USER_ROLES } from "@vbo/shared";
 import { buildBusinessSchemas } from "./business.schemas";
 import { buildCatalogSchemas } from "./catalog.schemas";
@@ -317,6 +317,14 @@ export class Product {
 
   @Prop({ type: String, default: null })
   branchId?: string | null;
+
+  /** Explicitly identifies the catalog workflow. Null is retained for legacy records. */
+  @Prop({ type: String, enum: ["product", "service", "menu_item", "part"], default: null })
+  catalogEntityType?: CatalogEntityType | null;
+
+  /** Snapshot of the business context used when the record was created. */
+  @Prop({ type: String, enum: INDUSTRY_KEYS, default: null })
+  industryKey?: IndustryKey | null;
 
   @Prop({ type: String })
   categoryId?: string | null;

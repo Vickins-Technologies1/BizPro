@@ -1,4 +1,4 @@
-import type { Business, Branch, Customer, DailySummary, Product, Sale } from "@vbo/shared";
+import type { Business, Branch, Customer, DailySummary, EnterpriseAnalytics, Product, Sale } from "@vbo/shared";
 
 export type Session = {
   accessToken: string;
@@ -13,7 +13,7 @@ const QUEUE_KEY = "bizpro.desktop.offline.queue";
 const CACHE_PREFIX = "bizpro.desktop.cache.";
 const MAX_CACHE_BYTES = 750_000;
 
-export type OfflineEntry = { id: string; path: string; body: unknown; createdAt: string };
+export type OfflineEntry = { id: string; accountKey: string; path: string; body: unknown; createdAt: string };
 
 type ApiEntity = Record<string, unknown>;
 
@@ -52,15 +52,29 @@ export function clearSession() {
   window.localStorage.removeItem(SESSION_KEY);
 }
 
+function currentAccountKey() {
+  const session = readSession();
+  return session ? `${session.user.businessId}:${session.user.id}` : "";
+}
+
+function notifyQueueChanged() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("dira-offline-queue-change"));
+}
+
 export function queuedCount() {
   if (typeof window === "undefined") return 0;
-  try { return JSON.parse(window.localStorage.getItem(QUEUE_KEY) ?? "[]").length as number; } catch { return 0; }
+  const accountKey = currentAccountKey();
+  if (!accountKey) return 0;
+  return readQueue().filter((entry) => entry.accountKey === accountKey).length;
 }
 
 export function queueOffline(path: string, body: unknown) {
+  const accountKey = currentAccountKey();
+  if (!accountKey) throw new Error("Sign in before queueing work for offline sync.");
   const current = readQueue();
-  current.push({ id: crypto.randomUUID(), path, body, createdAt: new Date().toISOString() });
+  current.push({ id: crypto.randomUUID(), accountKey, path, body, createdAt: new Date().toISOString() });
   window.localStorage.setItem(QUEUE_KEY, JSON.stringify(current));
+  notifyQueueChanged();
 }
 
 export function isOfflineError(error: unknown) {
@@ -77,10 +91,15 @@ function readQueue(): OfflineEntry[] {
 
 function cacheKey(path: string) { return `${CACHE_PREFIX}${path}`; }
 
+function scopedCacheKey(path: string) {
+  const accountKey = currentAccountKey();
+  return accountKey ? `${CACHE_PREFIX}${encodeURIComponent(accountKey)}.${path}` : cacheKey(path);
+}
+
 function readCached<T>(path: string): T | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(cacheKey(path));
+    const raw = window.localStorage.getItem(scopedCacheKey(path));
     return raw ? JSON.parse(raw) as T : null;
   } catch { return null; }
 }
@@ -89,7 +108,7 @@ function writeCached(path: string, value: unknown) {
   if (typeof window === "undefined") return;
   try {
     const serialized = JSON.stringify(value);
-    if (serialized.length <= MAX_CACHE_BYTES) window.localStorage.setItem(cacheKey(path), serialized);
+    if (serialized.length <= MAX_CACHE_BYTES) window.localStorage.setItem(scopedCacheKey(path), serialized);
   } catch { /* Cache is an optimization, never a request failure. */ }
 }
 
@@ -131,7 +150,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function flushOfflineQueue() {
   if (typeof navigator !== "undefined" && !navigator.onLine) return { synced: 0, remaining: queuedCount() };
-  const pending = readQueue();
+  const accountKey = currentAccountKey();
+  if (!accountKey) return { synced: 0, remaining: 0 };
+  const allEntries = readQueue();
+  const pending = allEntries.filter((entry) => entry.accountKey === accountKey);
   if (!pending.length) return { synced: 0, remaining: 0 };
   let synced = 0;
   for (const entry of pending) {
@@ -139,7 +161,9 @@ export async function flushOfflineQueue() {
     catch { break; }
   }
   const unprocessed = pending.slice(synced);
-  window.localStorage.setItem(QUEUE_KEY, JSON.stringify(unprocessed));
+  const processedIds = new Set(pending.slice(0, synced).map((entry) => entry.id));
+  window.localStorage.setItem(QUEUE_KEY, JSON.stringify(allEntries.filter((entry) => !processedIds.has(entry.id))));
+  notifyQueueChanged();
   return { synced, remaining: unprocessed.length };
 }
 
@@ -166,9 +190,22 @@ export const api = {
   expenses: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/expenses${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)),
   suppliers: async () => normalizeList(await request<ApiEntity[]>("/suppliers")),
   employees: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/employees${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)),
-  reports: (branchId?: string | null) => request<ApiEntity>(`/reports/summary${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`).then(normalizeSummary) as Promise<DailySummary>,
+  reports: (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<ApiEntity>(`/reports/summary${query.size ? `?${query.toString()}` : ""}`).then(normalizeSummary) as Promise<DailySummary>;
+  },
   financeOverview: (branchId?: string | null) => request<Record<string, unknown>>(`/finance/overview${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
-  paymentBreakdown: (branchId?: string | null) => request<Array<{ _id?: string; total?: number; count?: number }>>(`/reports/payment-breakdown${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  paymentBreakdown: (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<Array<{ _id?: string; total?: number; count?: number }>>(`/reports/payment-breakdown${query.size ? `?${query.toString()}` : ""}`);
+  },
+  enterpriseAnalytics: (branchId?: string | null) => request<EnterpriseAnalytics>(`/analytics/enterprise${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
   operations: (branchId?: string | null) => request<unknown[]>(`/business-operations${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
   notifications: () => request<unknown[]>("/notifications"),
   createSale: async (body: unknown) => {
@@ -178,5 +215,10 @@ export const api = {
     finally { saleRequestInFlight = false; }
   },
   createProduct: (body: unknown) => request<Product>("/products", { method: "POST", body: JSON.stringify(body) }),
-  createCustomer: (body: unknown) => request<Customer>("/customers", { method: "POST", body: JSON.stringify(body) })
+  createCustomer: (body: unknown) => request<Customer>("/customers", { method: "POST", body: JSON.stringify(body) }),
+  updateCustomer: (id: string, body: unknown) => request<Customer>(`/customers/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  createSupplier: (body: unknown) => request<ApiEntity>("/suppliers", { method: "POST", body: JSON.stringify(body) }).then(normalizeEntity),
+  createExpense: (body: unknown) => request<ApiEntity>("/expenses", { method: "POST", body: JSON.stringify(body) }).then(normalizeEntity),
+  markNotificationRead: (id: string) => request<void>(`/notifications/${encodeURIComponent(id)}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: () => request<void>("/notifications/read-all", { method: "PATCH" })
 };

@@ -19,6 +19,7 @@ __exportStar(require("./access"), exports);
 __exportStar(require("./schemas"), exports);
 __exportStar(require("./theme"), exports);
 __exportStar(require("./industries"), exports);
+__exportStar(require("./catalog-creation"), exports);
 __exportStar(require("./operations"), exports);
 __exportStar(require("./types"), exports);
 __exportStar(require("./financial"), exports);

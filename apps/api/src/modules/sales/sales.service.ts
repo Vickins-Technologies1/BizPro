@@ -61,7 +61,12 @@ export class SalesService {
         ? await this.businessModel.findOne({ ...buildBusinessLookup(input.businessId), deletedAt: null }).session(session).lean()
         : { currency: "KES" };
       if (!business) throw new NotFoundException("Business not found");
-      const tracksInventory = resolveBusinessTypeConfig({ businessType: (business as { businessType?: string }).businessType, industryKey: (business as { industryKey?: string }).industryKey }).capabilities.inventory;
+      // A configured API always resolves this from the authenticated business. The
+      // no-business-model branch is retained for isolated service tests and legacy
+      // callers so it does not silently turn inventory sales into service sales.
+      const tracksInventory = this.businessModel
+        ? resolveBusinessTypeConfig({ businessType: (business as { businessType?: string }).businessType, industryKey: (business as { industryKey?: string }).industryKey }).capabilities.inventory
+        : true;
       const serverTaxRate = Number((business as { taxSettings?: { defaultTaxRate?: number } }).taxSettings?.defaultTaxRate ?? 0);
       for (const item of input.items) {
         if (!Number.isFinite(item.quantity) || item.quantity <= 0) throw new BadRequestException("Sale quantity must be greater than zero");

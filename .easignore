@@ -1,10 +1,17 @@
 # EAS builds the mobile workspace from this monorepo root. Keep source,
 # workspace manifests, and native project files; omit local/generated content.
 node_modules/
+.pnpm/
 .pnpm-store/
+**/node_modules/
+**/.pnpm/
+**/*.apk
+**/*.aab
+**/*.log
 .turbo/
 .codex/
 .git/
+.tmp-brooons-patch/
 builds/
 docs/
 video/

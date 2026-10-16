@@ -146,6 +146,17 @@ For a real Android device, set `EXPO_PUBLIC_API_URL` to your machine's LAN IP, f
 http://192.168.1.20:3000/api
 ```
 
+### Windows desktop
+
+The desktop renderer runs in Next.js and is packaged in Electron. Configure `apps/desktop/.env.local` with `DIRA_API_URL` (copy the shape from `apps/desktop/.env.example`) before building. Use a test or staging API for verification; the default is the production API.
+
+```bash
+pnpm --filter @vbo/desktop electron:dev
+pnpm --filter @vbo/desktop desktop:build
+```
+
+The Windows NSIS installer is written to `apps/desktop/release/` by the standard packaging command.
+
 ## Environment Files
 
 - `apps/mobile/.env.example` - mobile sync endpoint and related runtime settings

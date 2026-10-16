@@ -24,6 +24,7 @@ const REACT_NATIVE_SCREENS_STACK = path.join(
 const ANDROID_MANIFEST = path.join("android", "app", "src", "main", "AndroidManifest.xml");
 const ANDROID_APP_BUILD_GRADLE = path.join("android", "app", "build.gradle");
 const ANDROID_GRADLE_PROPERTIES = path.join("android", "gradle.properties");
+const ANDROID_PROGUARD_RULES = path.join("android", "app", "proguard-rules.pro");
 const ANDROID_STYLES = path.join("android", "app", "src", "main", "res", "values", "styles.xml");
 const ANDROID_STRINGS = path.join("android", "app", "src", "main", "res", "values", "strings.xml");
 
@@ -101,13 +102,13 @@ function patchAndroidAppBuildGradle(contents) {
   );
 }
 
-function patchAndroidGradleProperties(contents) {
+function patchAndroidGradleProperties(contents, versionCode) {
   const required = [
-    "android.enableProguardInReleaseBuilds=false",
-    "android.enableShrinkResourcesInReleaseBuilds=false",
+    "android.enableProguardInReleaseBuilds=true",
+    "android.enableShrinkResourcesInReleaseBuilds=true",
     "android.ndkVersion=28.1.13356709",
     "reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64",
-    "versionCode=9",
+    `versionCode=${versionCode ?? 12}`,
   ];
 
   let patched = contents;
@@ -121,6 +122,17 @@ function patchAndroidGradleProperties(contents) {
     }
   }
   return patched;
+}
+
+function patchAndroidProguardRules(contents) {
+  const marker = "# Dira SecureStore R8 compatibility";
+  const rules = `${marker}\n# Expo Modules Core resolves native argument converters reflectively; keep the full module surface stable under R8.\n-keep class expo.modules.** { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault`;
+  const markerIndex = contents.indexOf(marker);
+  if (markerIndex >= 0) {
+    return `${contents.slice(0, markerIndex).trimEnd()}\n\n${rules}\n`;
+  }
+
+  return `${contents.trimEnd()}\n\n${rules}\n`;
 }
 
 module.exports = function withPatchedBluetoothEscpos(config) {
@@ -163,7 +175,8 @@ module.exports = function withPatchedBluetoothEscpos(config) {
       for (const [relativePath, patchFile] of [
         [ANDROID_MANIFEST, patchAndroidWindowConfiguration],
         [ANDROID_APP_BUILD_GRADLE, patchAndroidAppBuildGradle],
-        [ANDROID_GRADLE_PROPERTIES, patchAndroidGradleProperties],
+        [ANDROID_GRADLE_PROPERTIES, (contents) => patchAndroidGradleProperties(contents, config.android?.versionCode)],
+        [ANDROID_PROGUARD_RULES, patchAndroidProguardRules],
         [ANDROID_STYLES, patchAndroidStyles],
         [ANDROID_STRINGS, patchAndroidStrings]
       ]) {

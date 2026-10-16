@@ -4,6 +4,7 @@ import {
   Animated,
   Easing,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Image,
   Modal,
@@ -25,6 +26,10 @@ import { tokens } from "@/theme/tokens";
 import { useThemeTokens } from "@/theme";
 import { addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isBefore, isSameDay, isSameMonth, parseISO, startOfMonth, subMonths } from "date-fns";
 import type { FlatListProps, ImageSourcePropType, StyleProp, TextStyle, ViewStyle } from "react-native";
+
+type KeyboardFocusMeasurement = (callback: (x: number, y: number, width: number, height: number) => void) => void;
+
+export const KeyboardFocusScrollContext = React.createContext<((measure: KeyboardFocusMeasurement) => void) | null>(null);
 
 export const designTokens = {
   get colors() {
@@ -112,6 +117,7 @@ export function AppScrollView({
   contentContainerStyle,
   refreshing,
   onRefresh,
+  onScroll,
   scrollRef,
   ...props
 }: React.ComponentProps<typeof ScrollView> & {
@@ -121,10 +127,61 @@ export function AppScrollView({
   scrollRef?: React.RefObject<ScrollView>;
 }) {
   const styles = usePrimitiveStyles();
+  const internalScrollRef = React.useRef<ScrollView>(null);
+  const activeScrollRef = scrollRef || internalScrollRef;
+  const focusedFieldMeasureRef = React.useRef<KeyboardFocusMeasurement | null>(null);
+  const keyboardVisibleRef = React.useRef(false);
+  const keyboardTopRef = React.useRef<number | null>(null);
+  const scrollOffsetRef = React.useRef(0);
+
+  const revealFocusedField = React.useCallback(() => {
+    const measure = focusedFieldMeasureRef.current;
+    const scrollView = activeScrollRef.current;
+    const keyboardTop = keyboardTopRef.current;
+    if (!measure || !scrollView || keyboardTop == null) return;
+
+    measure((_x, y, _width, height) => {
+      const obscuredBy = y + height + 16 - keyboardTop;
+      if (obscuredBy > 0) {
+        scrollView.scrollTo({ y: Math.max(0, scrollOffsetRef.current + obscuredBy), animated: true });
+      }
+    });
+  }, [activeScrollRef]);
+
+  const revealFocusedInput = React.useCallback((measure: KeyboardFocusMeasurement) => {
+    focusedFieldMeasureRef.current = measure;
+    if (keyboardVisibleRef.current || Keyboard.isVisible()) {
+      keyboardVisibleRef.current = true;
+      requestAnimationFrame(revealFocusedField);
+    }
+  }, [revealFocusedField]);
+
+  React.useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", (event) => {
+      keyboardVisibleRef.current = true;
+      keyboardTopRef.current = event.endCoordinates.screenY;
+      requestAnimationFrame(revealFocusedField);
+    });
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardVisibleRef.current = false;
+      keyboardTopRef.current = null;
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [revealFocusedField]);
+
   return (
+    <KeyboardFocusScrollContext.Provider value={revealFocusedInput}>
       <ScrollView
-      ref={scrollRef}
-      keyboardShouldPersistTaps="handled"
+        ref={activeScrollRef}
+        onScroll={(event) => {
+          scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          onScroll?.(event);
+        }}
+        keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
       contentInsetAdjustmentBehavior="automatic"
@@ -145,7 +202,8 @@ export function AppScrollView({
       {...props}
     >
       {children}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardFocusScrollContext.Provider>
   );
 }
 
@@ -766,7 +824,9 @@ export const Input = React.memo(function Input({
   autoFocus?: boolean | undefined;
   disabled?: boolean | undefined;
 }) {
+  const scrollFocusedInput = React.useContext(KeyboardFocusScrollContext);
   const inputRef = React.useRef<React.ElementRef<typeof TextInput>>(null);
+  const fieldRef = React.useRef<View>(null);
   const [passwordVisible, setPasswordVisible] = React.useState(false);
   const [focused, setFocused] = React.useState(false);
   const styles = usePrimitiveStyles();
@@ -786,7 +846,7 @@ export const Input = React.memo(function Input({
   }, [value, focused]);
 
   return (
-    <View style={{ gap: 8 }}>
+    <View ref={fieldRef} style={{ gap: 8 }}>
       <View style={styles.fieldLabelRow}>
         <Pressable
           onPress={() => inputRef.current?.focus()}
@@ -835,9 +895,12 @@ export const Input = React.memo(function Input({
           autoFocus={autoFocus}
           editable={!disabled}
           accessibilityState={{ disabled }}
-          onFocus={() => {
+          onFocus={(event) => {
             focusedRef.current = true;
             setFocused(true);
+            if (scrollFocusedInput) {
+              scrollFocusedInput((callback) => fieldRef.current?.measureInWindow(callback));
+            }
           }}
           onBlur={() => {
             focusedRef.current = false;

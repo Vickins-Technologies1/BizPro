@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString } from "class-validator";
+import { CATALOG_ENTITY_TYPES, type CatalogEntityType, type IndustryKey } from "@vbo/shared";
 import { ProductsService } from "./products.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -10,6 +11,9 @@ class CreateProductDto {
   @IsString() businessId!: string;
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string | null;
+  @IsOptional() @IsIn(CATALOG_ENTITY_TYPES) catalogEntityType?: CatalogEntityType;
+  @IsOptional() @IsIn(["retail", "food_beverage", "beauty", "hospitality", "healthcare", "agriculture", "automotive", "services", "professional_services"])
+  industryKey?: IndustryKey;
   @IsOptional() @IsString() categoryId?: string;
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() supplierId?: string;
@@ -33,9 +37,9 @@ class CreateProductDto {
   @IsOptional() @IsString() batchNumber?: string;
   @IsOptional() @IsString() expiryDate?: string;
   @IsOptional() @IsString() serialNumber?: string;
-  @IsString() unit!: string;
-  @IsNumber() buyingPrice!: number;
-  @IsNumber() sellingPrice!: number;
+  @IsOptional() @IsString() unit?: string;
+  @IsOptional() @IsNumber() buyingPrice?: number;
+  @IsOptional() @IsNumber() sellingPrice?: number;
   @IsOptional() @IsNumber() stockOnHand?: number;
   @IsOptional() @IsNumber() lowStockThreshold?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;

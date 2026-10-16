@@ -152,6 +152,8 @@ exports.debitNoteCreateSchema = zod_1.z.object({
 });
 exports.productCreateSchema = zod_1.z.object({
     businessId: zod_1.z.string().min(1, "Select the business before saving."),
+    catalogEntityType: zod_1.z.enum(["product", "service", "menu_item", "part"]).nullable().optional(),
+    industryKey: zod_1.z.enum(industries_1.INDUSTRY_KEYS).nullable().optional(),
     categoryId: nullableText,
     brandId: nullableText,
     supplierId: nullableText,

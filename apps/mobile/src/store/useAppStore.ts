@@ -52,6 +52,75 @@ const STARTUP_CACHE_PATH = (() => {
   const base = FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? null;
   return base ? `${base}bizpro-startup-cache-v1.json` : null;
 })();
+type SessionCachedBusiness = Pick<Business, "id" | "name" | "slug" | "businessType" | "currency" | "planTier" | "billingStatus"> &
+  Partial<Pick<Business, "industryKey" | "graceEndsAt" | "logoUrl" | "phone" | "email" | "address" | "createdAt" | "updatedAt" | "deletedAt">>;
+
+type SessionMetadata = {
+  user: StoredSession["user"];
+  business?: SessionCachedBusiness | null;
+  branches?: Branch[];
+  selectedBranchId?: string | null;
+};
+
+function sessionMetadata(session: StoredSession): SessionMetadata {
+  const business = session.business;
+  return {
+    user: session.user,
+    business: business
+      ? ({
+          id: business.id,
+          name: business.name,
+          slug: business.slug,
+          industryKey: business.industryKey,
+          businessType: business.businessType,
+          currency: business.currency,
+          planTier: business.planTier,
+          billingStatus: business.billingStatus,
+          graceEndsAt: business.graceEndsAt,
+          logoUrl: business.logoUrl,
+          phone: business.phone,
+          email: business.email,
+          address: business.address,
+          createdAt: business.createdAt,
+          updatedAt: business.updatedAt,
+          deletedAt: business.deletedAt
+        } as SessionCachedBusiness)
+      : null,
+    branches: session.branches ?? [],
+    selectedBranchId: session.selectedBranchId ?? null
+  };
+}
+
+async function writeSessionMetadata(session: StoredSession) {
+  await secureStore.setSessionMetadata(JSON.stringify({ version: 1, ...sessionMetadata(session) }));
+}
+
+async function readSessionMetadata(): Promise<SessionMetadata | null> {
+  const raw = await secureStore.getSessionMetadata();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<SessionMetadata> & { version?: number };
+    if (
+      parsed.version !== 1 ||
+      !parsed.user || typeof parsed.user.id !== "string" ||
+      typeof parsed.user.role !== "string"
+    ) {
+      return null;
+    }
+    return {
+      user: parsed.user as StoredSession["user"],
+      business: parsed.business ?? null,
+      branches: Array.isArray(parsed.branches) ? parsed.branches : [],
+      selectedBranchId: parsed.selectedBranchId ?? null
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function clearSessionMetadata() {
+  await secureStore.clearSessionMetadata();
+}
 
 function sanitizeStartupCache(cache: StartupCache): StartupCache {
   return {
@@ -266,10 +335,19 @@ async function readStoredSession(): Promise<StoredSession | null> {
     if (!parsed || typeof parsed !== "object" || typeof parsed.accessToken !== "string" || !parsed.accessToken.trim()) {
       return null;
     }
-    if (!parsed.user || typeof parsed.user !== "object" || typeof parsed.user.id !== "string" || typeof parsed.user.role !== "string") {
-      return null;
+    if (parsed.user && typeof parsed.user === "object" && typeof parsed.user.id === "string" && typeof parsed.user.role === "string") {
+      // Backward compatibility with sessions written before metadata was split out.
+      return parsed as StoredSession;
     }
-    return parsed as StoredSession;
+    const metadata = await readSessionMetadata();
+    if (!metadata) return null;
+    return {
+      user: metadata.user,
+      business: metadata.business ? (metadata.business as Business) : null,
+      branches: metadata.branches ?? [],
+      selectedBranchId: metadata.selectedBranchId ?? null,
+      accessToken: parsed.accessToken
+    };
   } catch {
     return null;
   }
@@ -299,7 +377,9 @@ function deriveSelectedBranchId(user: AppState["user"], branches: Branch[], pref
 async function persistBranchSession(branches: Branch[], selectedBranchId: string | null) {
   const storedSession = await readStoredSession();
   if (!storedSession) return;
-  await secureStore.setSession(JSON.stringify({ ...storedSession, branches, selectedBranchId }));
+  const nextSession = { ...storedSession, branches, selectedBranchId };
+  await writeSessionMetadata(nextSession);
+  await secureStore.setSession(JSON.stringify(nextSession));
 }
 
 function resolveReadBranchId(state: Pick<AppState, "selectedBranchId" | "user">) {
@@ -375,12 +455,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const themePreference: ThemePreference = storedThemeMode === "dark" || storedThemeMode === "light" || storedThemeMode === "system" ? storedThemeMode : "system";
       const themeMode = resolveEffectiveThemeMode(themePreference);
       if (!storedThemeMode) {
-        void secureStore.setThemeMode(themePreference);
+        void secureStore.setThemeMode(themePreference).catch(() => undefined);
       }
       setThemeTokens(themeMode);
       const deviceId = storedDeviceId ?? createId();
       if (!storedDeviceId) {
-        void secureStore.setDeviceId(deviceId);
+        void secureStore.setDeviceId(deviceId).catch(() => undefined);
       }
 
       if (storedSession?.accessToken) {
@@ -407,16 +487,15 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
             const remoteBranches = remote.branches ?? currentSession.branches;
             const remoteSelectedBranchId = deriveSelectedBranchId(remote.user, remoteBranches, currentSession.selectedBranchId);
-            void secureStore
-              .setSession(
-                JSON.stringify({
-                  ...storedSession,
-                  user: remote.user,
-                  business: remote.business,
-                  branches: remoteBranches,
-                  selectedBranchId: remoteSelectedBranchId
-                })
-              )
+            const updatedSession = {
+              ...storedSession,
+              user: remote.user,
+              business: remote.business,
+              branches: remoteBranches,
+              selectedBranchId: remoteSelectedBranchId
+            };
+            void writeSessionMetadata(updatedSession)
+              .then(() => secureStore.setSession(JSON.stringify(updatedSession)))
               .catch(() => undefined);
             set({
               business: remote.business,
@@ -468,7 +547,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     const branches = session.branches ?? [];
     const selectedBranchId = deriveSelectedBranchId(session.user, branches, session.selectedBranchId);
-    await secureStore.setSession(JSON.stringify({ ...session, business, branches, selectedBranchId }));
+    const storedSession = { ...session, business, branches, selectedBranchId };
+    await writeSessionMetadata(storedSession);
+    await secureStore.setSession(JSON.stringify(storedSession));
     set({
       business,
       user: session.user,
@@ -543,6 +624,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   logout: async () => {
     await secureStore.clearSession();
+    await clearSessionMetadata();
     await clearStartupCache();
     set({
       business: null,
@@ -568,7 +650,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const themeMode = resolveEffectiveThemeMode(themePreference);
     setThemeTokens(themeMode);
     set({ themeMode, themePreference });
-    await secureStore.setThemeMode(themePreference);
+    await secureStore.setThemeMode(themePreference).catch(() => undefined);
   },
   syncSystemTheme: () => {
     if (get().themePreference !== "system") return;
@@ -830,6 +912,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       businessId,
       branchId,
       externalId: createId(),
+      catalogEntityType: input.catalogEntityType ?? null,
+      industryKey: input.industryKey ?? null,
       categoryId: input.categoryId ?? null,
       brandId: input.brandId ?? null,
       supplierId: input.supplierId ?? null,

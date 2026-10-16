@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { Product, ProductDocument, Sale, SaleDocument, StockMovement, StockMovementDocument } from "../schemas";
+import { resolveCatalogCreationContext, type CatalogCreationContext, type CatalogEntityType } from "@vbo/shared";
+import { Business, BusinessDocument, Product, ProductDocument, Sale, SaleDocument, StockMovement, StockMovementDocument } from "../schemas";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import {
   buildProductLookupQuery,
@@ -11,6 +12,7 @@ import {
   productNotFoundException
 } from "./product-identity";
 import { NotificationsService } from "../notifications/notifications.service";
+import { findBusinessByIdentifier } from "../../common/business-lookup";
 
 @Injectable()
 export class ProductsService {
@@ -18,7 +20,8 @@ export class ProductsService {
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
     @InjectModel(StockMovement.name) private readonly movementModel: Model<StockMovementDocument>,
     @InjectModel(Sale.name) private readonly saleModel: Model<SaleDocument>,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    @Optional() @InjectModel(Business.name) private readonly businessModel?: Model<BusinessDocument>
   ) {}
 
   list(businessId: string, scope: BranchScope = {}) {
@@ -64,23 +67,80 @@ export class ProductsService {
     return { items, page, pageSize: input.pageSize, total, totalPages };
   }
 
-  async create(input: Partial<Product> & { businessId: string; name: string; unit: string; buyingPrice: number; sellingPrice: number }, scope: BranchScope = {}) {
+  async create(input: Partial<Product> & { businessId: string; name: string }, scope: BranchScope = {}) {
+    const context = await this.resolveCreationContext(input.businessId, input.catalogEntityType ?? null);
+    const payload = this.normalizeCreationPayload(input, context);
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
-    if (input.externalId) {
-      const existing = await this.productModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).lean();
+    if (payload.externalId) {
+      const existing = await this.productModel.findOne({ businessId: payload.businessId, externalId: payload.externalId, deletedAt: null }).lean();
       if (existing) {
         return existing;
       }
     }
-    return this.productModel.create({ ...input, branchId, deletedAt: null });
+    return this.productModel.create({ ...payload, branchId, deletedAt: null });
   }
 
   async update(businessId: string, id: string, patch: Partial<Product>, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, patch.branchId ?? null);
-    const { businessId: _ignoredBusinessId, branchId: _ignoredBranchId, ...safePatch } = patch;
+    let safePatch = patch;
+    if (this.businessModel) {
+      const existing = await this.productModel.findOne(buildProductLookupQuery({ businessId, identifier: id, branchId })).lean();
+      if (!existing) throw isMongoObjectId(id) ? productNotFoundException() : invalidProductIdException();
+      const context = await this.resolveCreationContext(businessId, patch.catalogEntityType ?? existing.catalogEntityType ?? null);
+      if (patch.industryKey && patch.industryKey !== context.industryKey) {
+        throw new BadRequestException("The catalog record does not belong to this business industry.");
+      }
+      safePatch = {
+        ...patch,
+        catalogEntityType: context.config.entityType,
+        industryKey: context.industryKey
+      };
+    }
+    const { businessId: _ignoredBusinessId, branchId: _ignoredBranchId, industryKey: _ignoredIndustryKey, ...patchWithoutContext } = safePatch;
+    safePatch = patchWithoutContext;
     const updated = await this.productModel.findOneAndUpdate(buildProductLookupQuery({ businessId, identifier: id, branchId }), safePatch, { new: true }).lean();
     if (!updated) throw isMongoObjectId(id) ? productNotFoundException() : invalidProductIdException();
     return updated;
+  }
+
+  private async resolveCreationContext(businessId: string, entityType: CatalogEntityType | null) {
+    if (!this.businessModel) {
+      throw new BadRequestException("Business industry context is unavailable. Refresh the workspace and try again.");
+    }
+    const business = await findBusinessByIdentifier(this.businessModel, businessId);
+    if (!business) throw new BadRequestException("Business context could not be resolved.");
+    const resolution = resolveCatalogCreationContext({
+      industryKey: business.industryKey ?? null,
+      businessType: business.businessType ?? null,
+      ...(entityType ? { entityType } : {})
+    });
+    if (resolution.status !== "ready") throw new BadRequestException(resolution.message);
+    return resolution.context;
+  }
+
+  private normalizeCreationPayload(input: Partial<Product> & { businessId: string; name: string }, context: CatalogCreationContext) {
+    const requiredName = typeof input.name === "string" ? input.name.trim() : "";
+    if (requiredName.length < 2) throw new BadRequestException("Enter a name for this catalog record.");
+    const priceRequired = context.config.fields.some((field) => field.key === "sellingPrice" && field.required);
+    if (priceRequired && (input.sellingPrice == null || !Number.isFinite(Number(input.sellingPrice)) || Number(input.sellingPrice) < 0)) {
+      throw new BadRequestException(`${context.config.itemLabel} price is required.`);
+    }
+    const unitRequired = context.config.fields.some((field) => field.key === "unit" && field.required);
+    if (unitRequired && !input.unit?.trim()) throw new BadRequestException("Enter a unit of measure.");
+    if (input.industryKey && input.industryKey !== context.industryKey) {
+      throw new BadRequestException("The catalog record does not belong to this business industry.");
+    }
+    return {
+      ...input,
+      name: requiredName,
+      catalogEntityType: context.config.entityType,
+      industryKey: context.industryKey,
+      unit: input.unit?.trim() || context.config.defaultUnit,
+      buyingPrice: Number(input.buyingPrice ?? 0),
+      sellingPrice: Number(input.sellingPrice ?? 0),
+      stockOnHand: context.config.supportsInventory ? Number(input.stockOnHand ?? 0) : 0,
+      lowStockThreshold: context.config.supportsInventory ? Number(input.lowStockThreshold ?? 0) : 0
+    };
   }
 
   async archive(businessId: string, id: string, scope: BranchScope = {}) {

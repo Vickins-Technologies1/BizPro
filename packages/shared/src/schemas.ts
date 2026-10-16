@@ -164,6 +164,8 @@ export const debitNoteCreateSchema = z.object({
 
 export const productCreateSchema = z.object({
   businessId: z.string().min(1, "Select the business before saving."),
+  catalogEntityType: z.enum(["product", "service", "menu_item", "part"]).nullable().optional(),
+  industryKey: z.enum(INDUSTRY_KEYS).nullable().optional(),
   categoryId: nullableText,
   brandId: nullableText,
   supplierId: nullableText,

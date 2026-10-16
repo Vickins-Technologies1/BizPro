@@ -7,6 +7,8 @@ import * as Device from "expo-device";
 import * as SystemUI from "expo-system-ui";
 import NetInfo from "@react-native-community/netinfo";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { Asset } from "expo-asset";
 import { ErrorState, PrimaryButton } from "@/components/Primitives";
 import { getBrandLogo } from "@/components/BrandLogo";
 import { RootNavigator } from "@/navigation/RootNavigator";
@@ -27,6 +29,23 @@ export function RootApp() {
   const syncSystemTheme = useAppStore((state) => state.syncSystemTheme);
   const error = useAppStore((state) => state.error);
   const theme = getThemeTokens(themeMode);
+  const [visualsReady, setVisualsReady] = React.useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([Ionicons.loadFont(), Asset.loadAsync(getBrandLogo(themeMode))])
+      .catch((loadError) => {
+        console.warn("[visuals] Unable to preload logo or icon font", loadError);
+      })
+      .finally(() => {
+        if (mounted) setVisualsReady(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [themeMode]);
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -94,7 +113,7 @@ export function RootApp() {
     };
   }, [business, syncNow]);
 
-  if (loading) {
+  if (loading || !visualsReady) {
     return <LoadingSplash themeMode={themeMode} />;
   }
 

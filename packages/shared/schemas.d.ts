@@ -12,21 +12,21 @@ export declare const businessSetupSchema: z.ZodObject<{
     cashierPin: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
 }, "strip", z.ZodTypeAny, {
     currency: string;
+    businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "tyre_business" | "body_shop" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
     ownerName: string;
     phone: string;
     password: string;
     businessName: string;
-    businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "tyre_business" | "body_shop" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
     planTier: "command" | "pro" | "elite" | "enterprise";
     branchName: string;
     industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
     cashierPin?: string | undefined;
 }, {
+    businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "tyre_business" | "body_shop" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
     ownerName: string;
     phone: string;
     password: string;
     businessName: string;
-    businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "tyre_business" | "body_shop" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
     planTier: "command" | "pro" | "elite" | "enterprise";
     branchName: string;
     currency?: string | undefined;
@@ -58,26 +58,26 @@ export declare const branchCreateSchema: z.ZodObject<{
     status: z.ZodDefault<z.ZodEnum<["active", "inactive"]>>;
     isDefault: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
+    name: string;
     status: "active" | "inactive";
     code: string;
     businessId: string;
-    name: string;
     isDefault: boolean;
+    description?: string | null | undefined;
     phone?: string | null | undefined;
     location?: string | null | undefined;
     email?: string | null | undefined;
     managerId?: string | null | undefined;
-    description?: string | null | undefined;
 }, {
+    name: string;
     code: string;
     businessId: string;
-    name: string;
+    description?: string | null | undefined;
     phone?: string | null | undefined;
     status?: "active" | "inactive" | undefined;
     location?: string | null | undefined;
     email?: string | null | undefined;
     managerId?: string | null | undefined;
-    description?: string | null | undefined;
     isDefault?: boolean | undefined;
 }>;
 export declare const branchUpdateSchema: z.ZodObject<{
@@ -94,25 +94,25 @@ export declare const branchUpdateSchema: z.ZodObject<{
     businessId: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     businessId: string;
+    name?: string | undefined;
+    description?: string | null | undefined;
     phone?: string | null | undefined;
     status?: "active" | "inactive" | undefined;
     code?: string | undefined;
-    name?: string | undefined;
     location?: string | null | undefined;
     email?: string | null | undefined;
     managerId?: string | null | undefined;
-    description?: string | null | undefined;
     isDefault?: boolean | undefined;
 }, {
     businessId: string;
+    name?: string | undefined;
+    description?: string | null | undefined;
     phone?: string | null | undefined;
     status?: "active" | "inactive" | undefined;
     code?: string | undefined;
-    name?: string | undefined;
     location?: string | null | undefined;
     email?: string | null | undefined;
     managerId?: string | null | undefined;
-    description?: string | null | undefined;
     isDefault?: boolean | undefined;
 }>;
 export declare const saleItemSchema: z.ZodObject<{
@@ -269,18 +269,18 @@ export declare const pettyCashEntryCreateSchema: z.ZodObject<{
     label: string;
     direction: "in" | "out";
     entryDate: string;
+    category?: string | null | undefined;
     note?: string | null | undefined;
     recordedById?: string | undefined;
-    category?: string | null | undefined;
 }, {
     businessId: string;
     amount: number;
     label: string;
     direction: "in" | "out";
     entryDate: string;
+    category?: string | null | undefined;
     note?: string | null | undefined;
     recordedById?: string | undefined;
-    category?: string | null | undefined;
 }>;
 export declare const creditNoteCreateSchema: z.ZodObject<{
     businessId: z.ZodString;
@@ -332,9 +332,9 @@ export declare const invoiceLineItemSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     unit: string;
     quantity: number;
+    description: string;
     taxRate: number;
     unitPrice: number;
-    description: string;
     discountType: "percentage" | "fixed";
     discountValue: number;
     taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -345,8 +345,8 @@ export declare const invoiceLineItemSchema: z.ZodObject<{
 }, {
     unit: string;
     quantity: number;
-    unitPrice: number;
     description: string;
+    unitPrice: number;
     taxRate?: number | undefined;
     productId?: string | null | undefined;
     productName?: string | null | undefined;
@@ -392,9 +392,9 @@ export declare const invoiceCreateSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         unit: string;
         quantity: number;
+        description: string;
         taxRate: number;
         unitPrice: number;
-        description: string;
         discountType: "percentage" | "fixed";
         discountValue: number;
         taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -405,8 +405,8 @@ export declare const invoiceCreateSchema: z.ZodObject<{
     }, {
         unit: string;
         quantity: number;
-        unitPrice: number;
         description: string;
+        unitPrice: number;
         taxRate?: number | undefined;
         productId?: string | null | undefined;
         productName?: string | null | undefined;
@@ -432,9 +432,9 @@ export declare const invoiceCreateSchema: z.ZodObject<{
     lineItems: {
         unit: string;
         quantity: number;
+        description: string;
         taxRate: number;
         unitPrice: number;
-        description: string;
         discountType: "percentage" | "fixed";
         discountValue: number;
         taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -465,8 +465,8 @@ export declare const invoiceCreateSchema: z.ZodObject<{
     lineItems: {
         unit: string;
         quantity: number;
-        unitPrice: number;
         description: string;
+        unitPrice: number;
         taxRate?: number | undefined;
         productId?: string | null | undefined;
         productName?: string | null | undefined;
@@ -527,6 +527,8 @@ export declare const debitNoteCreateSchema: z.ZodObject<{
 }>;
 export declare const productCreateSchema: z.ZodObject<{
     businessId: z.ZodString;
+    catalogEntityType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["product", "service", "menu_item", "part"]>>>;
+    industryKey: z.ZodOptional<z.ZodNullable<z.ZodEnum<["retail", "food_beverage", "beauty", "hospitality", "healthcare", "agriculture", "automotive", "services", "professional_services"]>>>;
     categoryId: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodString>>, string | null | undefined, unknown>;
     brandId: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodString>>, string | null | undefined, unknown>;
     supplierId: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodString>>, string | null | undefined, unknown>;
@@ -564,65 +566,69 @@ export declare const productCreateSchema: z.ZodObject<{
     isActive: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     unit: string;
-    businessId: string;
     name: string;
+    buyingPrice: number;
+    sellingPrice: number;
+    stockOnHand: number;
+    lowStockThreshold: number;
     variants: string[];
     addOns: string[];
     recipeIngredients: {
         quantity: number;
         ingredientId: string;
     }[];
-    buyingPrice: number;
-    sellingPrice: number;
-    stockOnHand: number;
-    lowStockThreshold: number;
+    businessId: string;
     isActive: boolean;
     barcode?: string | null | undefined;
     batchNumber?: string | null | undefined;
     expiryDate?: string | null | undefined;
     sku?: string | null | undefined;
     description?: string | null | undefined;
+    pricingModel?: "custom" | "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | null | undefined;
+    hourlyPrice?: number | null | undefined;
+    compatibility?: string | null | undefined;
+    serialNumber?: string | null | undefined;
+    industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | null | undefined;
     categoryId?: string | null | undefined;
+    catalogEntityType?: "service" | "product" | "menu_item" | "part" | null | undefined;
     brandId?: string | null | undefined;
     supplierId?: string | null | undefined;
     serviceDurationMinutes?: number | null | undefined;
     assignedStaffId?: string | null | undefined;
     commissionRate?: number | null | undefined;
-    compatibility?: string | null | undefined;
-    pricingModel?: "custom" | "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | null | undefined;
-    hourlyPrice?: number | null | undefined;
     quantityUnit?: string | null | undefined;
-    serialNumber?: string | null | undefined;
 }, {
     unit: string;
-    businessId: string;
     name: string;
     buyingPrice: number;
     sellingPrice: number;
+    businessId: string;
     barcode?: unknown;
     batchNumber?: unknown;
     expiryDate?: unknown;
     sku?: unknown;
     description?: unknown;
-    categoryId?: unknown;
-    brandId?: unknown;
-    supplierId?: unknown;
+    stockOnHand?: number | undefined;
+    lowStockThreshold?: number | undefined;
+    pricingModel?: "custom" | "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | null | undefined;
+    hourlyPrice?: number | null | undefined;
     variants?: string[] | undefined;
     addOns?: string[] | undefined;
     recipeIngredients?: {
         quantity: number;
         ingredientId: string;
     }[] | undefined;
+    compatibility?: unknown;
+    serialNumber?: unknown;
+    industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | null | undefined;
+    categoryId?: unknown;
+    catalogEntityType?: "service" | "product" | "menu_item" | "part" | null | undefined;
+    brandId?: unknown;
+    supplierId?: unknown;
     serviceDurationMinutes?: number | null | undefined;
     assignedStaffId?: unknown;
     commissionRate?: number | null | undefined;
-    compatibility?: unknown;
-    pricingModel?: "custom" | "fixed" | "hourly" | "quantity" | "recurring" | "milestone" | null | undefined;
-    hourlyPrice?: number | null | undefined;
     quantityUnit?: unknown;
-    serialNumber?: unknown;
-    stockOnHand?: number | undefined;
-    lowStockThreshold?: number | undefined;
     isActive?: boolean | undefined;
 }>;
 export declare const brandCreateSchema: z.ZodObject<{
@@ -630,12 +636,12 @@ export declare const brandCreateSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    businessId: string;
     name: string;
+    businessId: string;
     description?: string | null | undefined;
 }, {
-    businessId: string;
     name: string;
+    businessId: string;
     description?: string | null | undefined;
 }>;
 export declare const supplierCreateSchema: z.ZodObject<{
@@ -648,8 +654,8 @@ export declare const supplierCreateSchema: z.ZodObject<{
     contactName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    businessId: string;
     name: string;
+    businessId: string;
     phone?: string | null | undefined;
     code?: string | null | undefined;
     email?: string | null | undefined;
@@ -657,8 +663,8 @@ export declare const supplierCreateSchema: z.ZodObject<{
     categoryId?: string | null | undefined;
     contactName?: string | null | undefined;
 }, {
-    businessId: string;
     name: string;
+    businessId: string;
     phone?: string | null | undefined;
     code?: string | null | undefined;
     email?: string | null | undefined;
@@ -674,15 +680,15 @@ export declare const supplierCategoryCreateSchema: z.ZodObject<{
     sortOrder: z.ZodDefault<z.ZodNumber>;
     isActive: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    businessId: string;
     name: string;
+    businessId: string;
     isActive: boolean;
     sortOrder: number;
     description?: string | null | undefined;
     color?: string | null | undefined;
 }, {
-    businessId: string;
     name: string;
+    businessId: string;
     description?: string | null | undefined;
     isActive?: boolean | undefined;
     color?: string | null | undefined;
@@ -698,8 +704,8 @@ export declare const supplierContactCreateSchema: z.ZodObject<{
     isPrimary: z.ZodDefault<z.ZodBoolean>;
     notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    businessId: string;
     name: string;
+    businessId: string;
     isPrimary: boolean;
     supplierId: string;
     phone?: string | null | undefined;
@@ -707,8 +713,8 @@ export declare const supplierContactCreateSchema: z.ZodObject<{
     email?: string | null | undefined;
     notes?: string | null | undefined;
 }, {
-    businessId: string;
     name: string;
+    businessId: string;
     supplierId: string;
     phone?: string | null | undefined;
     role?: string | null | undefined;

@@ -1,0 +1,4 @@
+You are on eas-cli@21.3.0 which does not satisfy the CLI version constraint defined in eas.json (>= 22.4.0).
+
+This error probably means that you need update your eas-cli to a newer version.
+Run npm install -g eas-cli to update the eas-cli to the latest version.

@@ -1,0 +1,3 @@
+[1016/004045.690:ERROR:registration_protocol_win.cc(136)] TransactNamedPipe: No process is on the other end of the pipe. (0xE9)
+[1016/004045.828:ERROR:registration_protocol_win.cc(136)] TransactNamedPipe: No process is on the other end of the pipe. (0xE9)
+[1016/004245.155:ERROR:registration_protocol_win.cc(136)] TransactNamedPipe: No process is on the other end of the pipe. (0xE9)

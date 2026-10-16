@@ -1,6 +1,6 @@
 import { secureStore } from "@/storage/secure";
 import { createEventId } from "@/utils/id";
-import type { Brand, BusinessOperation, Category, Customer, CustomerAttachment, Expense, Payment, Product, Sale, Supplier } from "@shared";
+import type { Brand, BusinessOperation, Category, CatalogEntityType, Customer, CustomerAttachment, Expense, Payment, Product, Sale, Supplier } from "@shared";
 
 export type OfflineQueueKind =
   | "createCategory"
@@ -56,10 +56,23 @@ export type OfflineQueueEntry =
         businessId: string;
         externalId: string;
         branchId?: string | null;
+        catalogEntityType?: CatalogEntityType | null;
+        industryKey?: Product["industryKey"];
         categoryId?: string | null;
         brandId?: string | null;
         supplierId?: string | null;
         name: string;
+        description?: string | null;
+        variants?: string[];
+        addOns?: string[];
+        recipeIngredients?: Array<{ ingredientId: string; quantity: number }>;
+        serviceDurationMinutes?: number | null;
+        assignedStaffId?: string | null;
+        commissionRate?: number | null;
+        compatibility?: string | null;
+        pricingModel?: Product["pricingModel"];
+        hourlyPrice?: number | null;
+        quantityUnit?: string | null;
         sku?: string | null;
         barcode?: string | null;
         batchNumber?: string | null;
@@ -471,10 +484,23 @@ export function createProductDraft(input: {
   businessId: string;
   externalId: string;
   branchId?: string | null;
+  catalogEntityType?: CatalogEntityType | null;
+  industryKey?: Product["industryKey"];
   categoryId?: string | null;
   brandId?: string | null;
   supplierId?: string | null;
   name: string;
+  description?: string | null;
+  variants?: string[];
+  addOns?: string[];
+  recipeIngredients?: Array<{ ingredientId: string; quantity: number }>;
+  serviceDurationMinutes?: number | null;
+  assignedStaffId?: string | null;
+  commissionRate?: number | null;
+  compatibility?: string | null;
+  pricingModel?: Product["pricingModel"];
+  hourlyPrice?: number | null;
+  quantityUnit?: string | null;
   sku?: string | null;
   barcode?: string | null;
   batchNumber?: string | null;
@@ -493,10 +519,23 @@ export function createProductDraft(input: {
     serverId: null,
     businessId: input.businessId,
     branchId: input.branchId ?? null,
+    catalogEntityType: input.catalogEntityType ?? null,
+    industryKey: input.industryKey ?? null,
     categoryId: input.categoryId ?? null,
     brandId: input.brandId ?? null,
     supplierId: input.supplierId ?? null,
     name: input.name,
+    description: input.description ?? null,
+    variants: input.variants ?? [],
+    addOns: input.addOns ?? [],
+    recipeIngredients: input.recipeIngredients ?? [],
+    serviceDurationMinutes: input.serviceDurationMinutes ?? null,
+    assignedStaffId: input.assignedStaffId ?? null,
+    commissionRate: input.commissionRate ?? null,
+    compatibility: input.compatibility ?? null,
+    pricingModel: input.pricingModel ?? null,
+    hourlyPrice: input.hourlyPrice ?? null,
+    quantityUnit: input.quantityUnit ?? null,
     sku: input.sku ?? null,
     barcode: input.barcode ?? null,
     batchNumber: input.batchNumber ?? null,

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { INVENTORY_UNITS, productCreateSchema, resolveBusinessTypeConfig, type Product } from "@shared";
+import { getSupportedCatalogEntityTypes, INVENTORY_UNITS, productCreateSchema, resolveBusinessTypeConfig, resolveCatalogCreationContext, resolveCatalogCreationConfig, type CatalogEntityType, type Product } from "@shared";
 import { AppScrollView, BottomSheet, Card, GradientHeader, InputField, Pagination, PrimaryButton, Screen, SimpleModal, Badge, Tag } from "@/components/Primitives";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
@@ -11,7 +11,7 @@ import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
 import { z } from "zod";
 import { useNavigation } from "@react-navigation/native";
-import { EmptyState } from "@/components/Primitives";
+import { EmptyState, ErrorState } from "@/components/Primitives";
 import { hasPermission } from "@shared";
 import { deleteProduct, listProductsPage } from "@/services/apiClient";
 import * as Clipboard from "expo-clipboard";
@@ -49,6 +49,7 @@ export function ProductsScreen() {
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [search, setSearch] = useState("");
   const [visible, setVisible] = useState(false);
+  const [selectedEntityType, setSelectedEntityType] = useState<CatalogEntityType | null>(null);
   const [categoryVisible, setCategoryVisible] = useState(false);
   const [brandVisible, setBrandVisible] = useState(false);
   const [supplierVisible, setSupplierVisible] = useState(false);
@@ -93,11 +94,17 @@ export function ProductsScreen() {
   const pageSize = 6;
   const deferredSearch = React.useDeferredValue(search);
   const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
-  const isMenu = businessConfig.workspace.catalogMode === "menu";
-  const isService = businessConfig.workspace.catalogMode === "services";
-  const isAutomotive = businessConfig.industryKey === "automotive";
-  const itemLabel = businessConfig.terminology.catalogItem;
-  const itemLabelPlural = businessConfig.navigation.catalogLabel;
+  const catalogInput = { industryKey: business?.industryKey ?? null, businessType: business?.businessType ?? null };
+  const catalogResolution = resolveCatalogCreationContext(catalogInput);
+  const supportedEntityTypes = catalogResolution.status === "ready" ? catalogResolution.context.supportedEntityTypes : getSupportedCatalogEntityTypes(catalogInput);
+  const selectedCreationResolution = resolveCatalogCreationContext({ ...catalogInput, ...(selectedEntityType ? { entityType: selectedEntityType } : {}) });
+  const creation = selectedCreationResolution.status === "ready" ? selectedCreationResolution.context.config : null;
+  const isMenu = creation?.entityType === "menu_item";
+  const isService = creation?.entityType === "service";
+  const isAutomotive = creation?.formKey === "automotive_service" || creation?.entityType === "part" && businessConfig.industryKey === "automotive";
+  const itemLabel = creation?.itemLabel ?? businessConfig.terminology.catalogItem;
+  const itemLabelPlural = creation?.entityType === "menu_item" ? "Menu" : creation?.entityType === "service" ? "Services" : creation?.entityType === "part" ? "Parts" : businessConfig.navigation.catalogLabel;
+  const hasField = (field: string) => Boolean(creation?.fields.some((candidate) => candidate.key === field));
 
   const {
     control,
@@ -143,6 +150,10 @@ export function ProductsScreen() {
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
   const brandMap = useMemo(() => new Map(brands.map((brand) => [brand.id, brand])), [brands]);
   const supplierMap = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier])), [suppliers]);
+
+  React.useEffect(() => {
+    setSelectedEntityType(null);
+  }, [business?.id, business?.industryKey, business?.businessType]);
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -385,20 +396,40 @@ export function ProductsScreen() {
 
   React.useEffect(() => {
     if (visible) {
+      if (!selectedEntityType && catalogResolution.status === "ready") setSelectedEntityType(catalogResolution.context.defaultEntityType);
       setValue("categoryId", selectedCategoryId);
       setValue("brandId", selectedBrandId);
       setValue("supplierId", selectedSupplierId);
     }
-  }, [visible, selectedBrandId, selectedCategoryId, selectedSupplierId, setValue]);
+  }, [catalogResolution, selectedBrandId, selectedCategoryId, selectedEntityType, selectedSupplierId, setValue, visible]);
+  React.useEffect(() => {
+    if (creation) setValue("unit", creation.defaultUnit);
+  }, [creation?.defaultUnit, creation?.entityType, setValue]);
   const currentCategoryId = watch("categoryId");
   const currentBrandId = watch("brandId");
   const currentSupplierId = watch("supplierId");
   const currentUnit = watch("unit");
   const canManageInventory = hasPermission(user, "manageInventory");
-  const canManageCatalog = canManageInventory || (isService && hasPermission(user, "addProducts"));
+  const canManageCatalog = canManageInventory || hasPermission(user, "addProducts");
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
 
-  if (!businessConfig.capabilities.products) {
+  if (catalogResolution.status !== "ready" || !creation) {
+    return (
+      <Screen>
+        <GradientHeader title="Catalog setup required" subtitle="Dira OS needs the authenticated business industry before it can choose a creation form." />
+        <View style={{ padding: 16 }}>
+          <ErrorState
+            title="Catalog form unavailable"
+            subtitle={selectedCreationResolution.status === "ready" ? "This catalog workflow is not available for the current business." : selectedCreationResolution.message}
+            action={<PrimaryButton title="Open settings" onPress={() => navigation.navigate("Settings")} />}
+            icon="warning-outline"
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!businessConfig.capabilities.catalog || !supportedEntityTypes.length) {
     return <CapabilityCatalogPanel config={businessConfig} onOpenOperations={() => navigation.navigate("Operations")} />;
   }
 
@@ -584,8 +615,18 @@ export function ProductsScreen() {
           {businessConfig.capabilities.inventory ? <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => { setToolsVisible(false); navigation.navigate("StockTransfers"); }} /> : null}
         </View>
       </BottomSheet>
-      <SimpleModal visible={visible} title={`Add ${itemLabel.toLowerCase()}`} onClose={() => setVisible(false)}>
+      <SimpleModal visible={visible} title={creation.title} onClose={() => setVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 12 }}>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{creation.description}</Text>
+          {supportedEntityTypes.length > 1 ? <View style={{ gap: 8 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>What are you creating?</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {supportedEntityTypes.map((candidate) => {
+                const candidateConfig = resolveCatalogCreationConfig({ ...catalogInput, entityType: candidate });
+                return <Tag key={candidate} label={candidateConfig?.itemLabel ?? candidate} tone="primary" selected={creation.entityType === candidate} onPress={() => setSelectedEntityType(candidate)} />;
+              })}
+            </View>
+          </View> : null}
           <Controller
             control={control}
             name="name"
@@ -598,25 +639,23 @@ export function ProductsScreen() {
             <InputField label="Add-ons" value={menuAddOns} onChangeText={setMenuAddOns} placeholder="Extra cheese, Avocado" helperText="Separate add-ons with commas." />
             {businessConfig.capabilities.recipes ? <InputField label="Recipe ingredients" value={menuRecipe} onChangeText={setMenuRecipe} placeholder="ingredient-id:1, ingredient-id:0.5" helperText="Ingredient IDs and quantities used per serving." /> : null}
           </View> : null}
-          {isMenu ? <Controller
+          {hasField("description") && !isMenu ? <Controller
             control={control}
             name="description"
-            render={({ field: { value, onChange } }) => <InputField label="Description" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Describe the dish or drink" multiline />}
+            render={({ field: { value, onChange } }) => <InputField label="Description" value={(value as string) ?? ""} onChangeText={onChange} placeholder={creation.entityType === "service" ? "Describe what the customer receives" : "Add a helpful description"} multiline />}
           /> : null}
           {isService ? <View style={{ gap: 10 }}>
             <Controller control={control} name="pricingModel" render={({ field: { value, onChange } }) => <View style={{ gap: 7 }}><Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>Pricing model</Text><View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>{(["fixed", "hourly", "quantity", "recurring", "milestone", "custom"] as const).map((model) => <Tag key={model} label={model === "fixed" ? "Fixed fee" : model === "hourly" ? "Hourly" : model === "quantity" ? "By quantity" : model === "recurring" ? "Recurring" : model === "milestone" ? "Milestone" : "Custom"} tone="primary" selected={value === model} onPress={() => onChange(model)} />)}</View></View>} />
             <Controller control={control} name="serviceDurationMinutes" render={({ field: { value, onChange } }) => <InputField label="Duration (minutes)" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="numeric" placeholder="60" />} />
             <Controller control={control} name="assignedStaffId" render={({ field: { value, onChange } }) => <InputField label="Assigned specialist" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Staff or specialist ID" />} />
             <Controller control={control} name="hourlyPrice" render={({ field: { value, onChange } }) => <InputField label="Hourly price" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="decimal-pad" placeholder="Optional" />} />
-            <Controller control={control} name="quantityUnit" render={({ field: { value, onChange } }) => <InputField label="Quantity unit" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Room, photo, visit, kilometre" />} />
-            <Controller control={control} name="commissionRate" render={({ field: { value, onChange } }) => <InputField label="Commission (%)" value={value == null ? "" : String(value)} onChangeText={(text) => onChange(text ? Number(text) : null)} keyboardType="decimal-pad" placeholder="Optional" />} />
           </View> : null}
-          <Controller
+          {hasField("sku") ? <Controller
             control={control}
             name="sku"
-            render={({ field: { value, onChange } }) => <InputField label="SKU" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional shelf or lookup code." />}
-          />
-          {businessConfig.capabilities.barcode ? (
+            render={({ field: { value, onChange } }) => <InputField label={creation.entityType === "part" ? "Part number / SKU" : "SKU"} value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional shelf or lookup code." />}
+          /> : null}
+          {hasField("barcode") && businessConfig.capabilities.barcode ? (
             <Controller
               control={control}
               name="barcode"
@@ -635,22 +674,22 @@ export function ProductsScreen() {
               )}
             />
           ) : null}
-          <Controller
+          {hasField("unit") ? <Controller
             control={control}
             name="unit"
             render={({ field: { value, onChange } }) => (
               <InputField label="Unit" value={value} onChangeText={onChange} error={errors.unit?.message} helperText="Examples: pcs, kg, box, or bottle." />
             )}
-          />
-          <View style={{ gap: 8 }}>
+          /> : null}
+          {hasField("unit") ? <View style={{ gap: 8 }}>
             <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Quick units</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {INVENTORY_UNITS.map((unit) => (
                 <Tag key={unit} label={unit} tone="primary" selected={currentUnit === unit} onPress={() => setValue("unit", unit)} />
               ))}
             </ScrollView>
-          </View>
-          <View style={{ gap: 8 }}>
+          </View> : null}
+          {hasField("brand") ? <View style={{ gap: 8 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Brand</Text>
               <Pressable onPress={() => setBrandVisible(true)}>
@@ -663,8 +702,8 @@ export function ProductsScreen() {
                 <Tag key={brand.id} label={brand.name} tone="primary" selected={currentBrandId === brand.id} onPress={() => setValue("brandId", brand.id)} />
               ))}
             </ScrollView>
-          </View>
-          <View style={{ gap: 8 }}>
+          </View> : null}
+          {hasField("supplier") ? <View style={{ gap: 8 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>Supplier</Text>
               <Pressable onPress={() => setSupplierVisible(true)}>
@@ -677,8 +716,8 @@ export function ProductsScreen() {
                 <Tag key={supplier.id} label={supplier.name} tone="primary" selected={currentSupplierId === supplier.id} onPress={() => setValue("supplierId", supplier.id)} />
               ))}
             </ScrollView>
-          </View>
-          {businessConfig.fields.some((field) => field.key === "batchNumber" || field.key === "expiryDate") ? <View style={{ flexDirection: "row", gap: 12 }}>
+          </View> : null}
+          {hasField("batchNumber") || hasField("expiryDate") ? <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}
@@ -698,12 +737,12 @@ export function ProductsScreen() {
               />
             </View>
           </View> : null}
-          {businessConfig.businessType === "garage" || businessConfig.businessType === "auto_parts" ? <Controller
+          {hasField("serialNumber") ? <Controller
             control={control}
             name="serialNumber"
             render={({ field: { value, onChange } }) => <InputField label="Serial number" value={(value as string) ?? ""} onChangeText={onChange} helperText="Optional serialized item tracking." />}
           /> : null}
-          {isAutomotive ? <Controller control={control} name="compatibility" render={({ field: { value, onChange } }) => <InputField label="Compatibility" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Toyota Hilux 2018–2022" helperText="Vehicles, models, or fitment notes." />} /> : null}
+          {hasField("compatibility") ? <Controller control={control} name="compatibility" render={({ field: { value, onChange } }) => <InputField label="Vehicle compatibility" value={(value as string) ?? ""} onChangeText={onChange} placeholder="Toyota Hilux 2018–2022" helperText="Vehicles, models, or fitment notes." />} /> : null}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Tag label="No category" tone="primary" selected={!currentCategoryId} onPress={() => setValue("categoryId", null)} />
             {categories.map((category) => (
@@ -716,23 +755,23 @@ export function ProductsScreen() {
               />
             ))}
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1 }}>
+          {hasField("sellingPrice") ? <View style={{ flexDirection: "row", gap: 12 }}>
+            {hasField("buyingPrice") ? <View style={{ flex: 1 }}>
               <Controller
                 control={control}
                 name="buyingPrice"
                 render={({ field: { value, onChange } }) => (
                   <InputField
-                    label={isMenu ? "Ingredient cost" : "Buying price"}
+                    label={isMenu ? "Ingredient cost" : creation.entityType === "service" ? "Internal cost (optional)" : "Buying price"}
                     value={String(value)}
                     onChangeText={(text) => onChange(Number(text || 0))}
                     keyboardType="decimal-pad"
                     error={errors.buyingPrice?.message}
-                    helperText={isMenu ? "Estimated ingredient cost per serving." : "How much you paid for one unit."}
+                    helperText={isMenu ? "Estimated ingredient cost per serving." : creation.entityType === "service" ? "Optional internal cost for margin reporting." : "How much you paid for one unit."}
                   />
                 )}
               />
-            </View>
+            </View> : null}
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}
@@ -749,8 +788,8 @@ export function ProductsScreen() {
                 )}
               />
             </View>
-          </View>
-          {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12 }}>
+          </View> : null}
+          {creation.supportsInventory ? <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Controller
                 control={control}
@@ -806,6 +845,8 @@ export function ProductsScreen() {
                   categoryId: values.categoryId ?? null,
                   brandId: values.brandId ?? null,
                   supplierId: values.supplierId ?? null,
+                  catalogEntityType: creation.entityType,
+                  industryKey: creation ? businessConfig.industryKey : null,
                   name: values.name,
                   description: values.description ?? null,
                   variants: isMenu ? splitMenuValues(menuVariants) : [],
@@ -823,7 +864,7 @@ export function ProductsScreen() {
                   batchNumber: values.batchNumber ? values.batchNumber : null,
                   expiryDate: values.expiryDate ?? null,
                   serialNumber: values.serialNumber ? values.serialNumber : null,
-                  unit: values.unit,
+                  unit: values.unit || creation.defaultUnit,
                   buyingPrice: values.buyingPrice,
                   sellingPrice: values.sellingPrice,
                   stockOnHand: values.stockOnHand,
@@ -852,7 +893,7 @@ export function ProductsScreen() {
                   batchNumber: "",
                   expiryDate: null,
                   serialNumber: "",
-                  unit: "pcs",
+                  unit: creation.defaultUnit,
                   buyingPrice: 0,
                   sellingPrice: 0,
                   stockOnHand: 0,

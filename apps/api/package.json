@@ -8,6 +8,7 @@
     "start:prod": "node ../../tools/start-api-prod.cjs",
     "build": "nest build",
     "test:smoke": "ts-node --transpile-only test/tenant-safety.smoke.ts",
+    "test:catalog-smoke": "ts-node --transpile-only test/catalog-creation.smoke.ts",
     "test:commerce-smoke": "ts-node --transpile-only test/commerce-foundation.smoke.ts",
     "test:financial-smoke": "ts-node --transpile-only test/financial-integrity.smoke.ts",
     "financial:diagnostic": "ts-node --transpile-only scripts/financial-diagnostic.ts",

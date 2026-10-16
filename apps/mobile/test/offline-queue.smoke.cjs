@@ -38,8 +38,16 @@ moduleLoader._load = function patchedLoad(request, parent, isMain) {
         setSession: async (value) => {
           secureState.session = value;
         },
+        getSessionMetadata: async () => secureState.sessionMetadata ?? null,
+        setSessionMetadata: async (value) => {
+          secureState.sessionMetadata = value;
+        },
+        clearSessionMetadata: async () => {
+          secureState.sessionMetadata = null;
+        },
         clearSession: async () => {
           secureState.session = null;
+          secureState.sessionMetadata = null;
         },
         getDeviceId: async () => secureState.deviceId,
         setDeviceId: async (value) => {

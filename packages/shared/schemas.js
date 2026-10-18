@@ -10,6 +10,7 @@ const nullableIsoDate = zod_1.z.preprocess((value) => (value === "" ? null : val
 exports.businessSetupSchema = zod_1.z.object({
     ownerName: zod_1.z.string().min(2, "Enter the business owner's full name."),
     phone: zod_1.z.string().min(7, "Enter a valid phone number."),
+    phoneLocal: zod_1.z.string().optional(),
     password: zod_1.z.string().min(6, "Use at least 6 characters for the password."),
     businessName: zod_1.z.string().min(2, "Enter the business name."),
     industryKey: zod_1.z.enum(industries_1.INDUSTRY_KEYS).optional(),

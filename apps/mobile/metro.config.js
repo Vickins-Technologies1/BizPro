@@ -30,7 +30,9 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     : context.resolveRequest(context, moduleName, platform);
 };
 
-config.watchFolders = [realWorkspaceRoot, expoModulesCoreRoot];
+// Keep both paths available for local Windows builds that use a short `subst`
+// drive. Metro resolves some pnpm junction targets through that mapped root.
+config.watchFolders = [projectRoot, workspaceRoot, realWorkspaceRoot, expoModulesCoreRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(realMobileRoot, "node_modules"),
   path.resolve(realWorkspaceRoot, "node_modules")

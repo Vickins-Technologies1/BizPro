@@ -451,6 +451,7 @@ export async function registerBusiness(input: {
   ownerUserId?: string;
   ownerName: string;
   phone: string;
+  phoneLocal?: string;
   password: string;
   businessName: string;
   industryKey?: string;

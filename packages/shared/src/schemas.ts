@@ -9,6 +9,7 @@ const nullableIsoDate = z.preprocess((value) => (value === "" ? null : value), i
 export const businessSetupSchema = z.object({
   ownerName: z.string().min(2, "Enter the business owner's full name."),
   phone: z.string().min(7, "Enter a valid phone number."),
+  phoneLocal: z.string().optional(),
   password: z.string().min(6, "Use at least 6 characters for the password."),
   businessName: z.string().min(2, "Enter the business name."),
   industryKey: z.enum(INDUSTRY_KEYS).optional(),

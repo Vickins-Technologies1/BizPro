@@ -186,6 +186,9 @@ export class User {
   phone?: string | null;
 
   @Prop({ type: String, select: false })
+  phoneLocal?: string | null;
+
+  @Prop({ type: String, select: false })
   passwordHash?: string | null;
 
   @Prop({ type: String, select: false })

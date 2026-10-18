@@ -4,6 +4,7 @@ import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { ClientSession, Connection, Model } from "mongoose";
 import bcrypt from "bcryptjs";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, ROLE_ACCESS, TRIAL_DAYS, getEffectivePermissions, resolveIndustryKey, type AccessPermission, type PlanTier } from "@vbo/shared";
 import { AuditLog, AuditLogDocument, Business, BusinessDocument, Branch, BranchDocument, Device, DeviceDocument, Subscription, SubscriptionDocument, SubscriptionPlan, SubscriptionPlanDocument, User, UserDocument } from "../schemas";
@@ -137,6 +138,7 @@ export class AuthService {
               branchId: createdBranch._id.toString(),
               fullName: ownerName,
               phone,
+              phoneLocal: this.normalizeLocalPhone(dto.phoneLocal ?? dto.phone),
               passwordHash,
               pinHash,
               role: "owner",
@@ -505,6 +507,10 @@ export class AuthService {
     return value.replace(/[^\d+]/g, "").trim();
   }
 
+  private normalizeLocalPhone(value: string) {
+    return value.replace(/\D/g, "");
+  }
+
   private maskPhone(value: string) {
     const trimmed = value.trim();
     if (!trimmed) return "empty";
@@ -518,13 +524,40 @@ export class AuthService {
     const businessFilter = businessId ? { businessId } : {};
 
     if (phone) {
-      const byPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phone }).select("+passwordHash +pinHash").lean();
+      const byPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phone }).select("+passwordHash +pinHash +phoneLocal").lean();
       if (byPhone) return byPhone;
+
+      const phoneLocal = this.normalizeLocalPhone(trimmed);
+      if (phoneLocal) {
+        const byLocalPhone = await this.userModel.findOne({ deletedAt: null, ...businessFilter, phoneLocal }).select("+passwordHash +pinHash +phoneLocal").lean();
+        if (byLocalPhone) return byLocalPhone;
+      }
+
+      // Older users only have the canonical international phone value. Resolve
+      // a national-format login using the region encoded in that stored value.
+      if (phoneLocal.length >= 7 && typeof this.userModel.find === "function") {
+        const nationalDigits = phoneLocal.replace(/^0+/, "");
+        if (nationalDigits) {
+          const escapedSuffix = nationalDigits.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const candidates = await this.userModel
+            .find({ deletedAt: null, ...businessFilter, phone: new RegExp(`${escapedSuffix}$`) })
+            .select("+passwordHash +pinHash +phoneLocal")
+            .lean();
+          const matches = (Array.isArray(candidates) ? candidates : []).filter((candidate: any) => {
+            if (!candidate.phone) return false;
+            const storedPhone = parsePhoneNumberFromString(candidate.phone);
+            if (!storedPhone?.isValid() || !storedPhone.country) return false;
+            const suppliedPhone = parsePhoneNumberFromString(trimmed, storedPhone.country);
+            return suppliedPhone?.isValid() && suppliedPhone.number === storedPhone.number;
+          });
+          if (matches.length === 1) return matches[0];
+        }
+      }
     }
 
     const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const fullName = new RegExp(`^${escaped}$`, "i");
-    return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).select("+passwordHash +pinHash").lean();
+    return this.userModel.findOne({ deletedAt: null, ...businessFilter, fullName }).select("+passwordHash +pinHash +phoneLocal").lean();
   }
 
   private async findUserForReset(identifier: string, includeResetFields = false) {

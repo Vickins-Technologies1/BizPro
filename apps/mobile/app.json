@@ -10,7 +10,7 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.bizpro.vickins",
-      "versionCode": 13,
+      "versionCode": 17,
       "edgeToEdgeEnabled": true,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",

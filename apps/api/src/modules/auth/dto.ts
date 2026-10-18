@@ -38,6 +38,12 @@ export class RegisterDto {
   @Transform(({ value }) => trimString(value))
   phone!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  @Transform(({ value }) => trimString(value))
+  phoneLocal?: string;
+
   @MinLength(6)
   @MaxLength(128)
   password!: string;

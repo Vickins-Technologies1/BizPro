@@ -2,6 +2,7 @@ import { z } from "zod";
 export declare const businessSetupSchema: z.ZodObject<{
     ownerName: z.ZodString;
     phone: z.ZodString;
+    phoneLocal: z.ZodOptional<z.ZodString>;
     password: z.ZodString;
     businessName: z.ZodString;
     industryKey: z.ZodOptional<z.ZodEnum<["retail", "food_beverage", "beauty", "hospitality", "healthcare", "agriculture", "automotive", "services", "professional_services"]>>;
@@ -20,6 +21,7 @@ export declare const businessSetupSchema: z.ZodObject<{
     planTier: "command" | "pro" | "elite" | "enterprise";
     branchName: string;
     industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
+    phoneLocal?: string | undefined;
     cashierPin?: string | undefined;
 }, {
     businessType: "retail_shop" | "boutique" | "cosmetics" | "accessories" | "wines_spirits" | "hardware" | "agrovet" | "restaurant" | "cafe" | "bakery" | "bar" | "salon" | "spa" | "hotel" | "lodge" | "clinic" | "pharmacy" | "dental_clinic" | "farm" | "feed_store" | "garage" | "auto_parts" | "service_center" | "tyre_business" | "body_shop" | "general_service" | "consultancy" | "agency" | "law_firm" | "accounting_firm";
@@ -31,6 +33,7 @@ export declare const businessSetupSchema: z.ZodObject<{
     branchName: string;
     currency?: string | undefined;
     industryKey?: "retail" | "food_beverage" | "beauty" | "hospitality" | "healthcare" | "agriculture" | "automotive" | "services" | "professional_services" | undefined;
+    phoneLocal?: string | undefined;
     cashierPin?: string | undefined;
 }>;
 export declare const loginSchema: z.ZodObject<{

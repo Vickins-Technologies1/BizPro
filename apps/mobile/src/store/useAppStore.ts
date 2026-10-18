@@ -579,6 +579,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ownerUserId: createId(),
         ownerName,
         phone,
+        phoneLocal: normalizeSetupValue(parsed.phoneLocal ?? parsed.phone),
         password: parsed.password,
         businessName,
         industryKey,

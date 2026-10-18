@@ -115,7 +115,7 @@ export function OnboardingScreen() {
     }
     setSubmitting(true);
     try {
-      const result = await completeOnboarding({ ...values, phone: parsedPhone.number });
+      const result = await completeOnboarding({ ...values, phone: parsedPhone.number, phoneLocal: values.phone });
       Alert.alert("Setup complete", "Your owner account and business were saved successfully. Tap Continue to open the app.", [
         {
           text: "Continue",

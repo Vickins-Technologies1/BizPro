@@ -246,7 +246,7 @@ export class InvoicesController {
 
   @Post(":id/payments")
   @Roles("owner", "manager", "cashier")
-  recordPayment(@CurrentUser() user: { businessId: string; sub: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Body() dto: RecordInvoicePaymentDto) {
+  recordPayment(@CurrentUser() user: { businessId: string; sub: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Body() dto: RecordInvoicePaymentDto, @Query("branchId") branchId?: string) {
     return this.invoices.recordPayment(
       {
         businessId: user.businessId,
@@ -259,7 +259,7 @@ export class InvoicesController {
         externalId: dto.externalId ?? null,
         recordedById: user.sub
       },
-      { role: user.role ?? null, branchId: user.branchId ?? null }
+      { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null }
     );
   }
 

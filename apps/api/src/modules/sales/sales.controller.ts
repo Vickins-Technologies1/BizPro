@@ -15,6 +15,13 @@ class SaleItemDto {
   @IsOptional() @IsNumber() @Min(0) tax?: number;
 }
 
+class SalePaymentLineDto {
+  @IsIn(PAYMENT_METHODS) method!: any;
+  @IsNumber() @Min(0) amount!: number;
+  @IsOptional() @IsString() reference?: string;
+  @IsOptional() @IsString() note?: string;
+}
+
 class CreateSaleDto {
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string;
@@ -24,6 +31,7 @@ class CreateSaleDto {
   @IsNumber() amountPaid!: number;
   @IsIn(PAYMENT_STATUSES) paymentStatus!: any;
   @IsIn(PAYMENT_METHODS) paymentMethod!: any;
+  @IsOptional() @Type(() => SalePaymentLineDto) @ValidateNested({ each: true }) @IsArray() paymentLines?: SalePaymentLineDto[];
   @IsOptional() @IsString() notes?: string;
   @Type(() => SaleItemDto)
   @ValidateNested({ each: true })

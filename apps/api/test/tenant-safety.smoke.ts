@@ -26,7 +26,7 @@ function createDoc<T extends Record<string, unknown>>(value: T) {
 }
 
 async function main() {
-  const { BusinessesService, CustomersService, JwtStrategy, ProductsService, SalesService } = loadServices();
+  const { BusinessesService, CustomersService, InvoicesController, JwtStrategy, ProductsService, PurchaseOrdersService, SalesService, StockTransfersService } = loadServices();
   await testProductsService(ProductsService);
   await testCustomersService(CustomersService);
   await testCustomersListWithInvalidAttachmentDate(CustomersService);
@@ -34,6 +34,9 @@ async function main() {
   await testJwtStrategyBusinessLookup(JwtStrategy);
   await testSalesService(SalesService);
   await testSalesServiceInvalidProductId(SalesService);
+  await testInvoicePaymentBranchQuery(InvoicesController);
+  await testPurchaseOrderIdentityAndBranch(PurchaseOrdersService);
+  await testStockTransferIdentity(StockTransfersService);
   console.log("Tenant safety smoke checks passed.");
 }
 
@@ -57,8 +60,95 @@ function loadServices() {
     ProductsService: require("../src/modules/products/products.service").ProductsService as any,
     CustomersService: require("../src/modules/customers/customers.service").CustomersService as any,
     SalesService: require("../src/modules/sales/sales.service").SalesService as any,
+    PurchaseOrdersService: require("../src/modules/purchase-orders/purchase-orders.service").PurchaseOrdersService as any,
+    StockTransfersService: require("../src/modules/stock-transfers/stock-transfers.service").StockTransfersService as any,
+    InvoicesController: require("../src/modules/invoices/invoices.controller").InvoicesController as any,
     JwtStrategy: require("../src/modules/auth/jwt.strategy").JwtStrategy as any
   };
+}
+
+async function testStockTransferIdentity(StockTransfersService: any) {
+  const calls: CallRecord[] = [];
+  const stockTransferModel = {
+    findOneAndUpdate(query: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown>) {
+      calls.push({ method: "stockTransfer.findOneAndUpdate", query, update, options });
+      return leanResult({ id: "transfer-1", ...update });
+    }
+  };
+  const service = new StockTransfersService(stockTransferModel as any);
+  await service.update("business-1", "transfer-external-1", { businessId: "ignored", note: "updated" } as any);
+  assert.deepEqual(calls[0], {
+    method: "stockTransfer.findOneAndUpdate",
+    query: { businessId: "business-1", deletedAt: null, $and: [{ externalId: "transfer-external-1" }] },
+    update: { note: "updated" },
+    options: { new: true }
+  });
+  calls.length = 0;
+  await service.archive("business-1", "transfer-external-1");
+  assert.deepEqual(calls[0]?.query, { businessId: "business-1", deletedAt: null, $and: [{ externalId: "transfer-external-1" }] });
+}
+
+async function testPurchaseOrderIdentityAndBranch(PurchaseOrdersService: any) {
+  const calls: CallRecord[] = [];
+  const purchaseOrderModel = {
+    findOneAndUpdate(query: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown>) {
+      calls.push({ method: "purchaseOrder.findOneAndUpdate", query, update, options });
+      return leanResult({ id: "purchase-1", ...update });
+    }
+  };
+  const service = new PurchaseOrdersService(purchaseOrderModel as any);
+  await service.update("business-1", "po-external-1", { branchId: "branch-2", notes: "Updated", businessId: "ignored" } as any, { role: "cashier", branchId: "branch-1" });
+  assert.deepEqual(calls[0], {
+    method: "purchaseOrder.findOneAndUpdate",
+    query: {
+      businessId: "business-1",
+      deletedAt: null,
+      $and: [
+        { externalId: "po-external-1" },
+        { $or: [{ branchId: "branch-1" }, { branchId: null }] }
+      ]
+    },
+    update: { notes: "Updated" },
+    options: { new: true }
+  });
+  calls.length = 0;
+  await service.archive("business-1", "po-external-1", { role: "owner", branchId: null, requestedBranchId: "branch-2" });
+  const archivedQuery = calls[0]?.query as Record<string, unknown>;
+  assert.equal(archivedQuery.businessId, "business-1");
+  assert.deepEqual(archivedQuery.$and, [
+    { externalId: "po-external-1" },
+    { $or: [{ branchId: "branch-2" }, { branchId: null }] }
+  ]);
+}
+
+async function testInvoicePaymentBranchQuery(InvoicesController: any) {
+  let received: { input?: Record<string, unknown>; scope?: Record<string, unknown> } | null = null;
+  const controller = new InvoicesController({
+    async recordPayment(input: Record<string, unknown>, scope: Record<string, unknown>) {
+      received = { input, scope };
+      return { ok: true };
+    }
+  });
+  await controller.recordPayment(
+    { businessId: "business-1", sub: "user-1", role: "owner", branchId: null },
+    "invoice-1",
+    { amount: 20, method: "cash", paymentDate: "2026-10-19", reference: "receipt-1" },
+    "branch-2"
+  );
+  assert.deepEqual(received, {
+    input: {
+      businessId: "business-1",
+      invoiceId: "invoice-1",
+      amount: 20,
+      method: "cash",
+      paymentDate: new Date("2026-10-19"),
+      reference: "receipt-1",
+      note: null,
+      externalId: null,
+      recordedById: "user-1"
+    },
+    scope: { role: "owner", branchId: null, requestedBranchId: "branch-2" }
+  });
 }
 
 async function testProductsService(ProductsService: any) {
@@ -198,6 +288,9 @@ async function testCustomersService(CustomersService: any) {
   };
 
   const paymentModel = {
+    findOne() {
+      return { lean: async () => null };
+    },
     create(input: Record<string, unknown>) {
       const payload = Array.isArray(input) ? input[0] ?? {} : input;
       calls.push({ method: "payment.create", input: payload });
@@ -270,6 +363,28 @@ async function testCustomersService(CustomersService: any) {
   assert.equal(calls[1]?.method, "payment.create");
   assert.equal((calls[1]?.input as Record<string, unknown> | undefined)?.businessId, "business-1");
   assert.equal((calls[1]?.input as Record<string, unknown> | undefined)?.branchId, null);
+
+  calls.length = 0;
+  await service.recordPayment({
+    businessId: "business-1",
+    customerId: "customer-1",
+    branchId: "branch-2",
+    externalId: "owner-payment-1",
+    amount: 10,
+    method: "cash"
+  }, { role: "owner", branchId: null });
+  assert.equal((calls.find((call) => call.method === "payment.create")?.input as Record<string, unknown> | undefined)?.branchId, "branch-2");
+
+  calls.length = 0;
+  await service.recordPayment({
+    businessId: "business-1",
+    customerId: "customer-1",
+    branchId: "branch-2",
+    externalId: "staff-payment-1",
+    amount: 10,
+    method: "cash"
+  }, { role: "cashier", branchId: "branch-1" });
+  assert.equal((calls.find((call) => call.method === "payment.create")?.input as Record<string, unknown> | undefined)?.branchId, "branch-1");
 }
 
 async function testCustomersListWithInvalidAttachmentDate(CustomersService: any) {
@@ -470,11 +585,13 @@ async function testSalesService(SalesService: any) {
   });
   const customerDoc = createDoc({
     _id: "customer-1",
+    externalId: "customer-external-1",
     businessId: "business-1",
     balance: 40
   });
 
   const saleModel = {
+    findOne() { return leanResult(null); },
     create(input: Record<string, unknown>) {
       const payload = Array.isArray(input) ? input[0] ?? {} : input;
       calls.push({ method: "sale.create", input: payload });
@@ -489,14 +606,9 @@ async function testSalesService(SalesService: any) {
 
   const paymentModel = {
     create(input: Record<string, unknown>) {
-      const payload = Array.isArray(input) ? input[0] ?? {} : input;
-      calls.push({ method: "payment.create", input: payload });
-      return Promise.resolve([
-        {
-          ...payload,
-          toObject: () => ({ ...payload })
-        }
-      ]);
+      const payloads = Array.isArray(input) ? input : [input];
+      calls.push({ method: "payment.create", input: payloads });
+      return Promise.resolve(payloads.map((payload) => ({ ...payload, toObject: () => ({ ...payload }) })));
     }
   };
 
@@ -551,11 +663,16 @@ async function testSalesService(SalesService: any) {
 
   await service.create({
     businessId: "business-1",
-    customerId: "customer-1",
+    externalId: "sale-external-1",
+    customerId: "customer-external-1",
     receiptNumber: "R-001",
     amountPaid: 95,
     paymentStatus: "partial",
     paymentMethod: "cash",
+    paymentLines: [
+      { method: "cash", amount: 45 },
+      { method: "mpesa", amount: 50, reference: "MPESA-123" }
+    ],
     notes: null,
     items: [
       {
@@ -581,9 +698,35 @@ async function testSalesService(SalesService: any) {
   assert.equal(saleItem.unitPrice, 50);
   assert.equal(saleItem.costPrice, 20);
   assert.equal(saleItem.currency, "KES");
+  const customerLookup = calls.find((call) => call.method === "customer.findOne")?.query as Record<string, unknown>;
+  assert.deepEqual(customerLookup.$and, [
+    { $or: [{ externalId: "customer-external-1" }] },
+    {}
+  ]);
   assert.ok(calls.some((call) => call.method === "product.findOneAndUpdate"));
   assert.ok(calls.some((call) => call.method === "movement.create"));
-  assert.ok(calls.some((call) => call.method === "payment.create"));
+  const recordedPayments = calls.find((call) => call.method === "payment.create")?.input as Array<Record<string, unknown>>;
+  assert.deepEqual(recordedPayments.map((payment) => [payment.method, payment.amount, payment.reference, payment.externalId]), [
+    ["cash", 45, null, "sale-external-1:payment:0"],
+    ["mpesa", 50, "MPESA-123", "sale-external-1:payment:1"]
+  ]);
+
+  calls.length = 0;
+  await service.create({
+    businessId: "business-1",
+    customerId: "customer-external-1",
+    receiptNumber: "R-002",
+    amountPaid: 50,
+    paymentStatus: "paid",
+    paymentMethod: "cash",
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 1 }]
+  });
+  const paidSaleCustomerLookup = calls.find((call) => call.method === "customer.findOne")?.query as Record<string, unknown>;
+  assert.equal(paidSaleCustomerLookup.businessId, "business-1");
+  assert.deepEqual(paidSaleCustomerLookup.$and, [
+    { $or: [{ externalId: "customer-external-1" }] },
+    {}
+  ]);
 }
 
 async function testSalesServiceInvalidProductId(SalesService: any) {

@@ -180,6 +180,7 @@ export class CustomersService {
   async recordPayment(input: {
     businessId: string;
     customerId: string;
+    branchId?: string | null;
     externalId?: string | null;
     amount: number;
     method: Payment["method"];
@@ -187,7 +188,7 @@ export class CustomersService {
     note?: string | null;
     recordedById?: string | null;
   }, scope: BranchScope = {}) {
-    const branchId = resolveWriteBranchId(scope, scope.branchId ?? null);
+    const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
     if (input.externalId) {
       const existingPayment = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).lean();
       if (existingPayment) {

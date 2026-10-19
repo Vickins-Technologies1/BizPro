@@ -24,6 +24,7 @@ export interface CreateSaleInput {
   amountPaid: number;
   paymentStatus: Sale["paymentStatus"];
   paymentMethod: Sale["paymentMethod"];
+  paymentLines?: Array<{ method: Sale["paymentMethod"]; amount: number; reference?: string | null; note?: string | null }>;
   notes?: string | null;
   items: Array<{ productId: string; quantity: number; discount?: number; tax?: number }>;
 }
@@ -112,10 +113,26 @@ export class SalesService {
         item.lineTotal = calculation.lines[index]!.lineTotal;
         item.calculationVersion = FINANCIAL_CALCULATION_VERSION;
       });
+      let customer: CustomerDocument | null = null;
+      if (input.customerId) {
+        const customerIdentifiers: Array<Record<string, string>> = [{ externalId: input.customerId }];
+        if (isMongoObjectId(input.customerId)) customerIdentifiers.unshift({ _id: input.customerId });
+        customer = await this.customerModel.findOne({
+          businessId: input.businessId,
+          deletedAt: null,
+          $and: [{ $or: customerIdentifiers }, buildBranchMatch(branchId)]
+        }).session(session);
+        if (!customer) throw new NotFoundException({ success: false, code: "CUSTOMER_NOT_FOUND", message: "Customer not found" });
+        if (calculation.balanceDue > 0) {
+          customer.balance += calculation.balanceDue;
+          await customer.save({ session });
+        }
+      }
       const sale = (await this.saleModel.create(
         [
           {
             ...input,
+            customerId: customer ? (customer.externalId ?? customer._id.toString()) : null,
             subtotal: calculation.subtotal,
             discountTotal: calculation.discountTotal,
             taxTotal: calculation.taxTotal,
@@ -184,29 +201,29 @@ export class SalesService {
           );
         }
       }
-      if (input.customerId && calculation.balanceDue > 0) {
-        const customer = await this.customerModel.findOne({ _id: input.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
-        if (!customer) throw new NotFoundException({ success: false, code: "CUSTOMER_NOT_FOUND", message: "Customer not found" });
-        customer.balance += calculation.balanceDue;
-        await customer.save({ session });
-      }
-      if (calculation.amountPaid > 0) await this.paymentModel.create(
-        [{
-            businessId: input.businessId,
-            branchId,
-            customerId: input.customerId ?? null,
-            saleId: sale._id.toString(),
-            debtPaymentId: null,
-            externalId: input.externalId ?? null,
-            method: input.paymentMethod,
-            status: calculation.balanceDue === 0 ? "paid" : "partial",
-            amount: calculation.amountPaid,
-            reference: null,
-            note: input.notes ?? null,
-            provider: input.paymentMethod === "mpesa" ? "tuma" : null,
-            reconciledAt: input.paymentMethod === "mpesa" && input.paymentStatus === "paid" ? new Date() : null
-          }
-        ],
+      const paymentLines = input.paymentLines?.length ? input.paymentLines : [{ method: input.paymentMethod, amount: calculation.amountPaid }];
+      if (paymentLines.some((line) => !Number.isFinite(line.amount) || line.amount < 0)) throw new BadRequestException("Payment amounts must be zero or greater");
+      const tenderTotal = paymentLines.reduce((sum, line) => sum + line.amount, 0);
+      if (Math.abs(tenderTotal - calculation.amountPaid) > 0.01) throw new BadRequestException("Payment lines must add up to the amount paid");
+      const recordedPayments = paymentLines.filter((line) => line.amount > 0);
+      if (recordedPayments.length) await this.paymentModel.create(
+        recordedPayments.map((line, index) => ({
+          businessId: input.businessId,
+          branchId,
+          customerId: customer ? (customer.externalId ?? customer._id.toString()) : null,
+          saleId: sale._id.toString(),
+          debtPaymentId: null,
+          externalId: input.externalId
+            ? recordedPayments.length === 1 ? input.externalId : `${input.externalId}:payment:${index}`
+            : null,
+          method: line.method,
+          status: calculation.balanceDue === 0 ? "paid" : "partial",
+          amount: line.amount,
+          reference: line.reference ?? null,
+          note: [line.note, input.notes].filter(Boolean).join(" · ") || null,
+          provider: line.method === "mpesa" ? "tuma" : null,
+          reconciledAt: line.method === "mpesa" && calculation.balanceDue === 0 ? new Date() : null
+        })),
         { session }
       );
       return sale.toObject();

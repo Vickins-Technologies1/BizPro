@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { endOfDay, format, parseISO, startOfDay, subMonths } from "date-fns";
 import {
   PurchaseOrder,
@@ -50,13 +50,15 @@ export class SuppliersService {
 
   async update(businessId: string, id: string, patch: Partial<Supplier>) {
     const { businessId: _ignoredBusinessId, ...safePatch } = patch;
-    const updated = await this.supplierModel.findOneAndUpdate({ _id: id, businessId }, { ...safePatch, categoryId: safePatch.categoryId ?? null }, { new: true }).lean();
+    const identity = Types.ObjectId.isValid(id) ? [{ _id: id }, { externalId: id }] : [{ externalId: id }];
+    const updated = await this.supplierModel.findOneAndUpdate({ businessId, deletedAt: null, $or: identity }, { ...safePatch, categoryId: safePatch.categoryId ?? null }, { new: true }).lean();
     if (!updated) throw new NotFoundException("Supplier not found");
     return updated;
   }
 
   async archive(businessId: string, id: string) {
-    const updated = await this.supplierModel.findOneAndUpdate({ _id: id, businessId }, { deletedAt: new Date(), isActive: false }, { new: true }).lean();
+    const identity = Types.ObjectId.isValid(id) ? [{ _id: id }, { externalId: id }] : [{ externalId: id }];
+    const updated = await this.supplierModel.findOneAndUpdate({ businessId, deletedAt: null, $or: identity }, { deletedAt: new Date(), isActive: false }, { new: true }).lean();
     if (!updated) throw new NotFoundException("Supplier not found");
     return updated;
   }

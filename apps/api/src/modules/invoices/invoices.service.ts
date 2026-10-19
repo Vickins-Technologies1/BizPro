@@ -469,7 +469,7 @@ export class InvoicesService {
   }
 
   async recordPayment(input: InvoicePaymentInput, scope: BranchScope = {}) {
-    const branchId = resolveWriteBranchId(scope, null);
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? null);
     return runInTransaction(this.connection, async (session) => {
       const invoice = await this.invoiceModel.findOne({ _id: input.invoiceId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");

@@ -3,6 +3,11 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { PurchaseOrder, PurchaseOrderDocument } from "../schemas";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
+import { isMongoObjectId } from "../products/product-identity";
+
+function purchaseOrderIdentity(id: string) {
+  return isMongoObjectId(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
+}
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -27,14 +32,14 @@ export class PurchaseOrdersService {
   async update(businessId: string, id: string, patch: Partial<PurchaseOrder>, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, patch.branchId ?? null);
     const { businessId: _ignoredBusinessId, branchId: _ignoredBranchId, ...safePatch } = patch;
-    const updated = await this.purchaseOrderModel.findOneAndUpdate({ _id: id, businessId, ...buildBranchMatch(branchId) }, safePatch, { new: true }).lean();
+    const updated = await this.purchaseOrderModel.findOneAndUpdate({ businessId, deletedAt: null, $and: [purchaseOrderIdentity(id), buildBranchMatch(branchId)] }, safePatch, { new: true }).lean();
     if (!updated) throw new NotFoundException("Purchase order not found");
     return updated;
   }
 
   async archive(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const updated = await this.purchaseOrderModel.findOneAndUpdate({ _id: id, businessId, ...buildBranchMatch(branchId) }, { deletedAt: new Date(), status: "cancelled" }, { new: true }).lean();
+    const updated = await this.purchaseOrderModel.findOneAndUpdate({ businessId, deletedAt: null, $and: [purchaseOrderIdentity(id), buildBranchMatch(branchId)] }, { deletedAt: new Date(), status: "cancelled" }, { new: true }).lean();
     if (!updated) throw new NotFoundException("Purchase order not found");
     return updated;
   }

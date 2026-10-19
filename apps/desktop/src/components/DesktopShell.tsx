@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ACCESS_PERMISSIONS, hasPermission, resolveCatalogCreationConfig, resolveCatalogCreationContext, type AccessPermission, type Customer, type DailySummary, type Product, type Sale } from "@vbo/shared";
-import { api, clearSession, flushOfflineQueue, isOfflineError, login, queueOffline, queuedCount, readSession, writeSession, type Session } from "../lib/desktop-api";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { ACCESS_PERMISSIONS, PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, ROLE_ACCESS, ROLE_PRESETS, businessSetupSchema, formatPermissionLabel, formatRoleLabel, getEffectivePermissions, hasPermission, listIndustryModules, resolveBusinessTypeConfig, resolveCatalogCreationConfig, resolveCatalogCreationContext, resolveIndustryKey, type AccessPermission, type Branch, type Customer, type DailySummary, type Product, type Sale, type UserRole } from "@vbo/shared";
+import { api, clearSession, DesktopApiError, flushOfflineQueue, isOfflineError, login, queueOffline, queuedCount, readSession, registerBusiness, writeSession, type Session } from "../lib/desktop-api";
 import { IndustryProducts } from "./DesktopCatalog";
+import { DesktopInvoices } from "./DesktopInvoices";
+import { DesktopBranches } from "./DesktopBranches";
+import { DesktopPos } from "./DesktopPos";
+import { DesktopSalesHistory } from "./DesktopSalesHistory";
+import { DesktopPurchaseOrders } from "./DesktopPurchaseOrders";
+import { DesktopStockTransfers } from "./DesktopStockTransfers";
 
-type View = "dashboard" | "pos" | "products" | "inventory" | "customers" | "suppliers" | "expenses" | "sales" | "reports" | "finance" | "insights" | "operations" | "team" | "settings" | "notifications" | "subscription";
+type View = "dashboard" | "pos" | "products" | "inventory" | "purchaseOrders" | "transfers" | "customers" | "suppliers" | "expenses" | "sales" | "reports" | "finance" | "insights" | "operations" | "team" | "teamAccess" | "settings" | "notifications" | "subscription";
 type RecordItem = Record<string, unknown>;
 
 const nav: Array<{ id: View; label: string; icon: string; group: string; permission?: AccessPermission }> = [
@@ -13,6 +19,8 @@ const nav: Array<{ id: View; label: string; icon: string; group: string; permiss
   { id: "pos", label: "Point of sale", icon: "▣", group: "Workspace", permission: "createSales" },
   { id: "products", label: "Products", icon: "▤", group: "Manage", permission: "manageInventory" },
   { id: "inventory", label: "Inventory", icon: "◫", group: "Manage", permission: "manageInventory" },
+  { id: "purchaseOrders", label: "Purchase orders", icon: "⇩", group: "Manage", permission: "manageInventory" },
+  { id: "transfers", label: "Stock transfers", icon: "⇄", group: "Manage", permission: "manageInventory" },
   { id: "customers", label: "Customers", icon: "◎", group: "Manage", permission: "manageCustomers" },
   { id: "suppliers", label: "Suppliers", icon: "⇄", group: "Manage", permission: "manageSuppliers" },
   { id: "expenses", label: "Expenses", icon: "−", group: "Manage", permission: "manageExpenses" },
@@ -22,6 +30,7 @@ const nav: Array<{ id: View; label: string; icon: string; group: string; permiss
   { id: "insights", label: "Insights", icon: "◒", group: "Insights", permission: "viewReports" },
   { id: "operations", label: "Operations", icon: "▦", group: "Manage", permission: "manageOperations" },
   { id: "team", label: "Team & access", icon: "♙", group: "Admin", permission: "manageEmployees" },
+  { id: "teamAccess", label: "Team access", icon: "⛨", group: "Admin", permission: "manageEmployees" },
   { id: "settings", label: "Business settings", icon: "⚙", group: "Admin", permission: "manageSettings" },
   { id: "notifications", label: "Notifications", icon: "◉", group: "Admin" },
   { id: "subscription", label: "Subscription", icon: "◇", group: "Admin", permission: "manageSettings" }
@@ -73,19 +82,55 @@ export function DesktopShell() {
   const [view, setView] = useState<View>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [offline, setOffline] = useState(false);
-  const [branchIndex, setBranchIndex] = useState(0);
+  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [pendingWrites, setPendingWrites] = useState(0);
 
+  const updateBranches = useCallback((branches: Branch[]) => {
+    setSession((current) => {
+      if (!current) return current;
+      const next = { ...current, branches };
+      writeSession(next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
-    setSession(readSession());
+    let active = true;
+    const cachedSession = readSession();
+    setSession(cachedSession);
+    if (cachedSession) {
+      void api.me().then((profile) => {
+        if (!active) return;
+        const refreshedSession: Session = { ...cachedSession, ...profile, accessToken: cachedSession.accessToken };
+        writeSession(refreshedSession);
+        setSession(refreshedSession);
+      }).catch((error) => {
+        if (active && error instanceof DesktopApiError && error.status === 401) {
+          clearSession();
+          setSession(null);
+        }
+      });
+    }
     setTheme((window.localStorage.getItem("bizpro.desktop.theme") as "light" | "dark" | null) ?? "dark");
     setPendingWrites(queuedCount());
     const onLine = () => setOffline(!navigator.onLine);
     const sync = () => { onLine(); void flushOfflineQueue().then(({ remaining }) => setPendingWrites(remaining)).catch(() => setPendingWrites(queuedCount())); };
     const onQueueChange = () => setPendingWrites(queuedCount());
     sync(); window.addEventListener("online", sync); window.addEventListener("offline", onLine); window.addEventListener("dira-offline-queue-change", onQueueChange);
-    return () => { window.removeEventListener("online", sync); window.removeEventListener("offline", onLine); window.removeEventListener("dira-offline-queue-change", onQueueChange); };
+    return () => { active = false; window.removeEventListener("online", sync); window.removeEventListener("offline", onLine); window.removeEventListener("dira-offline-queue-change", onQueueChange); };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    const activeBranches = (session.branches ?? []).filter((branch) => branch.status !== "inactive");
+    const savedId = window.localStorage.getItem("bizpro.desktop.branchId");
+    const nextId = activeBranches.find((branch) => branch.id === savedId)?.id ?? activeBranches.find((branch) => branch.isDefault)?.id ?? activeBranches[0]?.id ?? "";
+    setSelectedBranchId(nextId);
+  }, [session?.user.id, session?.branches]);
+
+  useEffect(() => {
+    if (selectedBranchId) window.localStorage.setItem("bizpro.desktop.branchId", selectedBranchId);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
@@ -101,9 +146,11 @@ export function DesktopShell() {
   function toggleTheme() { const next = theme === "dark" ? "light" : "dark"; setTheme(next); window.localStorage.setItem("bizpro.desktop.theme", next); }
   if (!session) return <LoginScreen onLogin={(next) => { writeSession(next); setSession(next); }} />;
 
-  const activeBranch = session.branches?.length ? session.branches[branchIndex % session.branches.length] : undefined;
+  const activeBranches = (session.branches ?? []).filter((branch) => branch.status !== "inactive");
+  const activeBranch = activeBranches.find((branch) => branch.id === selectedBranchId) ?? activeBranches.find((branch) => branch.isDefault) ?? activeBranches[0];
   const activeSession = activeBranch ? { ...session, branches: [activeBranch] } : session;
-  const visibleNav = nav.filter((item) => !item.permission || canAccess(session, item.permission));
+  const inventoryEnabled = resolveBusinessTypeConfig({ businessType: session.business?.businessType, industryKey: session.business?.industryKey }).capabilities.inventory;
+  const visibleNav = nav.filter((item) => (!item.permission || canAccess(session, item.permission)) && (!(["purchaseOrders", "transfers"] as View[]).includes(item.id) || inventoryEnabled));
   return <div className={`desktop-app ${theme}`} style={(theme === "light" ? lightThemeVars : darkThemeVars) as CSSProperties}>
     <aside className="sidebar">
       <div className="brand"><img className="brand-logo" src="/dira-os-logo.png" alt="Dira OS" /><div><strong>Dira OS</strong><span>Business OS</span></div></div>
@@ -111,31 +158,71 @@ export function DesktopShell() {
       <nav>{["Workspace", "Manage", "Insights", "Admin"].map((group) => <div className="nav-group" key={group}><small>{group}</small>{visibleNav.filter((item) => item.group === group).map((item) => <button className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => setView(item.id)} key={item.id}><i>{item.icon}</i><span>{item.label}</span></button>)}</div>)}</nav>
       <div className="sidebar-footer"><div className="sync-line"><span className={offline || pendingWrites ? "status-dot amber" : "status-dot"} />{offline ? "Offline mode" : pendingWrites ? `${pendingWrites} changes waiting` : "Connected"}<span className="sync-count">{pendingWrites}</span></div><button className="theme-button" onClick={toggleTheme}>{theme === "dark" ? "☼  Light appearance" : "☾  Dark appearance"}</button><button className="profile" onClick={() => setView("settings")}><span className="avatar">{text(session.user.fullName, "U").slice(0, 1).toUpperCase()}</span><span><strong>{text(session.user.fullName, "User")}</strong><small>{text(session.user.role, "Owner")}</small></span><span className="more">•••</span></button></div>
     </aside>
-    <main className="main-area"><header className="topbar"><div className="breadcrumbs"><span>Dira OS</span><b>/</b><strong>{visibleNav.find((item) => item.id === view)?.label}</strong></div><div className="top-actions"><kbd>Ctrl K</kbd><button className="icon-button" aria-label="Search" onClick={() => setView("products")}>⌕</button><button className="icon-button" onClick={() => setView("notifications")} aria-label="Notifications">◉</button><button className="branch-select" type="button" onClick={() => setBranchIndex((index) => session.branches?.length ? (index + 1) % session.branches.length : 0)}>{text(activeSession.branches?.[0]?.name, "Main branch")}⌄</button></div></header><div className="content"><ViewContent view={view} session={activeSession} offline={offline} pendingWrites={pendingWrites} onNavigate={setView} /></div></main>
+    <main className="main-area"><header className="topbar"><div className="breadcrumbs"><span>Dira OS</span><b>/</b><strong>{visibleNav.find((item) => item.id === view)?.label}</strong></div><div className="top-actions"><kbd>Ctrl K</kbd><button className="icon-button" aria-label="Search" onClick={() => setView("products")}>⌕</button><button className="icon-button" onClick={() => setView("notifications")} aria-label="Notifications">◉</button><select className="branch-select" aria-label="Current branch" value={activeBranch?.id ?? ""} disabled={activeBranches.length < 2} onChange={(event) => setSelectedBranchId(event.target.value)}>{activeBranches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></div></header><div className="content"><ViewContent view={view} session={activeSession} allBranches={session.branches ?? []} onBranchesChange={updateBranches} offline={offline} pendingWrites={pendingWrites} onNavigate={setView} /></div></main>
   </div>;
 }
 
 function LoginScreen({ onLogin }: { onLogin: (session: Session) => void }) {
-  const [identifier, setIdentifier] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const [identifier, setIdentifier] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false); const [showOnboarding, setShowOnboarding] = useState(false);
   async function submit(event: React.FormEvent) { event.preventDefault(); setLoading(true); setError(""); try { onLogin(await login(identifier, password)); } catch (err) { setError(err instanceof Error ? err.message : "Unable to sign in"); } finally { setLoading(false); } }
-  return <div className="login-page"><div className="login-art"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="login-brand"><img className="brand-logo large" src="/dira-os-logo.png" alt="Dira OS" /><strong>Dira OS</strong></div><div className="login-quote"><p>“The calm, clear way to run your business.”</p><span>Sales, stock and growth in one focused workspace.</span></div></div><div className="login-panel"><div className="login-inner"><span className="eyebrow">WELCOME BACK</span><h1>Run your business<br /><span>with clarity.</span></h1><p className="muted">Sign in to your Dira OS workspace to continue.</p><form onSubmit={submit}><label>Phone or email<input autoFocus value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@business.com" required /></label><label>Password or PIN<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Enter your password" required /></label>{error && <div className="error-banner">{error}</div>}<button className="primary full" disabled={loading}>{loading ? "Signing in..." : "Continue  →"}</button></form><p className="login-help">Protected by Dira OS access controls · <a href="#help">Need help?</a></p></div></div></div>;
+  if (showOnboarding) return <OnboardingForm onCancel={() => setShowOnboarding(false)} onComplete={onLogin} />;
+  return <div className="login-page"><div className="login-art"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="login-brand"><img className="brand-logo large" src="/dira-os-logo.png" alt="Dira OS" /><strong>Dira OS</strong></div><div className="login-quote"><p>“The calm, clear way to run your business.”</p><span>Sales, stock and growth in one focused workspace.</span></div></div><div className="login-panel"><div className="login-inner"><span className="eyebrow">WELCOME BACK</span><h1>Run your business<br /><span>with clarity.</span></h1><p className="muted">Sign in to your Dira OS workspace to continue.</p><form onSubmit={submit}><label>Phone or email<input autoFocus value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@business.com" required /></label><label>Password or PIN<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Enter your password" required /></label>{error && <div className="error-banner">{error}</div>}<button className="primary full" disabled={loading}>{loading ? "Signing in..." : "Continue  →"}</button></form><p className="login-help">Protected by Dira OS access controls · <button type="button" className="text-button" onClick={() => setShowOnboarding(true)}>Create owner account</button></p></div></div></div>;
 }
 
-function ViewContent({ view, session, offline, pendingWrites, onNavigate }: { view: View; session: Session; offline: boolean; pendingWrites: number; onNavigate: (view: View) => void }) {
+function OnboardingForm({ onCancel, onComplete }: { onCancel: () => void; onComplete: (session: Session) => void }) {
+  const industries = listIndustryModules();
+  const initialIndustry = industries[0]!;
+  const [values, setValues] = useState({ ownerName: "", phone: "", countryCode: "+254", password: "", businessName: "", industryKey: initialIndustry.key, businessType: initialIndustry.businessTypes[0]!.value, planTier: PLAN_TIERS[0], currency: "KES", branchName: "Main Branch", cashierPin: "" });
+  const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const selectedIndustry = industries.find((industry) => industry.key === values.industryKey) ?? initialIndustry;
+  function update(key: keyof typeof values, value: string) { setValues((current) => ({ ...current, [key]: value })); }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); if (busy) return;
+    const localPhone = values.phone.trim();
+    const normalizedPhone = `${values.countryCode}${localPhone.replace(/^0+/, "").replace(/[\s()-]/g, "")}`;
+    const parsed = businessSetupSchema.safeParse({ ...values, phone: normalizedPhone, phoneLocal: localPhone, industryKey: resolveIndustryKey({ industryKey: values.industryKey, businessType: values.businessType }) });
+    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check the setup details and try again."); return; }
+    setBusy(true); setError("");
+    try { onComplete(await registerBusiness({ ...parsed.data, industryKey: resolveIndustryKey({ industryKey: parsed.data.industryKey, businessType: parsed.data.businessType }), phoneLocal: parsed.data.phoneLocal ?? localPhone, cashierPin: parsed.data.cashierPin || null })); }
+    catch (registerError) { setError(registerError instanceof Error ? registerError.message : "Could not create the business account."); }
+    finally { setBusy(false); }
+  }
+  return <div className="login-page"><div className="login-art"><div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="login-brand"><img className="brand-logo large" src="/dira-os-logo.png" alt="Dira OS" /><strong>Dira OS</strong></div><div className="login-quote"><p>Set up your workspace.</p><span>Choose the business type and tools that fit your work.</span></div></div><div className="login-panel"><form className="login-inner" onSubmit={submit}><span className="eyebrow">NEW WORKSPACE</span><h1>Create your<br /><span>business account.</span></h1><p className="muted">The first account is the business owner.</p>
+    <div className="onboarding-fields">
+      <label>Owner full name<input autoFocus value={values.ownerName} onChange={(event) => update("ownerName", event.target.value)} required minLength={2} /></label>
+      <label>Phone number<div style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 8 }}><input aria-label="Country calling code" value={values.countryCode} onChange={(event) => update("countryCode", event.target.value)} pattern="\+[0-9]{1,4}" required /><input type="tel" autoComplete="tel" value={values.phone} onChange={(event) => update("phone", event.target.value)} required minLength={7} /></div></label>
+      <label>Business name<input value={values.businessName} onChange={(event) => update("businessName", event.target.value)} required minLength={2} /></label>
+      <label>Industry<select value={values.industryKey} onChange={(event) => { const industry = industries.find((item) => item.key === event.target.value) ?? initialIndustry; setValues((current) => ({ ...current, industryKey: industry.key, businessType: industry.businessTypes[0]!.value })); }}>{industries.map((industry) => <option key={industry.key} value={industry.key}>{industry.label}</option>)}</select></label>
+      <label>Business type<select value={values.businessType} onChange={(event) => update("businessType", event.target.value)}>{selectedIndustry.businessTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
+      <label>Starting plan<select value={values.planTier} onChange={(event) => update("planTier", event.target.value)}>{PLAN_TIERS.map((plan) => <option key={plan} value={plan}>{PLAN_NAMES[plan]} · KES {PLAN_PRICING[plan].toLocaleString()}/month · {PLAN_EMPLOYEE_LIMITS[plan]} team members</option>)}</select></label>
+      <label>Currency<input value={values.currency} onChange={(event) => update("currency", event.target.value.toUpperCase())} required minLength={3} maxLength={3} /></label>
+      <label>First branch name<input value={values.branchName} onChange={(event) => update("branchName", event.target.value)} required minLength={2} /></label>
+      <label>Password<input type="password" autoComplete="new-password" value={values.password} onChange={(event) => update("password", event.target.value)} required minLength={6} /></label>
+      <label>Cashier PIN (optional)<input type="password" inputMode="numeric" autoComplete="new-password" value={values.cashierPin} onChange={(event) => update("cashierPin", event.target.value)} pattern="[0-9]{4,8}" minLength={4} maxLength={8} /></label>
+    </div>
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="heading-actions"><button type="button" className="secondary" onClick={onCancel}>Back to sign in</button><button className="primary" disabled={busy}>{busy ? "Creating workspace…" : "Create workspace"}</button></div>
+  </form></div></div>;
+}
+
+function ViewContent({ view, session, allBranches, onBranchesChange, offline, pendingWrites, onNavigate }: { view: View; session: Session; allBranches: Branch[]; onBranchesChange: (branches: Branch[]) => void; offline: boolean; pendingWrites: number; onNavigate: (view: View) => void }) {
   if (view === "dashboard") return <Dashboard session={session} offline={offline} pendingWrites={pendingWrites} onNavigate={onNavigate} />;
-  if (view === "pos") return <Pos session={session} />;
+  if (view === "pos") return <DesktopPos session={session} />;
+  if (view === "purchaseOrders") return <DesktopPurchaseOrders session={session} />;
+  if (view === "transfers") return <DesktopStockTransfers session={session} />;
   if (view === "products" || view === "inventory") return <IndustryProducts session={session} inventory={view === "inventory"} />;
   if (view === "customers") return <DataView session={session} title="Customers" subtitle="Keep every customer relationship in one place." endpoint="customers" columns={["Name", "Phone", "Email", "Balance", "Last visit"]} />;
   if (view === "suppliers") return <DataView session={session} title="Suppliers" subtitle="Manage purchasing partners and supplier balances." endpoint="suppliers" columns={["Supplier", "Phone", "Email", "Balance", "Status"]} />;
   if (view === "expenses") return <DataView session={session} title="Expenses" subtitle="Track operating costs and keep your margins visible." endpoint="expenses" columns={["Description", "Category", "Amount", "Date", "Recorded by"]} />;
-  if (view === "sales") return <DataView session={session} title="Sales history" subtitle="Search, review and reconcile every sale." endpoint="sales" columns={["Receipt", "Customer", "Items", "Payment", "Total"]} />;
+  if (view === "sales") return <DesktopSalesHistory session={session} />;
   if (view === "reports") return <ReportView session={session} />;
   if (view === "finance") return <FinanceView session={session} />;
   if (view === "insights") return <InsightsView session={session} />;
   if (view === "operations") return <OperationsView session={session} />;
   if (view === "team") return <TeamView session={session} />;
+  if (view === "teamAccess") return <TeamAccessView session={session} onNavigate={onNavigate} />;
   if (view === "notifications") return <NotificationsView />;
-  return <SettingsView view={view} session={session} onLogout={() => { clearSession(); window.location.reload(); }} />;
+  return <SettingsView view={view} session={session} allBranches={allBranches} onBranchesChange={onBranchesChange} onLogout={() => { clearSession(); window.location.reload(); }} />;
 }
 
 function Dashboard({ session, offline, pendingWrites, onNavigate }: { session: Session; offline: boolean; pendingWrites: number; onNavigate: (view: View) => void }) {
@@ -164,12 +251,14 @@ function Activity({ session }: { session: Session }) {
   return <div className="activity-list">{error ? <Empty text={error} /> : entries.length ? entries.map((entry) => <div className="activity-row" key={entry.id}><span className={`activity-dot ${entry.tone}`} /><div><strong>{entry.title}</strong><small>{entry.detail}</small></div><time>{new Date(entry.createdAt).toLocaleString()}</time></div>) : <Empty text="Recent sales and expenses will appear here." />}</div>;
 }
 
-function Pos({ session }: { session: Session }) { const [products, setProducts] = useState<Product[]>([]); const [query, setQuery] = useState(""); const [cart, setCart] = useState<Product[]>([]); const [saved, setSaved] = useState(false); const [catalogFilter, setCatalogFilter] = useState<"all" | "low">("all"); useEffect(() => { api.products(session.branches?.[0]?.id).then(setProducts).catch(() => undefined); }, [session]); useEffect(() => { const handler = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void completeSale(); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); document.querySelector<HTMLInputElement>(".pos-search input")?.focus(); } if (event.key === "Escape") setQuery(""); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [cart]); const filtered = products.filter((p) => { const matchesQuery = `${p.name} ${p.sku ?? ""} ${p.barcode ?? ""}`.toLowerCase().includes(query.toLowerCase()); const isLow = Number(p.stockOnHand ?? 0) <= Number(p.lowStockThreshold ?? 5); return matchesQuery && (catalogFilter === "all" || isLow); }).slice(0, 8); const total = cart.reduce((sum, p) => sum + Number(p.sellingPrice ?? 0), 0); async function completeSale() { if (!cart.length) return; const externalId = crypto.randomUUID(); const body = { businessId: session.user.businessId, branchId: session.branches?.[0]?.id, externalId, receiptNumber: `D-${externalId.slice(0, 8).toUpperCase()}`, subtotal: total, discountTotal: 0, taxTotal: 0, grandTotal: total, amountPaid: total, balanceDue: 0, paymentStatus: "paid", paymentMethod: "cash", items: cart.map((p) => ({ productId: p.id, productName: text(p.name, "Product"), quantity: 1, unitPrice: Number(p.sellingPrice ?? 0), costPrice: Number(p.buyingPrice ?? 0), lineDiscount: 0, lineTotal: Number(p.sellingPrice ?? 0) })) }; try { await api.createSale(body); } catch (submitError) { if (isOfflineError(submitError)) { queueOffline("/sales", body); } else { window.alert(submitError instanceof Error ? submitError.message : "Unable to record sale."); return; } } setCart([]); setSaved(true); } return <><PageHeading eyebrow="POINT OF SALE" title="Record a sale" subtitle="Scan a barcode or search your catalog to build the basket." actions={<><span className="shortcut-hint"><kbd>Ctrl + Enter</kbd> Complete sale</span><button className="secondary" onClick={() => setCart([])}>Clear draft</button></>} /><div className="pos-layout"><section className="pos-catalog panel"><div className="pos-search"><span>⌕</span><input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Scan barcode or search products..." /><kbd>Ctrl K</kbd></div><div className="category-row"><button className={catalogFilter === "all" ? "selected" : ""} onClick={() => setCatalogFilter("all")}>All products</button><button className={catalogFilter === "low" ? "selected" : ""} onClick={() => setCatalogFilter("low")}>Low stock</button></div><div className="catalog-grid">{filtered.map((product) => <button className="catalog-card" onClick={() => setCart((current) => [...current, product])} key={product.id}><span className="catalog-image">{text(product.name, "P").slice(0, 1)}</span><strong>{text(product.name)}</strong><small>{text(product.stockOnHand, "0")} in stock</small><b>{money(product.sellingPrice)}</b></button>)}{!filtered.length && <Empty text="No matching products. Scan another barcode or add the product first." />}</div></section><section className="basket panel"><div className="panel-heading"><div><h2>Current basket</h2><small>{cart.length} items</small></div><button className="text-button" onClick={() => setCart([])}>Clear</button></div><div className="basket-items">{cart.length ? cart.map((product, index) => <div className="basket-item" key={`${product.id}-${index}`}><span className="basket-thumb">{text(product.name, "P").slice(0, 1)}</span><div><strong>{text(product.name)}</strong><small>1 × {money(product.sellingPrice)}</small></div><b>{money(product.sellingPrice)}</b></div>) : <Empty text="Your basket is ready." />}</div><div className="basket-total"><span>Subtotal</span><b>{money(total)}</b><span>Tax</span><b>{money(0)}</b><strong>Total</strong><strong>{money(total)}</strong></div><button className="primary full" onClick={() => void completeSale()}>{saved ? "Sale queued / completed  ✓" : "Complete sale  →"}</button><div className="payment-note">Cash selected · You can split payment at checkout</div></section></div></>; }
 
 function DataView({ title, subtitle, endpoint, columns, session }: { title: string; subtitle: string; endpoint: "customers" | "suppliers" | "expenses" | "sales"; columns: string[]; session: Session }) {
   const [items, setItems] = useState<unknown[]>([]);
   const [query, setQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<RecordItem | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<RecordItem | null>(null);
+  const [paymentCustomer, setPaymentCustomer] = useState<RecordItem | null>(null);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const branchId = session.branches?.[0]?.id ?? null;
@@ -191,7 +280,8 @@ function DataView({ title, subtitle, endpoint, columns, session }: { title: stri
     const externalId = crypto.randomUUID();
     const common = { businessId: session.user.businessId, branchId, externalId };
     const body = endpoint === "customers" ? {
-      ...common, name: (values.name ?? "").trim(), phone: (values.phone ?? "").trim() || null, email: (values.email ?? "").trim() || null,
+      ...common, name: (values.name ?? "").trim(), businessName: (values.businessName ?? "").trim() || null, phone: (values.phone ?? "").trim() || null, email: (values.email ?? "").trim() || null,
+      address: (values.address ?? "").trim() || null, taxPin: (values.taxPin ?? "").trim() || null,
       creditLimit: Number(values.creditLimit || 0), loyaltyPoints: 0, notes: (values.notes ?? "").trim() || null, balance: 0
     } : endpoint === "suppliers" ? {
       ...common, name: (values.name ?? "").trim(), phone: (values.phone ?? "").trim() || null, email: (values.email ?? "").trim() || null,
@@ -213,17 +303,122 @@ function DataView({ title, subtitle, endpoint, columns, session }: { title: stri
       } catch (queueError) { setError(queueError instanceof Error ? queueError.message : `Could not queue ${addLabel}.`); }
     }
   }
+  async function updateCustomer(customer: RecordItem, values: Record<string, string>) {
+    const id = text(customer.id, "");
+    if (!id) throw new Error("This customer cannot be updated because its server ID is missing.");
+    const updated = await api.updateCustomer(id, {
+      branchId,
+      name: (values.name ?? "").trim(),
+      businessName: (values.businessName ?? "").trim() || null,
+      phone: (values.phone ?? "").trim() || null,
+      email: (values.email ?? "").trim() || null,
+      address: (values.address ?? "").trim() || null,
+      taxPin: (values.taxPin ?? "").trim() || null,
+      creditLimit: Number(values.creditLimit || 0),
+      notes: (values.notes ?? "").trim() || null
+    });
+    setItems((current) => current.map((item) => text((item as RecordItem).id) === id ? updated : item));
+    setEditingCustomer(null);
+  }
+  async function updateSupplier(supplier: RecordItem, values: Record<string, string>) {
+    const id = text(supplier.id, "");
+    if (!id) throw new Error("This supplier cannot be updated because its server ID is missing.");
+    const updated = await api.updateSupplier(id, {
+      name: (values.name ?? "").trim(), contactName: (values.contactName ?? "").trim() || null,
+      phone: (values.phone ?? "").trim() || null, email: (values.email ?? "").trim() || null,
+      notes: (values.notes ?? "").trim() || null
+    });
+    setItems((current) => current.map((item) => text((item as RecordItem).id) === id ? updated : item));
+    setEditingSupplier(null);
+  }
+  async function archiveSupplier(supplier: RecordItem) {
+    const id = text(supplier.id, "");
+    if (!id) { setError("This supplier cannot be archived because its server ID is missing."); return; }
+    try {
+      const archived = await api.archiveSupplier(id);
+      setItems((current) => current.map((item) => text((item as RecordItem).id) === id ? archived : item));
+    } catch (archiveError) { setError(archiveError instanceof Error ? archiveError.message : "Could not archive supplier."); }
+  }
+  async function recordCustomerPayment(customer: RecordItem, values: { amount: number; method: string; reference: string; note: string }) {
+    const id = text(customer.id, "");
+    if (!id) throw new Error("This customer cannot receive a payment because its server ID is missing.");
+    const body = { businessId: session.user.businessId, branchId, externalId: crypto.randomUUID(), amount: values.amount, method: values.method, reference: values.reference.trim() || null, note: values.note.trim() || null };
+    let pendingSync = false;
+    try { await api.recordCustomerPayment(id, body); }
+    catch (paymentError) {
+      if (!isOfflineError(paymentError)) throw paymentError;
+      queueOffline(`/customers/${encodeURIComponent(id)}/payments`, body);
+      pendingSync = true;
+    }
+    setItems((current) => current.map((item) => { const row = item as RecordItem; return text(row.id) === id ? { ...row, balance: Math.max(0, Number(row.balance ?? 0) - values.amount), pendingPaymentSync: pendingSync || Boolean(row.pendingPaymentSync) } : item; }));
+    setPaymentCustomer(null);
+  }
   return <>
     <PageHeading eyebrow={title.toUpperCase()} title={title} subtitle={subtitle} actions={canCreate ? <button className="primary" onClick={() => setShowCreate(true)}>+ Add {addLabel}</button> : undefined} />
     {error && <div className="error-banner" role="alert">{error}</div>}
     <div className="toolbar"><div className="search-field">⌕<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${title.toLowerCase()}...`} /></div><button className="filter-button" onClick={() => setReload((value) => value + 1)}>Refresh</button><span className="toolbar-count">{rows.length} records</span></div>
-    <div className="table-panel panel"><table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}<th /></tr></thead><tbody>{rows.slice(0, 100).map((item, index) => { const record = item as RecordItem; return <tr key={String(record.id ?? index)}>{columns.map((_, columnIndex) => { const field = fieldMap[endpoint][columnIndex] ?? ""; const value = record[field]; const display = endpoint === "sales" && columnIndex === 2 ? Array.isArray(value) ? `${value.length} items` : text(value, "0") : endpoint === "suppliers" && columnIndex === 4 ? record.isActive === false ? "Archived" : "Active" : text(value); return <td key={columnIndex}>{columnIndex === 0 ? <strong>{display}</strong> : display}</td>; })}<td>{record.pendingSync ? <span className="badge warning">Pending sync</span> : null}</td></tr>; })}</tbody></table>{!rows.length && <Empty text={error ? "Could not load records." : `No ${title.toLowerCase()} to display yet.`} />}</div>
+    <div className="table-panel panel"><table><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}<th>Actions</th></tr></thead><tbody>{rows.slice(0, 100).map((item, index) => { const record = item as RecordItem; return <tr key={String(record.id ?? index)}>{columns.map((_, columnIndex) => { const field = fieldMap[endpoint][columnIndex] ?? ""; const value = record[field]; const display = endpoint === "sales" && columnIndex === 2 ? Array.isArray(value) ? `${value.length} items` : text(value, "0") : endpoint === "suppliers" && columnIndex === 4 ? record.isActive === false ? "Archived" : "Active" : text(value); return <td key={columnIndex}>{columnIndex === 0 ? <strong>{display}</strong> : display}</td>; })}<td className="record-actions">{endpoint === "customers" && canCreate ? <><button className="text-button" onClick={() => setEditingCustomer(record)}>Edit</button><button className="text-button" onClick={() => setPaymentCustomer(record)}>Payment history</button></> : null}{endpoint === "suppliers" && canCreate && record.isActive !== false ? <><button className="text-button" onClick={() => setEditingSupplier(record)}>Edit</button><button className="text-button" onClick={() => void archiveSupplier(record)}>Archive</button></> : null}{record.pendingSync || record.pendingPaymentSync ? <span className="badge warning">Pending sync</span> : null}</td></tr>; })}</tbody></table>{!rows.length && <Empty text={error ? "Could not load records." : `No ${title.toLowerCase()} to display yet.`} />}</div>
     {showCreate ? <DataCreateModal endpoint={endpoint} title={addLabel} onClose={() => setShowCreate(false)} onSave={createRecord} /> : null}
+    {editingCustomer ? <CustomerEditModal customer={editingCustomer} onClose={() => setEditingCustomer(null)} onSave={(values) => updateCustomer(editingCustomer, values)} /> : null}
+    {editingSupplier ? <SupplierEditModal supplier={editingSupplier} onClose={() => setEditingSupplier(null)} onSave={(values) => updateSupplier(editingSupplier, values)} /> : null}
+    {paymentCustomer ? <CustomerPaymentModal customer={paymentCustomer} branchId={branchId} onClose={() => setPaymentCustomer(null)} onSave={(values) => recordCustomerPayment(paymentCustomer, values)} /> : null}
   </>;
 }
 
+function SupplierEditModal({ supplier, onClose, onSave }: { supplier: RecordItem; onClose: () => void; onSave: (values: Record<string, string>) => Promise<void> }) {
+  const [values, setValues] = useState<Record<string, string>>({ name: text(supplier.name, ""), contactName: text(supplier.contactName, ""), phone: text(supplier.phone, ""), email: text(supplier.email, ""), notes: text(supplier.notes, "") });
+  const [saving, setSaving] = useState(false); const [error, setError] = useState("");
+  async function submit(event: React.FormEvent) { event.preventDefault(); if (saving) return;
+    if ((values.name ?? "").trim().length < 2) { setError("Supplier name must contain at least two characters."); return; }
+    setSaving(true); setError(""); try { await onSave(values); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : "Could not update supplier."); } finally { setSaving(false); }
+  }
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><form className="modal-card customer-modal" onSubmit={submit}>
+    <div className="panel-heading"><div><span className="eyebrow">SUPPLIER RECORD</span><h2>Edit supplier</h2></div><button type="button" className="text-button" onClick={onClose}>Close</button></div>
+    {([ ["name", "Supplier name", "text"], ["contactName", "Contact name", "text"], ["phone", "Phone", "tel"], ["email", "Email", "email"], ["notes", "Notes", "text"] ] as const).map(([key, title, type]) => <label key={key}>{title}<input type={type} required={key === "name"} value={values[key]} onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+  </form></div>;
+}
+
+function CustomerEditModal({ customer, onClose, onSave }: { customer: RecordItem; onClose: () => void; onSave: (values: Record<string, string>) => Promise<void> }) {
+  const [values, setValues] = useState<Record<string, string>>({ name: text(customer.name, ""), businessName: text(customer.businessName, ""), phone: text(customer.phone, ""), email: text(customer.email, ""), address: text(customer.address, ""), taxPin: text(customer.taxPin, ""), creditLimit: String(customer.creditLimit ?? 0), notes: text(customer.notes, "") });
+  const [saving, setSaving] = useState(false); const [error, setError] = useState("");
+  async function submit(event: React.FormEvent) { event.preventDefault(); if (saving) return;
+    if ((values.name ?? "").trim().length < 2) { setError("Customer name must contain at least two characters."); return; }
+    if (!Number.isFinite(Number(values.creditLimit)) || Number(values.creditLimit) < 0) { setError("Credit limit must be a non-negative amount."); return; }
+    setSaving(true); setError(""); try { await onSave(values); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : "Could not update customer."); } finally { setSaving(false); }
+  }
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><form className="modal-card customer-modal" onSubmit={submit}>
+    <div className="panel-heading"><div><span className="eyebrow">CUSTOMER RECORD</span><h2>Edit customer</h2></div><button type="button" className="text-button" onClick={onClose}>Close</button></div>
+    {([ ["name", "Customer name", "text"], ["businessName", "Business name", "text"], ["phone", "Phone", "tel"], ["email", "Email", "email"], ["address", "Address", "text"], ["taxPin", "Tax PIN", "text"], ["creditLimit", "Credit limit (KES)", "number"], ["notes", "Notes", "text"] ] as const).map(([key, title, type]) => <label key={key}>{title}<input type={type} min={type === "number" ? 0 : undefined} step={type === "number" ? "0.01" : undefined} required={key === "name"} value={values[key]} onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))} /></label>)}
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+  </form></div>;
+}
+
+function CustomerPaymentModal({ customer, branchId, onClose, onSave }: { customer: RecordItem; branchId?: string | null; onClose: () => void; onSave: (values: { amount: number; method: string; reference: string; note: string }) => Promise<void> }) {
+  const [payments, setPayments] = useState<RecordItem[]>([]);
+  const [values, setValues] = useState({ amount: "", method: "cash", reference: "", note: "" });
+  const [saving, setSaving] = useState(false); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  useEffect(() => { const id = text(customer.id, ""); if (!id) { setLoading(false); return; } api.customerPayments(id, branchId).then(setPayments).catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Could not load payment history.")).finally(() => setLoading(false)); }, [customer.id, branchId]);
+  async function submit(event: React.FormEvent) { event.preventDefault(); if (saving) return;
+    const amount = Number(values.amount); if (!Number.isFinite(amount) || amount <= 0) { setError("Enter a payment amount greater than zero."); return; }
+    setSaving(true); setError(""); try { await onSave({ ...values, amount }); } catch (saveError) { setError(saveError instanceof Error ? saveError.message : "Could not record payment."); } finally { setSaving(false); }
+  }
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><form className="modal-card customer-modal" onSubmit={submit}>
+    <div className="panel-heading"><div><span className="eyebrow">CUSTOMER BALANCE · {money(customer.balance)}</span><h2>{text(customer.name, "Customer payments")}</h2></div><button type="button" className="text-button" onClick={onClose}>Close</button></div>
+    <div className="customer-payment-history">{loading ? <p className="muted">Loading payment history…</p> : payments.length ? payments.slice(0, 8).map((payment) => <div className="finance-row" key={String(payment.id)}><strong>{text(payment.method, "Payment")} · {money(payment.amount)}</strong><small>{payment.paymentDate ? new Date(String(payment.paymentDate)).toLocaleDateString() : "Date unavailable"}{payment.reference ? ` · ${String(payment.reference)}` : ""}</small></div>) : <p className="muted">No standalone payments recorded for this customer.</p>}</div>
+    <label>Amount (KES)<input autoFocus type="number" min="0.01" step="0.01" value={values.amount} onChange={(event) => setValues((current) => ({ ...current, amount: event.target.value }))} required /></label>
+    <label>Method<select value={values.method} onChange={(event) => setValues((current) => ({ ...current, method: event.target.value }))}>{["cash", "mpesa", "bank", "credit"].map((method) => <option key={method} value={method}>{method.toUpperCase()}</option>)}</select></label>
+    <label>Reference<input value={values.reference} onChange={(event) => setValues((current) => ({ ...current, reference: event.target.value }))} /></label>
+    <label>Note<input value={values.note} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} /></label>
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Close</button><button className="primary" disabled={saving}>{saving ? "Recording…" : "Record payment"}</button></div>
+  </form></div>;
+}
+
 function DataCreateModal({ endpoint, title, onClose, onSave }: { endpoint: "customers" | "suppliers" | "expenses" | "sales"; title: string; onClose: () => void; onSave: (values: Record<string, string>) => Promise<void> }) {
-  const [values, setValues] = useState<Record<string, string>>({ name: "", phone: "", email: "", contactName: "", notes: "", creditLimit: "0", amount: "", note: "", expenseDate: new Date().toISOString().slice(0, 10) });
+  const [values, setValues] = useState<Record<string, string>>({ name: "", businessName: "", address: "", taxPin: "", phone: "", email: "", contactName: "", notes: "", creditLimit: "0", amount: "", note: "", expenseDate: new Date().toISOString().slice(0, 10) });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const isExpense = endpoint === "expenses";
@@ -232,7 +427,7 @@ function DataCreateModal({ endpoint, title, onClose, onSave }: { endpoint: "cust
   ] : endpoint === "suppliers" ? [
     { key: "name", label: "Supplier name", required: true }, { key: "contactName", label: "Contact name" }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "notes", label: "Notes" }
   ] : [
-    { key: "name", label: "Customer name", required: true }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "creditLimit", label: "Credit limit (KES)", type: "number" }, { key: "notes", label: "Notes" }
+    { key: "name", label: "Customer name", required: true }, { key: "businessName", label: "Business name" }, { key: "phone", label: "Phone" }, { key: "email", label: "Email", type: "email" }, { key: "address", label: "Address" }, { key: "taxPin", label: "Tax PIN" }, { key: "creditLimit", label: "Credit limit (KES)", type: "number" }, { key: "notes", label: "Notes" }
   ];
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -289,7 +484,7 @@ function ReportView({ session }: { session: Session }) {
   </>;
 }
 
-function FinanceView({ session }: { session: Session }) { const [overview, setOverview] = useState<RecordItem | null>(null); const [payments, setPayments] = useState<Array<{ _id?: string; total?: number; count?: number }>>([]); useEffect(() => { const branchId = session.branches?.[0]?.id; Promise.all([api.financeOverview(branchId), api.paymentBreakdown(branchId)]).then(([nextOverview, nextPayments]) => { setOverview(nextOverview); setPayments(nextPayments); }).catch(() => undefined); }, [session]); return <><PageHeading eyebrow="FINANCE" title="Finance overview" subtitle="Keep revenue, payments, and cash movement visible in one workspace." /><div className="metric-grid"><Metric label="Revenue" value={money(overview?.revenue ?? overview?.totalRevenue ?? overview?.totalSales)} delta="Synced data" tone="blue" /><Metric label="Expenses" value={money(overview?.expenses ?? overview?.totalExpenses)} delta="Synced data" tone="amber" /><Metric label="Net result" value={money(overview?.net ?? overview?.netProfit)} delta="Calculated by API" tone="green" /><Metric label="Payments" value={text(overview?.paymentCount, String(payments.reduce((sum, item) => sum + Number(item.count ?? 0), 0)))} delta="Recorded" tone="red" /></div><section className="panel"><div className="panel-heading"><h2>Payment breakdown</h2><span className="muted">Live API data</span></div><div className="finance-breakdown">{payments.length ? payments.map((item) => <div className="finance-row" key={String(item._id)}><strong>{text(item._id, "Other")}</strong><span>{money(item.total)}</span><small>{text(item.count, "0")} payments</small></div>) : <Empty text="Payment data will appear after synchronization." />}</div></section></>; }
+function FinanceView({ session }: { session: Session }) { const [overview, setOverview] = useState<RecordItem | null>(null); const [payments, setPayments] = useState<Array<{ _id?: string; total?: number; count?: number }>>([]); useEffect(() => { const branchId = session.branches?.[0]?.id; Promise.all([api.financeOverview(branchId), api.paymentBreakdown(branchId)]).then(([nextOverview, nextPayments]) => { setOverview(nextOverview); setPayments(nextPayments); }).catch(() => undefined); }, [session]); return <><PageHeading eyebrow="FINANCE" title="Finance overview" subtitle="Keep revenue, payments, and cash movement visible in one workspace." /><div className="metric-grid"><Metric label="Revenue" value={money(overview?.revenue ?? overview?.totalRevenue ?? overview?.totalSales)} delta="Synced data" tone="blue" /><Metric label="Expenses" value={money(overview?.expenses ?? overview?.totalExpenses)} delta="Synced data" tone="amber" /><Metric label="Net result" value={money(overview?.net ?? overview?.netProfit)} delta="Calculated by API" tone="green" /><Metric label="Payments" value={text(overview?.paymentCount, String(payments.reduce((sum, item) => sum + Number(item.count ?? 0), 0)))} delta="Recorded" tone="red" /></div><section className="panel"><div className="panel-heading"><h2>Payment breakdown</h2><span className="muted">Live API data</span></div><div className="finance-breakdown">{payments.length ? payments.map((item) => <div className="finance-row" key={String(item._id)}><strong>{text(item._id, "Other")}</strong><span>{money(item.total)}</span><small>{text(item.count, "0")} payments</small></div>) : <Empty text="Payment data will appear after synchronization." />}</div></section><DesktopInvoices session={session} /></>; }
 
 function InsightsView({ session }: { session: Session }) {
   const [data, setData] = useState<import("@vbo/shared").EnterpriseAnalytics | null>(null);
@@ -301,7 +496,95 @@ function InsightsView({ session }: { session: Session }) {
 
 function OperationsView({ session }: { session: Session }) { const [items, setItems] = useState<unknown[]>([]); useEffect(() => { api.operations(session.branches?.[0]?.id).then(setItems).catch(() => undefined); }, [session]); return <><PageHeading eyebrow="OPERATIONS" title="Business operations" subtitle="Track orders, jobs, and operational work from the desktop workspace." actions={<button className="primary">+ New operation</button>} /><div className="table-panel panel"><table><thead><tr><th>Operation</th><th>Type</th><th>Status</th><th>Updated</th></tr></thead><tbody>{items.slice(0, 50).map((item, index) => { const record = item as RecordItem; return <tr key={String(record.id ?? index)}><td><strong>{text(record.title ?? record.name, `Operation ${index + 1}`)}</strong></td><td>{text(record.kind)}</td><td><span className="badge success">{text(record.status, "Open")}</span></td><td>{text(record.updatedAt ?? record.createdAt)}</td></tr>; })}</tbody></table>{!items.length && <Empty text="No operations are currently recorded." />}</div></>; }
 
-function TeamView({ session }: { session: Session }) { const [items, setItems] = useState<unknown[]>([]); useEffect(() => { api.employees(session.branches?.[0]?.id).then(setItems).catch(() => undefined); }, [session]); return <><PageHeading eyebrow="TEAM & ACCESS" title="Team members" subtitle="Review staff access and roles for this workspace." actions={<button className="primary">+ Invite teammate</button>} /><div className="table-panel panel"><table><thead><tr><th>Name</th><th>Role</th><th>Branch</th><th>Status</th></tr></thead><tbody>{items.map((item, index) => { const record = item as RecordItem; return <tr key={String(record.id ?? index)}><td><strong>{text(record.fullName ?? record.name, `Team member ${index + 1}`)}</strong></td><td>{text(record.roleLabel ?? record.role)}</td><td>{text(record.branchName, "Workspace")}</td><td><span className="badge success">{record.isActive === false ? "Inactive" : "Active"}</span></td></tr>; })}</tbody></table>{!items.length && <Empty text="No team members are available for this branch." />}</div></>; }
+function TeamView({ session }: { session: Session }) {
+  const [items, setItems] = useState<unknown[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+  const [reload, setReload] = useState(0);
+  const branchId = session.branches?.[0]?.id;
+  useEffect(() => {
+    let active = true;
+    setLoading(true); setError("");
+    api.employees(branchId).then((next) => { if (active) setItems(next); })
+      .catch((loadError) => { if (active) setError(loadError instanceof Error ? loadError.message : "Could not load team members."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [branchId, reload]);
+  async function toggleEmployee(record: RecordItem) {
+    const id = text(record.id, "");
+    if (!id || busyId) return;
+    setBusyId(id); setError("");
+    try {
+      if (record.isActive === false) await api.restoreEmployee(id);
+      else await api.suspendEmployee(id);
+      setReload((value) => value + 1);
+    } catch (actionError) { setError(actionError instanceof Error ? actionError.message : "Could not update this employee."); }
+    finally { setBusyId(""); }
+  }
+  async function invite(values: { fullName: string; phone: string; password: string; pin: string; role: "manager" | "cashier" }) {
+    setError("");
+    await api.createEmployee({ ...values, phone: values.phone || null, pin: values.pin || null, branchId: branchId ?? null });
+    setShowInvite(false);
+    setReload((value) => value + 1);
+  }
+  return <>
+    <PageHeading eyebrow="TEAM & ACCESS" title="Team members" subtitle="Review staff access and roles for this workspace." actions={<button className="primary" onClick={() => setShowInvite(true)}>+ Invite teammate</button>} />
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="table-panel panel"><table><thead><tr><th>Name</th><th>Role</th><th>Branch</th><th>Status</th><th /></tr></thead><tbody>{items.map((item, index) => { const record = item as RecordItem; const id = text(record.id, ""); const active = record.isActive !== false; return <tr key={id || index}><td><strong>{text(record.fullName ?? record.name, `Team member ${index + 1}`)}</strong><small>{text(record.phone)}</small></td><td>{text(record.roleLabel ?? record.role)}</td><td>{text(record.branchName, "Workspace")}</td><td><span className={`badge ${active ? "success" : "warning"}`}>{active ? "Active" : "Inactive"}</span></td><td>{record.role !== "owner" && id ? <button className="text-button" disabled={busyId === id} onClick={() => void toggleEmployee(record)}>{busyId === id ? "Saving…" : active ? "Suspend" : "Restore"}</button> : null}</td></tr>; })}</tbody></table>{loading ? <Empty text="Loading team members…" /> : !items.length && <Empty text={error ? "Could not load team members." : "No team members are available for this branch."} />}</div>
+    {showInvite ? <TeamInviteModal onClose={() => setShowInvite(false)} onSave={invite} /> : null}
+  </>;
+}
+
+function TeamAccessView({ session, onNavigate }: { session: Session; onNavigate: (view: View) => void }) {
+  const role = session.user.role as UserRole;
+  const currentPermissions = getEffectivePermissions({ role, permissions: session.user.permissions?.filter((value): value is AccessPermission => ACCESS_PERMISSIONS.includes(value as AccessPermission)) ?? null });
+  return <>
+    <PageHeading eyebrow="TEAM ACCESS" title="Roles and permissions" subtitle="Review the shared role presets and the permissions active for this account." actions={<button className="primary" onClick={() => onNavigate("team")}>Open employees →</button>} />
+    <div className="dashboard-grid">
+      <Panel title="Access snapshot"><div className="settings-list">
+        <div className="setting-row"><span className="avatar">{text(session.user.fullName, "U").slice(0, 1).toUpperCase()}</span><div><strong>{text(session.user.fullName)}</strong><small>{text(session.business?.name, "Workspace")}</small></div><span className="badge primary">{formatRoleLabel(role)}</span></div>
+        <div className="setting-row"><span className="setting-icon">⛨</span><div><strong>Effective access</strong><small>{role === "owner" ? "Owners retain all business permissions." : "Permission overrides are applied by the API."}</small></div><span className="badge success">{currentPermissions.length} permissions</span></div>
+      </div><div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 12 }}>{currentPermissions.map((permission) => <span className="badge success" key={permission}>{formatPermissionLabel(permission)}</span>)}</div></Panel>
+      <Panel title="Permission coverage"><div className="finance-breakdown">{[["Roles", String(ROLE_PRESETS.length)], ["Available permissions", String(ACCESS_PERMISSIONS.length)], ["Current role", formatRoleLabel(role)]].map(([label, value]) => <div className="finance-row" key={label}><strong>{label}</strong><span>{value}</span></div>)}</div><p className="muted">Employee permission overrides are edited from the employee workspace. Role rules are shared with mobile and enforced by the API.</p></Panel>
+    </div>
+    <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginTop: 18 }} aria-label="Role permission matrix">
+      {ROLE_PRESETS.map((preset) => { const isCurrent = role === preset.role; const permissions = ROLE_ACCESS[preset.role]; return <article className="panel" key={preset.role} style={{ borderColor: isCurrent ? "var(--primary)" : undefined }}>
+        <div className="panel-heading"><div><span className="eyebrow">{permissions.length} PERMISSIONS</span><h2>{preset.label}</h2></div>{isCurrent ? <span className="badge success">Current role</span> : null}</div>
+        <p className="muted">{preset.description}</p><div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{permissions.map((permission) => <span className="badge primary" key={permission}>{formatPermissionLabel(permission)}</span>)}</div>
+      </article>; })}
+    </section>
+  </>;
+}
+
+function TeamInviteModal({ onClose, onSave }: { onClose: () => void; onSave: (values: { fullName: string; phone: string; password: string; pin: string; role: "manager" | "cashier" }) => Promise<void> }) {
+  const [values, setValues] = useState({ fullName: "", phone: "", password: "", pin: "", role: "cashier" as "manager" | "cashier" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (saving) return;
+    if (values.fullName.trim().length < 2) { setError("Enter the teammate’s full name."); return; }
+    if (values.phone.trim().length < 7) { setError("Enter a valid phone number."); return; }
+    if (values.password.length < 6) { setError("The temporary password must have at least 6 characters."); return; }
+    if (values.pin && values.pin.length < 4) { setError("The PIN must have at least 4 characters."); return; }
+    setSaving(true); setError("");
+    try { await onSave({ ...values, fullName: values.fullName.trim(), phone: values.phone.trim() }); }
+    catch (saveError) { setError(saveError instanceof Error ? saveError.message : "Could not invite this teammate."); }
+    finally { setSaving(false); }
+  }
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><form className="modal-card" onSubmit={submit}>
+    <div className="panel-heading"><div><span className="eyebrow">TEAM ACCESS</span><h2>Invite teammate</h2></div><button type="button" className="text-button" onClick={onClose}>Close</button></div>
+    <label>Full name<input autoFocus value={values.fullName} onChange={(event) => setValues((current) => ({ ...current, fullName: event.target.value }))} required /></label>
+    <label>Phone number<input type="tel" autoComplete="tel" value={values.phone} onChange={(event) => setValues((current) => ({ ...current, phone: event.target.value }))} required /></label>
+    <label>Role<select value={values.role} onChange={(event) => setValues((current) => ({ ...current, role: event.target.value as "manager" | "cashier" }))}><option value="cashier">Cashier</option><option value="manager">Manager</option></select></label>
+    <label>Temporary password<input type="password" autoComplete="new-password" minLength={6} value={values.password} onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))} required /></label>
+    <label>PIN (optional)<input type="password" inputMode="numeric" autoComplete="new-password" minLength={4} value={values.pin} onChange={(event) => setValues((current) => ({ ...current, pin: event.target.value }))} /></label>
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={saving}>{saving ? "Inviting…" : "Create teammate"}</button></div>
+  </form></div>;
+}
 
 function NotificationsView() {
   const [items, setItems] = useState<unknown[]>([]);
@@ -329,5 +612,5 @@ function NotificationsView() {
 
 function Reports({ session }: { session: Session }) { const [data, setData] = useState<DailySummary | null>(null); const [payments, setPayments] = useState<Array<{ _id?: string; total?: number; count?: number }>>([]); useEffect(() => { const branchId = session.branches?.[0]?.id; Promise.all([api.reports(branchId), api.paymentBreakdown(branchId)]).then(([summaryData, paymentData]) => { setData(summaryData); setPayments(paymentData); }).catch(() => undefined); }, [session]); function exportReport() { const rows = [["Metric", "Value"], ["Revenue", String((data as RecordItem | null)?.totalSales ?? 0)], ["Transactions", String((data as RecordItem | null)?.transactionCount ?? 0)], ["Items sold", String((data as RecordItem | null)?.itemsSold ?? 0)], ...payments.map((payment) => [String(payment._id ?? "Other"), String(payment.total ?? 0)])]; const blob = new Blob([rows.map((row) => row.join(",")).join("\n")], { type: "text/csv" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `dira-os-report-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); } return <><PageHeading eyebrow="BUSINESS INTELLIGENCE" title="Reports" subtitle="Turn daily activity into decisions with a clear view of performance." actions={<><button className="secondary" onClick={exportReport}>Export CSV</button><span className="secondary">Live reporting period</span></>} /><div className="metric-grid"><Metric label="Revenue" value={money((data as RecordItem | null)?.totalSales)} delta="This period" tone="blue" /><Metric label="Transactions" value={text((data as RecordItem | null)?.transactionCount, "0")} delta="Live data" tone="green" /><Metric label="Average sale" value={money(Number((data as RecordItem | null)?.totalSales ?? 0) / Math.max(Number((data as RecordItem | null)?.transactionCount ?? 0), 1))} delta="Across transactions" tone="amber" /><Metric label="Items sold" value={text((data as RecordItem | null)?.itemsSold, "0")} delta="Live data" tone="red" /></div><div className="dashboard-grid"><Panel title="Revenue trend"><SalesChart session={session} /></Panel><Panel title="Payment mix"><div className="payment-mix"><div className="donut" /><div>{payments.length ? payments.map((payment) => <p key={String(payment._id)}><i className="legend cash" />{text(payment._id, "Other")} <b>{money(payment.total)}</b></p>) : <Empty text="Payment data will appear after synchronization." />}</div></div></Panel></div></>; }
 
-function SettingsView({ view, session, onLogout }: { view: View; session: Session; onLogout: () => void }) { const titles: Record<string, [string, string]> = { team: ["Team & access", "Manage roles, permissions and branch access."], settings: ["Business settings", "Your workspace preferences and branch configuration."], notifications: ["Notifications", "Stay on top of important activity and sync events."], subscription: ["Subscription", "Manage your Dira OS plan and account billing."] }; const [title, subtitle] = titles[view] ?? ["Business settings", "Your workspace preferences and branch configuration."]; function savePreferences() { window.localStorage.setItem("bizpro.desktop.businessName", text(session.business?.name)); } return <><PageHeading eyebrow="ADMINISTRATION" title={title} subtitle={subtitle} /><div className="settings-grid"><Panel title="Workspace profile"><div className="settings-list"><div className="setting-row"><span className="avatar">{text(session.user.fullName, "U").slice(0, 1)}</span><div><strong>{text(session.user.fullName)}</strong><small>{text(session.user.role, "Owner")} · {text(session.user.businessId)}</small></div><span className="badge success">Active</span></div><div className="setting-row"><span className="setting-icon">⌘</span><div><strong>Permissions and access</strong><small>Roles are enforced consistently across every device.</small></div><span className="badge success">Protected</span></div><div className="setting-row"><span className="setting-icon">⇄</span><div><strong>Offline & synchronization</strong><small>{queuedCount()} actions waiting to sync.</small></div><span className="badge success">Ready</span></div></div></Panel><Panel title="Quick preferences"><div className="preference-list"><label>Business name<input defaultValue={text(session.business?.name)} /></label><label>Currency<select defaultValue="KES"><option>KES · Kenyan Shilling</option></select></label><label>Default branch<select><option>{text(session.branches?.[0]?.name, "Main branch")}</option></select></label></div><div className="heading-actions"><button className="primary" onClick={savePreferences}>Save changes</button><button className="secondary" onClick={onLogout}>Sign out</button></div></Panel></div></>; }
+function SettingsView({ view, session, allBranches, onBranchesChange, onLogout }: { view: View; session: Session; allBranches: Branch[]; onBranchesChange: (branches: Branch[]) => void; onLogout: () => void }) { const titles: Record<string, [string, string]> = { team: ["Team & access", "Manage roles, permissions and branch access."], settings: ["Business settings", "Your workspace preferences and branch configuration."], notifications: ["Notifications", "Stay on top of important activity and sync events."], subscription: ["Subscription", "Manage your Dira OS plan and account billing."] }; const [title, subtitle] = titles[view] ?? ["Business settings", "Your workspace preferences and branch configuration."]; function savePreferences() { window.localStorage.setItem("bizpro.desktop.businessName", text(session.business?.name)); } return <><PageHeading eyebrow="ADMINISTRATION" title={title} subtitle={subtitle} /><div className="settings-grid"><Panel title="Workspace profile"><div className="settings-list"><div className="setting-row"><span className="avatar">{text(session.user.fullName, "U").slice(0, 1)}</span><div><strong>{text(session.user.fullName)}</strong><small>{text(session.user.role, "Owner")} · {text(session.user.businessId)}</small></div><span className="badge success">Active</span></div><div className="setting-row"><span className="setting-icon">⌘</span><div><strong>Permissions and access</strong><small>Roles are enforced consistently across every device.</small></div><span className="badge success">Protected</span></div><div className="setting-row"><span className="setting-icon">⇄</span><div><strong>Offline & synchronization</strong><small>{queuedCount()} actions waiting to sync.</small></div><span className="badge success">Ready</span></div></div></Panel><Panel title="Quick preferences"><div className="preference-list"><label>Business name<input defaultValue={text(session.business?.name)} /></label><label>Currency<select defaultValue={session.business?.currency ?? "KES"}><option>{session.business?.currency ?? "KES"}</option></select></label></div><div className="heading-actions"><button className="primary" onClick={savePreferences}>Save changes</button><button className="secondary" onClick={onLogout}>Sign out</button></div></Panel></div>{view === "settings" && canAccess(session, "manageBranches") ? <DesktopBranches session={{ ...session, branches: allBranches }} onBranchesChange={onBranchesChange} /> : null}</>; }
 function Empty({ text: label }: { text: string }) { return <div className="empty"><span>◌</span><p>{label}</p></div>; }

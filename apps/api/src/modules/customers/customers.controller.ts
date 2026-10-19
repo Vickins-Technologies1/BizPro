@@ -199,6 +199,7 @@ export class CustomersController {
     return this.customers.recordPayment({
       businessId: user.businessId,
       customerId: id,
+      ...(dto.branchId !== undefined ? { branchId: dto.branchId } : {}),
       ...(dto.externalId !== undefined ? { externalId: dto.externalId } : {}),
       ...(dto.branchId !== undefined ? { branchId: dto.branchId } : {}),
       amount: dto.amount,

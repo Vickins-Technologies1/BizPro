@@ -33,6 +33,7 @@ import { HealthController } from "./health.controller";
 import { BootstrapService } from "./bootstrap.service";
 import { SystemState, SystemStateSchema } from "./system-state.schema";
 import { IndustryDomainsModule } from "./modules/industry-domains/industry-domains.module";
+import { EmailModule } from "./modules/email/email.module";
 
 @Module({
   imports: [
@@ -70,7 +71,8 @@ import { IndustryDomainsModule } from "./modules/industry-domains/industry-domai
     BusinessOperationsModule,
     InvoicesModule,
     CommerceModule,
-    IndustryDomainsModule
+    IndustryDomainsModule,
+    EmailModule
   ],
   controllers: [HealthController],
   providers: [JwtAuthGuard, RolesGuard, SupportKeyGuard, BootstrapService]

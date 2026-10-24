@@ -144,7 +144,7 @@ export class ProductsController {
       businessId: user.businessId,
       productId: id,
       branchId: branchId ?? user.branchId ?? null,
-      referenceType: (dto.referenceType as "sale" | "purchase" | "adjustment" | "restock" | "refund") ?? "adjustment",
+      referenceType: (dto.referenceType as "sale" | "purchase" | "adjustment" | "restock" | "refund" | "transfer") ?? "adjustment",
       referenceId: dto.referenceId ?? `${id}-${Date.now()}`,
       quantityDelta: dto.quantityDelta,
       unitCost: dto.unitCost,

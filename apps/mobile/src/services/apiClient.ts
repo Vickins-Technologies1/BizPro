@@ -1421,10 +1421,10 @@ export async function createPurchaseOrder(input: {
   externalId?: string | null;
   supplierId?: string | null;
   orderNumber: string;
-  status?: PurchaseOrder["status"];
+  status?: "draft" | "ordered";
   orderDate: string;
   expectedDate?: string | null;
-  receivedAt?: string | null;
+
   subtotal?: number;
   taxTotal?: number;
   total?: number;
@@ -1437,6 +1437,15 @@ export async function createPurchaseOrder(input: {
 
 export async function updatePurchaseOrder(id: string, patch: Partial<PurchaseOrder> & { branchId?: string | null }) {
   const order = await apiRequest<RawEntity>(`/purchase-orders/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+  return withId(order) as PurchaseOrder;
+}
+
+export async function receivePurchaseOrder(
+  id: string,
+  input: { receiptId: string; items: Array<{ productId: string; quantity: number }> },
+  branchId?: string | null
+) {
+  const order = await apiRequest<RawEntity>(withBranchQuery(`/purchase-orders/${encodeURIComponent(id)}/receive`, branchId), { method: "POST", body: input });
   return withId(order) as PurchaseOrder;
 }
 
@@ -1473,6 +1482,16 @@ export async function updateStockTransfer(id: string, patch: Partial<StockTransf
 
 export async function archiveStockTransfer(id: string) {
   const transfer = await apiRequest<RawEntity>(`/stock-transfers/${encodeURIComponent(id)}/archive`, { method: "POST" });
+  return withId(transfer) as StockTransfer;
+}
+
+export async function dispatchStockTransfer(id: string) {
+  const transfer = await apiRequest<RawEntity>(`/stock-transfers/${encodeURIComponent(id)}/dispatch`, { method: "POST" });
+  return withId(transfer) as StockTransfer;
+}
+
+export async function receiveStockTransfer(id: string) {
+  const transfer = await apiRequest<RawEntity>(`/stock-transfers/${encodeURIComponent(id)}/receive`, { method: "POST" });
   return withId(transfer) as StockTransfer;
 }
 

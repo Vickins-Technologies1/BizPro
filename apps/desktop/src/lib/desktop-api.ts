@@ -1,4 +1,4 @@
-import type { Business, Branch, Customer, DailySummary, EnterpriseAnalytics, Invoice, Product, PurchaseOrder, Sale, StockTransfer } from "@vbo/shared";
+import type { BankAccount, Business, Branch, BusinessNotification, CreditNote, Customer, DailySummary, EnterpriseAnalytics, Expense, FinanceOverview, FinancePayment, Invoice, PettyCashEntry, Product, PurchaseOrder, Sale, StockTransfer, Supplier, SupplierCategory, SupplierContact, SupplierDocument, SupplierPayment, SupplierPerformanceReport, SupplierStatement } from "@vbo/shared";
 
 export type Session = {
   accessToken: string;
@@ -198,6 +198,14 @@ export async function registerBusiness(input: {
   return request<Session>("/auth/register", { method: "POST", body: JSON.stringify(input) });
 }
 
+export async function requestPasswordReset(identifier: string) {
+  return request<{ accepted: boolean; message: string; expiresInMinutes: number; debugCode?: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ identifier: identifier.trim() }) });
+}
+
+export async function resetPassword(input: { identifier: string; code: string; password: string }) {
+  return request<{ success: boolean; message: string }>("/auth/reset-password", { method: "POST", body: JSON.stringify(input) });
+}
+
 let saleRequestInFlight = false;
 
 export const api = {
@@ -215,9 +223,26 @@ export const api = {
   customers: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/customers${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)) as unknown as Customer[],
   sales: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/sales${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)) as unknown as Sale[],
   purchaseOrders: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/purchase-orders${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)) as unknown as PurchaseOrder[],
-  stockTransfers: async () => normalizeList(await request<ApiEntity[]>("/stock-transfers")) as unknown as StockTransfer[],
-  expenses: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/expenses${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)),
+  stockTransfers: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/stock-transfers${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)) as unknown as StockTransfer[],
+  expenses: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/expenses${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)) as unknown as Expense[],
   suppliers: async () => normalizeList(await request<ApiEntity[]>("/suppliers")),
+  supplierCategories: async () => normalizeList(await request<ApiEntity[]>("/suppliers/categories")) as unknown as SupplierCategory[],
+  createSupplierCategory: async (body: unknown) => normalizeEntity(await request<ApiEntity>("/suppliers/categories", { method: "POST", body: JSON.stringify(body) })) as unknown as SupplierCategory,
+  updateSupplierCategory: async (id: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/categories/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) })) as unknown as SupplierCategory,
+  archiveSupplierCategory: async (id: string) => normalizeEntity(await request<ApiEntity>(`/suppliers/categories/${encodeURIComponent(id)}/archive`, { method: "POST" })) as unknown as SupplierCategory,
+  supplierContacts: async (supplierId: string) => normalizeList(await request<ApiEntity[]>(`/suppliers/${encodeURIComponent(supplierId)}/contacts`)) as unknown as SupplierContact[],
+  createSupplierContact: async (supplierId: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/contacts`, { method: "POST", body: JSON.stringify(body) })) as unknown as SupplierContact,
+  updateSupplierContact: async (supplierId: string, id: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/contacts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) })) as unknown as SupplierContact,
+  archiveSupplierContact: async (supplierId: string, id: string) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/contacts/${encodeURIComponent(id)}/archive`, { method: "POST" })) as unknown as SupplierContact,
+  supplierDocuments: async (supplierId: string) => normalizeList(await request<ApiEntity[]>(`/suppliers/${encodeURIComponent(supplierId)}/documents`)) as unknown as SupplierDocument[],
+  createSupplierDocument: async (supplierId: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/documents`, { method: "POST", body: JSON.stringify(body) })) as unknown as SupplierDocument,
+  updateSupplierDocument: async (supplierId: string, id: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/documents/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) })) as unknown as SupplierDocument,
+  archiveSupplierDocument: async (supplierId: string, id: string) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/documents/${encodeURIComponent(id)}/archive`, { method: "POST" })) as unknown as SupplierDocument,
+  supplierPayments: async (supplierId: string, from?: string, to?: string) => { const query = new URLSearchParams(); if (from) query.set("from", from); if (to) query.set("to", to); return normalizeList(await request<ApiEntity[]>(`/suppliers/${encodeURIComponent(supplierId)}/payments${query.size ? `?${query}` : ""}`)) as unknown as SupplierPayment[]; },
+  createSupplierPayment: async (supplierId: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/payments`, { method: "POST", body: JSON.stringify(body) })) as unknown as SupplierPayment,
+  archiveSupplierPayment: async (supplierId: string, id: string) => normalizeEntity(await request<ApiEntity>(`/suppliers/${encodeURIComponent(supplierId)}/payments/${encodeURIComponent(id)}/archive`, { method: "POST" })) as unknown as SupplierPayment,
+  supplierStatement: async (supplierId: string, from?: string, to?: string) => { const query = new URLSearchParams(); if (from) query.set("from", from); if (to) query.set("to", to); return request<SupplierStatement>(`/suppliers/${encodeURIComponent(supplierId)}/statement${query.size ? `?${query}` : ""}`); },
+  supplierPerformance: async (supplierId: string, from?: string, to?: string) => { const query = new URLSearchParams(); if (from) query.set("from", from); if (to) query.set("to", to); return request<SupplierPerformanceReport>(`/suppliers/${encodeURIComponent(supplierId)}/performance${query.size ? `?${query}` : ""}`); },
   employees: async (branchId?: string | null) => normalizeList(await request<ApiEntity[]>(`/employees${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)),
   branches: async () => (await request<ApiEntity[]>("/branches")).map(normalizeBranch),
   createBranch: async (body: unknown) => normalizeBranch(await request<ApiEntity>("/branches", { method: "POST", body: JSON.stringify(body) })),
@@ -231,7 +256,48 @@ export const api = {
     if (to) query.set("to", to);
     return request<ApiEntity>(`/reports/summary${query.size ? `?${query.toString()}` : ""}`).then(normalizeSummary) as Promise<DailySummary>;
   },
-  financeOverview: (branchId?: string | null) => request<Record<string, unknown>>(`/finance/overview${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  topProducts: async (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<Array<{ _id?: string; productName?: string; quantity?: number; total?: number }>>(`/reports/top-products${query.size ? `?${query.toString()}` : ""}`);
+  },
+  financeOverview: (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<FinanceOverview>(`/finance/overview${query.size ? `?${query.toString()}` : ""}`);
+  },
+  financePayments: async (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return normalizeList(await request<ApiEntity[]>(`/finance/payments${query.size ? `?${query.toString()}` : ""}`)) as unknown as FinancePayment[];
+  },
+  financeCreditNotes: async (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return normalizeList(await request<ApiEntity[]>(`/finance/credit-notes${query.size ? `?${query.toString()}` : ""}`)) as unknown as CreditNote[];
+  },
+  createFinanceCreditNote: (body: unknown) => request<ApiEntity>("/finance/credit-notes", { method: "POST", body: JSON.stringify(body) }).then(normalizeEntity) as Promise<CreditNote>,
+  archiveFinanceCreditNote: (id: string) => request<ApiEntity>(`/finance/credit-notes/${encodeURIComponent(id)}/archive`, { method: "POST" }).then(normalizeEntity) as Promise<CreditNote>,
+  bankAccounts: async () => normalizeList(await request<ApiEntity[]>("/finance/bank-accounts")) as unknown as BankAccount[],
+  createBankAccount: (body: unknown) => request<ApiEntity>("/finance/bank-accounts", { method: "POST", body: JSON.stringify(body) }).then(normalizeEntity) as Promise<BankAccount>,
+  archiveBankAccount: (id: string) => request<ApiEntity>(`/finance/bank-accounts/${encodeURIComponent(id)}/archive`, { method: "POST" }).then(normalizeEntity) as Promise<BankAccount>,
+  pettyCashEntries: async (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return normalizeList(await request<ApiEntity[]>(`/finance/petty-cash${query.size ? `?${query.toString()}` : ""}`)) as unknown as PettyCashEntry[];
+  },
+  createPettyCashEntry: (body: unknown) => request<ApiEntity>("/finance/petty-cash", { method: "POST", body: JSON.stringify(body) }).then(normalizeEntity) as Promise<PettyCashEntry>,
+  archivePettyCashEntry: (id: string) => request<ApiEntity>(`/finance/petty-cash/${encodeURIComponent(id)}/archive`, { method: "POST" }).then(normalizeEntity) as Promise<PettyCashEntry>,
   invoices: async (branchId?: string | null, page = 1, search = "") => {
     const query = new URLSearchParams({ page: String(page), pageSize: "20" });
     if (branchId) query.set("branchId", branchId);
@@ -254,9 +320,30 @@ export const api = {
     if (to) query.set("to", to);
     return request<Array<{ _id?: string; total?: number; count?: number }>>(`/reports/payment-breakdown${query.size ? `?${query.toString()}` : ""}`);
   },
-  enterpriseAnalytics: (branchId?: string | null) => request<EnterpriseAnalytics>(`/analytics/enterprise${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
-  operations: (branchId?: string | null) => request<unknown[]>(`/business-operations${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  enterpriseAnalytics: (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<EnterpriseAnalytics>(`/analytics/enterprise${query.size ? `?${query.toString()}` : ""}`);
+  },
+  operations: (params: { branchId?: string | null; kind?: string; status?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.branchId) query.set("branchId", params.branchId);
+    if (params.kind) query.set("kind", params.kind);
+    if (params.status) query.set("status", params.status);
+    return request<ApiEntity[]>(`/business-operations${query.size ? `?${query.toString()}` : ""}`).then(normalizeList);
+  },
+  createOperation: async (body: unknown) => normalizeEntity(await request<ApiEntity>("/business-operations", { method: "POST", body: JSON.stringify(body) })),
+  updateOperation: async (id: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/business-operations/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) })),
+  archiveOperation: async (id: string) => normalizeEntity(await request<ApiEntity>(`/business-operations/${encodeURIComponent(id)}/archive`, { method: "POST" })),
   notifications: () => request<unknown[]>("/notifications"),
+  notificationsPage: async (params: { page?: number; pageSize?: number; search?: string } = {}) => {
+    const query = new URLSearchParams({ page: String(params.page ?? 1), pageSize: String(params.pageSize ?? 12) });
+    if (params.search?.trim()) query.set("search", params.search.trim());
+    const result = await request<{ items: ApiEntity[]; page: number; pageSize: number; total: number; totalPages: number; unreadCount: number }>("/notifications/page?" + query.toString());
+    return { ...result, items: normalizeList(result.items) as unknown as BusinessNotification[] };
+  },
   createSale: async (body: unknown) => {
     if (saleRequestInFlight) throw new Error("A sale is already being submitted.");
     saleRequestInFlight = true;
@@ -265,6 +352,7 @@ export const api = {
   },
   createPurchaseOrder: async (body: unknown) => normalizeEntity(await request<ApiEntity>("/purchase-orders", { method: "POST", body: JSON.stringify(body) })) as unknown as PurchaseOrder,
   updatePurchaseOrder: async (id: string, body: unknown) => normalizeEntity(await request<ApiEntity>(`/purchase-orders/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) })) as unknown as PurchaseOrder,
+  receivePurchaseOrder: async (id: string, body: unknown, branchId?: string | null) => normalizeEntity(await request<ApiEntity>(`/purchase-orders/${encodeURIComponent(id)}/receive${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`, { method: "POST", body: JSON.stringify(body) })) as unknown as PurchaseOrder,
   archivePurchaseOrder: async (id: string, branchId?: string | null) => request<ApiEntity>(`/purchase-orders/${encodeURIComponent(id)}/archive${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`, { method: "POST" }).then(normalizeEntity) as unknown as PurchaseOrder,
   createStockTransfer: async (body: unknown) => normalizeEntity(await request<ApiEntity>("/stock-transfers", { method: "POST", body: JSON.stringify(body) })) as unknown as StockTransfer,
   createProduct: (body: unknown) => request<Product>("/products", { method: "POST", body: JSON.stringify(body) }),

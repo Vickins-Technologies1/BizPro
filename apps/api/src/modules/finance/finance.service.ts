@@ -197,7 +197,7 @@ export class FinanceService {
 
   async updateCreditNote(businessId: string, id: string, patch: Partial<CreditNoteView>, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, patch.branchId ?? null);
-    const note = await this.creditNoteModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) });
+    const note = await this.creditNoteModel.findOne({ ...idLookupFilter(id), businessId, deletedAt: null, ...buildBranchMatch(branchId) });
     if (!note) throw new NotFoundException("Credit note not found");
     if (patch.reference !== undefined) note.reference = patch.reference;
     if (patch.relatedSaleId !== undefined) note.relatedSaleId = patch.relatedSaleId ?? null;
@@ -212,7 +212,7 @@ export class FinanceService {
 
   async archiveCreditNote(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const note = await this.creditNoteModel.findOneAndUpdate({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) }, { deletedAt: new Date(), status: "void" }, { new: true }).lean();
+    const note = await this.creditNoteModel.findOneAndUpdate({ ...idLookupFilter(id), businessId, deletedAt: null, ...buildBranchMatch(branchId) }, { deletedAt: new Date(), status: "void" }, { new: true }).lean();
     if (!note) throw new NotFoundException("Credit note not found");
     return this.normalizeCreditNote(note);
   }
@@ -260,7 +260,7 @@ export class FinanceService {
   }
 
   async updateBankAccount(businessId: string, id: string, patch: Partial<BankAccountView>) {
-    const account = await this.bankAccountModel.findOne({ _id: id, businessId, deletedAt: null });
+    const account = await this.bankAccountModel.findOne({ ...idLookupFilter(id), businessId, deletedAt: null });
     if (!account) throw new NotFoundException("Bank account not found");
     if (patch.bankName !== undefined) account.bankName = patch.bankName;
     if (patch.accountName !== undefined) account.accountName = patch.accountName;
@@ -274,7 +274,7 @@ export class FinanceService {
   }
 
   async bankTransactions(businessId: string, bankAccountId: string) {
-    const account = await this.bankAccountModel.findOne({ _id: bankAccountId, businessId, deletedAt: null }).lean();
+    const account = await this.bankAccountModel.findOne({ ...idLookupFilter(bankAccountId), businessId, deletedAt: null }).lean();
     if (!account) throw new NotFoundException("Bank account not found");
     return this.bankTransactionModel.find({ businessId, bankAccountId }).sort({ createdAt: 1 }).lean();
   }
@@ -295,7 +295,7 @@ export class FinanceService {
     return runInTransaction(this.connection, async (session) => {
       const existing = input.externalId ? await this.bankTransactionModel.findOne({ businessId: input.businessId, externalId: input.externalId }).session(session).lean() : null;
       if (existing) return existing;
-      const account = await this.bankAccountModel.findOne({ _id: input.bankAccountId, businessId: input.businessId, deletedAt: null }).session(session);
+      const account = await this.bankAccountModel.findOne({ ...idLookupFilter(input.bankAccountId), businessId: input.businessId, deletedAt: null }).session(session);
       if (!account) throw new NotFoundException("Bank account not found");
       const created = (await this.bankTransactionModel.create([{ ...input, currency: account.currency, reference: input.reference ?? null, description: input.description ?? null, createdById: input.createdById ?? null }], { session }))[0]!;
       account.currentBalance = roundMoney(Number(account.currentBalance ?? account.openingBalance ?? 0) + (input.direction === "in" ? input.amount : -input.amount));
@@ -306,7 +306,7 @@ export class FinanceService {
   }
 
   async archiveBankAccount(businessId: string, id: string) {
-    const account = await this.bankAccountModel.findOneAndUpdate({ _id: id, businessId, deletedAt: null }, { deletedAt: new Date(), isPrimary: false }, { new: true }).lean();
+    const account = await this.bankAccountModel.findOneAndUpdate({ ...idLookupFilter(id), businessId, deletedAt: null }, { deletedAt: new Date(), isPrimary: false }, { new: true }).lean();
     if (!account) throw new NotFoundException("Bank account not found");
     return this.normalizeBankAccount(account);
   }
@@ -355,7 +355,7 @@ export class FinanceService {
   }
 
   async archivePettyCashEntry(businessId: string, id: string) {
-    const entry = await this.pettyCashModel.findOneAndUpdate({ _id: id, businessId, deletedAt: null }, { deletedAt: new Date() }, { new: true }).lean();
+    const entry = await this.pettyCashModel.findOneAndUpdate({ ...idLookupFilter(id), businessId, deletedAt: null }, { deletedAt: new Date() }, { new: true }).lean();
     if (!entry) throw new NotFoundException("Petty cash entry not found");
     return this.normalizePettyCashEntry(entry);
   }
@@ -420,6 +420,10 @@ function buildDateRange(from?: string, to?: string) {
   if (from) range.$gte = normalizeRangeBound(from, "from");
   if (to) range.$lte = normalizeRangeBound(to, "to");
   return range;
+}
+
+function idLookupFilter(id: string) {
+  return /^[a-f\d]{24}$/i.test(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
 }
 
 function normalizeRangeBound(value: string, bound: "from" | "to") {

@@ -1,7 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { BusinessNotification, BusinessNotificationDocument, Device, DeviceDocument } from "../schemas";
+import { Business, BusinessDocument, BusinessNotification, BusinessNotificationDocument, Device, DeviceDocument } from "../schemas";
+import { EmailService } from "../email/email.service";
+import { buildBusinessLookup } from "../../common/business-lookup";
 
 type NotificationPriority = "low" | "normal" | "high" | "critical";
 
@@ -24,7 +26,9 @@ export class NotificationsService {
 
   constructor(
     @InjectModel(BusinessNotification.name) private readonly notificationModel: Model<BusinessNotificationDocument>,
-    @InjectModel(Device.name) private readonly deviceModel: Model<DeviceDocument>
+    @InjectModel(Device.name) private readonly deviceModel: Model<DeviceDocument>,
+    @InjectModel(Business.name) private readonly businessModel: Model<BusinessDocument>,
+    private readonly emailService: EmailService
   ) {}
 
   async listInbox(businessId: string, userId: string) {
@@ -127,6 +131,11 @@ export class NotificationsService {
     void this.sendPush(notification.toObject()).catch((error) => {
       this.logger.warn(`Push delivery failed for notification "${notification._id}": ${error instanceof Error ? error.message : String(error)}`);
     });
+    if ((input.priority === "high" || input.priority === "critical") && !input.audienceUserId) {
+      void this.sendBusinessAlertEmail(notification.toObject()).catch(() => {
+        this.logger.warn(`Email alert could not be queued for notification "${notification._id}".`);
+      });
+    }
 
     return notification.toObject();
   }
@@ -160,6 +169,19 @@ export class NotificationsService {
         threshold: input.threshold
       },
       dedupeKey: `low-stock:${input.businessId}:${input.productId}`
+    });
+  }
+
+  private async sendBusinessAlertEmail(notification: { _id: unknown; businessId: string; title: string; body: string; dedupeKey?: string | null }) {
+    if (!this.emailService.isEnabled()) return;
+    const business = await this.businessModel.findOne(buildBusinessLookup(notification.businessId)).select("email name").lean();
+    if (!business?.email) return;
+    await this.emailService.enqueue({
+      to: business.email,
+      template: "admin_notice",
+      businessId: notification.businessId,
+      idempotencyKey: notification.dedupeKey ? `business-alert:${notification.dedupeKey}` : `business-alert:${String(notification._id)}`,
+      variables: { businessName: business.name, message: notification.title, details: notification.body }
     });
   }
 

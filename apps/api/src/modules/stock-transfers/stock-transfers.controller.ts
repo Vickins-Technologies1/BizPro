@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { CurrentUser } from "../../common/current-user.decorator";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -9,8 +9,8 @@ import { StockTransfersService } from "./stock-transfers.service";
 
 class StockTransferItemDto {
   @IsString() productId!: string;
-  @IsNumber() quantity!: number;
-  @IsNumber() unitCost!: number;
+  @IsNumber() @Min(0.000001) quantity!: number;
+  @IsNumber() @Min(0) unitCost!: number;
   @IsOptional() @IsString() batchNumber?: string | null;
   @IsOptional() @IsArray() serialNumbers?: string[];
 }
@@ -21,9 +21,8 @@ class CreateStockTransferDto {
   @IsOptional() @IsString() fromBranchId?: string | null;
   @IsOptional() @IsString() toBranchId?: string | null;
   @IsString() transferNumber!: string;
-  @IsOptional() @IsString() status?: "draft" | "in_transit" | "received" | "cancelled";
+  @IsOptional() @IsIn(["draft"]) status?: "draft";
   @IsDateString() transferDate!: string;
-  @IsOptional() @IsDateString() receivedAt?: string | null;
   @IsOptional() @IsString() note?: string | null;
   @IsArray()
   @ValidateNested({ each: true })
@@ -35,9 +34,8 @@ class UpdateStockTransferDto {
   @IsOptional() @IsString() fromBranchId?: string | null;
   @IsOptional() @IsString() toBranchId?: string | null;
   @IsOptional() @IsString() transferNumber?: string;
-  @IsOptional() @IsString() status?: "draft" | "in_transit" | "received" | "cancelled";
+  @IsOptional() @IsIn(["draft", "cancelled"]) status?: "draft" | "cancelled";
   @IsOptional() @IsDateString() transferDate?: string;
-  @IsOptional() @IsDateString() receivedAt?: string | null;
   @IsOptional() @IsString() note?: string | null;
   @IsOptional() @IsArray()
   @ValidateNested({ each: true })
@@ -54,7 +52,6 @@ function buildCreateTransferPayload(input: CreateStockTransferDto & { businessId
     transferNumber: input.transferNumber,
     status: input.status ?? "draft",
     transferDate: new Date(input.transferDate),
-    ...(input.receivedAt === undefined ? {} : input.receivedAt ? { receivedAt: new Date(input.receivedAt) } : { receivedAt: null }),
     note: input.note ?? null,
     items: input.items
   };
@@ -67,7 +64,6 @@ function buildUpdateTransferPatch(input: UpdateStockTransferDto & { businessId: 
     ...(input.transferNumber === undefined ? {} : { transferNumber: input.transferNumber }),
     ...(input.status === undefined ? {} : { status: input.status }),
     ...(input.transferDate === undefined ? {} : { transferDate: new Date(input.transferDate) }),
-    ...(input.receivedAt === undefined ? {} : input.receivedAt ? { receivedAt: new Date(input.receivedAt) } : { receivedAt: null }),
     ...(input.note === undefined ? {} : { note: input.note }),
     ...(input.items === undefined ? {} : { items: input.items })
   };
@@ -80,25 +76,37 @@ export class StockTransfersController {
 
   @Get()
   @Roles("owner", "manager", "cashier")
-  list(@CurrentUser() user: { businessId: string }) {
-    return this.stockTransfers.list(user.businessId);
+  list(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("branchId") branchId?: string) {
+    return this.stockTransfers.list(user.businessId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Post()
   @Roles("owner", "manager")
-  create(@CurrentUser() user: { businessId: string }, @Body() dto: CreateStockTransferDto) {
-    return this.stockTransfers.create(buildCreateTransferPayload({ ...dto, businessId: user.businessId }));
+  create(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Body() dto: CreateStockTransferDto) {
+    return this.stockTransfers.create(buildCreateTransferPayload({ ...dto, businessId: user.businessId }), { role: user.role ?? null, branchId: user.branchId ?? null });
   }
 
   @Patch(":id")
   @Roles("owner", "manager")
-  update(@CurrentUser() user: { businessId: string }, @Param("id") id: string, @Body() dto: UpdateStockTransferDto) {
-    return this.stockTransfers.update(user.businessId, id, buildUpdateTransferPatch({ ...dto, businessId: user.businessId }));
+  update(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: UpdateStockTransferDto) {
+    return this.stockTransfers.update(user.businessId, id, buildUpdateTransferPatch({ ...dto, businessId: user.businessId }), { role: user.role ?? null, branchId: user.branchId ?? null });
+  }
+
+  @Post(":id/dispatch")
+  @Roles("owner", "manager")
+  dispatch(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string) {
+    return this.stockTransfers.dispatch(user.businessId, id, { role: user.role ?? null, branchId: user.branchId ?? null });
+  }
+
+  @Post(":id/receive")
+  @Roles("owner", "manager")
+  receive(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string) {
+    return this.stockTransfers.receive(user.businessId, id, { role: user.role ?? null, branchId: user.branchId ?? null });
   }
 
   @Post(":id/archive")
   @Roles("owner", "manager")
-  archive(@CurrentUser() user: { businessId: string }, @Param("id") id: string) {
-    return this.stockTransfers.archive(user.businessId, id);
+  archive(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string) {
+    return this.stockTransfers.archive(user.businessId, id, { role: user.role ?? null, branchId: user.branchId ?? null });
   }
 }

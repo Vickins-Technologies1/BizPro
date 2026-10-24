@@ -283,6 +283,7 @@ export function ProductDetailScreen() {
                   </Text>
                 </View>
                 <Text style={{ color: tokens.colors.textSecondary }}>{movement.note ?? movement.referenceId}</Text>
+                {movement.batchNumber || movement.serialNumbers?.length ? <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{[movement.batchNumber ? `Batch ${movement.batchNumber}` : null, movement.serialNumbers?.length ? `Serials ${movement.serialNumbers.join(", ")}` : null].filter(Boolean).join(" · ")}</Text> : null}
                 <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(movement.createdAt, "PPP")}</Text>
               </View>
             ))
@@ -381,6 +382,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 function formatReferenceLabel(value: string) {
   if (value === "adjustment") return "Manual adjustment";
   if (value === "sale") return "Sale";
+  if (value === "transfer") return "Branch transfer";
   if (value === "restock") return "Restock";
   return value.replaceAll("_", " ");
 }

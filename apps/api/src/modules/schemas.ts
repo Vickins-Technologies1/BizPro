@@ -41,7 +41,7 @@ export class Business {
   @Prop({ required: true, unique: true, index: true })
   slug!: string;
 
-  @Prop({ required: true, enum: [...BUSINESS_TYPES] satisfies BusinessType[] })
+  @Prop({ type: String, required: true, enum: [...BUSINESS_TYPES] satisfies BusinessType[] })
   businessType!: BusinessType;
 
   @Prop({ type: String, enum: INDUSTRY_KEYS, default: null })
@@ -111,10 +111,10 @@ export class Business {
     defaultTaxCode?: string | null;
   } | null;
 
-  @Prop({ required: true, enum: [...PLAN_TIERS] satisfies PlanTier[] })
+  @Prop({ type: String, required: true, enum: [...PLAN_TIERS] satisfies PlanTier[] })
   planTier!: PlanTier;
 
-  @Prop({ required: true, default: "trial" })
+  @Prop({ type: String, required: true, default: "trial" })
   billingStatus!: "trial" | "active" | "past_due" | "suspended";
 
   @Prop({ type: Date })
@@ -203,7 +203,7 @@ export class User {
   @Prop({ type: Number, select: false, default: 0 })
   passwordResetAttempts?: number;
 
-  @Prop({ required: true, enum: [...USER_ROLES] satisfies UserRole[] })
+  @Prop({ type: String, required: true, enum: [...USER_ROLES] satisfies UserRole[] })
   role!: UserRole;
 
   @Prop({ type: String, default: null })
@@ -600,7 +600,7 @@ export class SupplierPayment {
   @Prop({ required: true, min: 0 })
   amount!: number;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   method!: PaymentMethod;
 
   @Prop({ type: String, default: null })
@@ -625,9 +625,21 @@ export interface PurchaseOrderItem {
   productId: string;
   productName: string;
   quantity: number;
+  receivedQuantity?: number;
   unitCost: number;
   batchNumber?: string | null;
   expiryDate?: string | null;
+}
+
+export interface PurchaseOrderReceiptItem {
+  productId: string;
+  quantity: number;
+}
+
+export interface PurchaseOrderReceipt {
+  receiptId: string;
+  receivedAt: Date;
+  items: PurchaseOrderReceiptItem[];
 }
 
 @Schema({ timestamps: true, collection: "purchase_orders" })
@@ -674,6 +686,9 @@ export class PurchaseOrder {
   @Prop({ type: Array, default: [] })
   items!: PurchaseOrderItem[];
 
+  @Prop({ type: Array, default: [] })
+  receipts!: PurchaseOrderReceipt[];
+
   @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
@@ -710,6 +725,9 @@ export class StockTransfer {
 
   @Prop({ required: true })
   transferDate!: Date;
+
+  @Prop({ type: Date })
+  dispatchedAt?: Date | null;
 
   @Prop({ type: Date })
   receivedAt?: Date | null;
@@ -1267,10 +1285,10 @@ export class Sale {
   @Prop({ required: true, default: 0 })
   balanceDue!: number;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   paymentStatus!: PaymentStatus;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   paymentMethod!: PaymentMethod;
 
   @Prop({ type: String })
@@ -1315,10 +1333,10 @@ export class Payment {
   @Prop({ type: String })
   debtPaymentId?: string | null;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   method!: PaymentMethod;
 
-  @Prop({ required: true })
+  @Prop({ type: String, required: true })
   status!: PaymentStatus;
 
   @Prop({ required: true })
@@ -1355,7 +1373,7 @@ export class StockMovement {
   productId!: string;
 
   @Prop({ required: true })
-  referenceType!: "sale" | "purchase" | "adjustment" | "restock" | "refund";
+  referenceType!: "sale" | "purchase" | "adjustment" | "restock" | "refund" | "transfer";
 
   @Prop({ required: true })
   referenceId!: string;
@@ -1365,6 +1383,12 @@ export class StockMovement {
 
   @Prop({ required: true })
   unitCost!: number;
+
+  @Prop({ type: String, default: null })
+  batchNumber?: string | null;
+
+  @Prop({ type: [String], default: [] })
+  serialNumbers?: string[];
 
   @Prop({ type: String })
   note?: string | null;
@@ -1435,7 +1459,7 @@ export const SyncCheckpointSchema = SchemaFactory.createForClass(SyncCheckpoint)
 
 @Schema({ timestamps: true, collection: "subscription_plans" })
 export class SubscriptionPlan {
-  @Prop({ required: true, unique: true, enum: [...PLAN_TIERS] })
+  @Prop({ type: String, required: true, unique: true, enum: [...PLAN_TIERS] })
   code!: PlanTier;
 
   @Prop({ required: true })
@@ -1458,7 +1482,7 @@ export class Subscription {
   @Prop({ required: true, index: true })
   businessId!: string;
 
-  @Prop({ required: true, ref: "SubscriptionPlan" })
+  @Prop({ type: String, required: true, ref: "SubscriptionPlan" })
   planCode!: PlanTier;
 
   @Prop({ required: true, enum: ["TRIAL", "ACTIVE", "EXPIRED", "PAST_DUE", "CANCELLED"] })

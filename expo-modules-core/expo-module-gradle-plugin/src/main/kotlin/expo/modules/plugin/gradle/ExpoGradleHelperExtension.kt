@@ -40,7 +40,7 @@ open class ExpoGradleHelperExtension {
       ?.projectDir
       ?.parentFile
 
-    reactNativeDir = reactNativeDirFromSource ?: File(
+    reactNativeDir = System.getenv("DIRAOS_REACT_NATIVE_DIR")?.let { File(it) } ?: reactNativeDirFromSource ?: File(
       project.providers.exec { env ->
         env.workingDir(project.rootDir)
         env.commandLine("node", "--print", "require.resolve('react-native/package.json')")

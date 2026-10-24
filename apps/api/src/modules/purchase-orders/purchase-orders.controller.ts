@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { ArrayMinSize, IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { CurrentUser } from "../../common/current-user.decorator";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -10,8 +10,8 @@ import { PurchaseOrdersService } from "./purchase-orders.service";
 class PurchaseOrderItemDto {
   @IsString() productId!: string;
   @IsString() productName!: string;
-  @IsNumber() quantity!: number;
-  @IsNumber() unitCost!: number;
+  @IsNumber() @Min(0.000001) quantity!: number;
+  @IsNumber() @Min(0) unitCost!: number;
   @IsOptional() @IsString() batchNumber?: string | null;
   @IsOptional() @IsString() expiryDate?: string | null;
 }
@@ -22,10 +22,9 @@ class CreatePurchaseOrderDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() supplierId?: string | null;
   @IsString() orderNumber!: string;
-  @IsOptional() @IsString() status?: "draft" | "ordered" | "partially_received" | "received" | "cancelled";
+  @IsOptional() @IsIn(["draft", "ordered"]) status?: "draft" | "ordered";
   @IsDateString() orderDate!: string;
   @IsOptional() @IsDateString() expectedDate?: string | null;
-  @IsOptional() @IsDateString() receivedAt?: string | null;
   @IsOptional() @IsNumber() subtotal?: number;
   @IsOptional() @IsNumber() taxTotal?: number;
   @IsOptional() @IsNumber() total?: number;
@@ -40,10 +39,9 @@ class UpdatePurchaseOrderDto {
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() supplierId?: string | null;
   @IsOptional() @IsString() orderNumber?: string;
-  @IsOptional() @IsString() status?: "draft" | "ordered" | "partially_received" | "received" | "cancelled";
+  @IsOptional() @IsIn(["draft", "ordered", "cancelled"]) status?: "draft" | "ordered" | "cancelled";
   @IsOptional() @IsDateString() orderDate?: string;
   @IsOptional() @IsDateString() expectedDate?: string | null;
-  @IsOptional() @IsDateString() receivedAt?: string | null;
   @IsOptional() @IsNumber() subtotal?: number;
   @IsOptional() @IsNumber() taxTotal?: number;
   @IsOptional() @IsNumber() total?: number;
@@ -52,6 +50,19 @@ class UpdatePurchaseOrderDto {
   @ValidateNested({ each: true })
   @Type(() => PurchaseOrderItemDto)
   items?: PurchaseOrderItemDto[];
+}
+
+class PurchaseOrderReceiptItemDto {
+  @IsString() productId!: string;
+  @IsNumber() @Min(0.000001) quantity!: number;
+}
+
+class ReceivePurchaseOrderDto {
+  @IsString() @MinLength(8) @MaxLength(128) receiptId!: string;
+  @IsArray() @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => PurchaseOrderReceiptItemDto)
+  items!: PurchaseOrderReceiptItemDto[];
 }
 
 function buildCreateOrderPayload(input: CreatePurchaseOrderDto & { businessId: string; branchId?: string | null }) {
@@ -64,7 +75,6 @@ function buildCreateOrderPayload(input: CreatePurchaseOrderDto & { businessId: s
     status: input.status ?? "draft",
     orderDate: new Date(input.orderDate),
     ...(input.expectedDate === undefined ? {} : input.expectedDate ? { expectedDate: new Date(input.expectedDate) } : { expectedDate: null }),
-    ...(input.receivedAt === undefined ? {} : input.receivedAt ? { receivedAt: new Date(input.receivedAt) } : { receivedAt: null }),
     ...(input.subtotal === undefined ? {} : { subtotal: input.subtotal }),
     ...(input.taxTotal === undefined ? {} : { taxTotal: input.taxTotal }),
     ...(input.total === undefined ? {} : { total: input.total }),
@@ -81,7 +91,6 @@ function buildUpdateOrderPatch(input: UpdatePurchaseOrderDto & { businessId: str
     ...(input.status === undefined ? {} : { status: input.status }),
     ...(input.orderDate === undefined ? {} : { orderDate: new Date(input.orderDate) }),
     ...(input.expectedDate === undefined ? {} : input.expectedDate ? { expectedDate: new Date(input.expectedDate) } : { expectedDate: null }),
-    ...(input.receivedAt === undefined ? {} : input.receivedAt ? { receivedAt: new Date(input.receivedAt) } : { receivedAt: null }),
     ...(input.subtotal === undefined ? {} : { subtotal: input.subtotal }),
     ...(input.taxTotal === undefined ? {} : { taxTotal: input.taxTotal }),
     ...(input.total === undefined ? {} : { total: input.total }),
@@ -111,6 +120,21 @@ export class PurchaseOrdersController {
   @Roles("owner", "manager")
   update(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: UpdatePurchaseOrderDto) {
     return this.purchaseOrders.update(user.businessId, id, buildUpdateOrderPatch({ ...dto, businessId: user.businessId, branchId: user.branchId ?? null }), { role: user.role ?? null, branchId: user.branchId ?? null });
+  }
+
+  @Post(":id/receive")
+  @Roles("owner", "manager")
+  receive(
+    @CurrentUser() user: { businessId: string; role?: string; branchId?: string | null },
+    @Param("id") id: string,
+    @Query("branchId") branchId: string | undefined,
+    @Body() dto: ReceivePurchaseOrderDto
+  ) {
+    return this.purchaseOrders.receive(user.businessId, id, dto, {
+      role: user.role ?? null,
+      branchId: user.branchId ?? null,
+      requestedBranchId: branchId ?? null
+    });
   }
 
   @Post(":id/archive")

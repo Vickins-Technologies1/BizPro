@@ -254,6 +254,7 @@ export interface Category extends BaseEntity {
 }
 export interface Product extends BaseEntity {
     serverId?: string | null;
+    externalId?: string | null;
     branchId?: string | null;
     catalogEntityType?: "product" | "service" | "menu_item" | "part" | null;
     industryKey?: IndustryKey | null;
@@ -424,9 +425,18 @@ export interface PurchaseOrderLine {
     productId: string;
     productName: string;
     quantity: number;
+    receivedQuantity?: number;
     unitCost: number;
     batchNumber?: string | null;
     expiryDate?: string | null;
+}
+export interface PurchaseOrderReceipt {
+    receiptId: string;
+    receivedAt: string;
+    items: Array<{
+        productId: string;
+        quantity: number;
+    }>;
 }
 export interface PurchaseOrder extends BaseEntity {
     branchId?: string | null;
@@ -441,6 +451,7 @@ export interface PurchaseOrder extends BaseEntity {
     total: number;
     notes?: string | null;
     items: PurchaseOrderLine[];
+    receipts?: PurchaseOrderReceipt[];
 }
 export interface StockTransferLine {
     productId: string;
@@ -455,6 +466,7 @@ export interface StockTransfer extends BaseEntity {
     toBranchId?: string | null;
     status: "draft" | "in_transit" | "received" | "cancelled";
     transferDate: string;
+    dispatchedAt?: string | null;
     receivedAt?: string | null;
     note?: string | null;
     items: StockTransferLine[];
@@ -665,10 +677,12 @@ export interface EnterpriseAnalytics {
 export interface StockMovement extends BaseEntity {
     branchId?: string | null;
     productId: string;
-    referenceType: "sale" | "purchase" | "adjustment" | "restock" | "refund";
+    referenceType: "sale" | "purchase" | "adjustment" | "restock" | "refund" | "transfer";
     referenceId: string;
     quantityDelta: number;
     unitCost: number;
+    batchNumber?: string | null;
+    serialNumbers?: string[];
     note?: string | null;
 }
 export interface SyncEventPayload<T = any> {

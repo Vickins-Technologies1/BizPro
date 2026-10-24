@@ -5,8 +5,9 @@ import { useNavigation } from "@react-navigation/native";
 import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
-import { archivePurchaseOrder, createPurchaseOrder, listPurchaseOrders, updatePurchaseOrder } from "@/services/apiClient";
+import { archivePurchaseOrder, createPurchaseOrder, listPurchaseOrders, receivePurchaseOrder, updatePurchaseOrder } from "@/services/apiClient";
 import { formatDate } from "@/utils/date";
+import { createId } from "@/utils/id";
 import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,6 +20,8 @@ type OrderLine = {
   expiryDate: string;
 };
 
+type ReceiptLine = { productId: string; productName: string; remaining: number; quantity: string };
+
 export function PurchaseOrdersScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
@@ -28,6 +31,7 @@ export function PurchaseOrdersScreen() {
   const products = useAppStore((state) => state.products);
   const suppliers = useAppStore((state) => state.suppliers);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
+  const canManageOrders = user?.role === 'owner' || user?.role === 'manager';
   const [orders, setOrders] = React.useState<PurchaseOrder[]>([]);
   const [search, setSearch] = React.useState("");
   const [editing, setEditing] = React.useState<PurchaseOrder | null>(null);
@@ -36,13 +40,17 @@ export function PurchaseOrdersScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [supplierId, setSupplierId] = React.useState<string | null>(null);
   const [orderNumber, setOrderNumber] = React.useState("");
-  const [status, setStatus] = React.useState<PurchaseOrder["status"]>("draft");
+  const [status, setStatus] = React.useState<"draft" | "ordered" | "cancelled">("draft");
   const [orderDate, setOrderDate] = React.useState("");
   const [expectedDate, setExpectedDate] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [taxTotal, setTaxTotal] = React.useState("0");
   const [productSearch, setProductSearch] = React.useState("");
   const [items, setItems] = React.useState<OrderLine[]>([]);
+  const [receivingOrder, setReceivingOrder] = React.useState<PurchaseOrder | null>(null);
+  const [receiptId, setReceiptId] = React.useState("");
+  const [receiptLines, setReceiptLines] = React.useState<ReceiptLine[]>([]);
+  const [receiving, setReceiving] = React.useState(false);
 
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
@@ -86,7 +94,7 @@ export function PurchaseOrdersScreen() {
     setEditing(order ?? null);
     setSupplierId(order?.supplierId ?? null);
     setOrderNumber(order?.orderNumber ?? `PO-${Date.now()}`);
-    setStatus(order?.status ?? "draft");
+    setStatus(order?.status === "ordered" ? "ordered" : order?.status === "cancelled" ? "cancelled" : "draft");
     setOrderDate(order?.orderDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
     setExpectedDate(order?.expectedDate?.slice(0, 10) ?? "");
     setNotes(order?.notes ?? "");
@@ -137,15 +145,15 @@ export function PurchaseOrdersScreen() {
     }
     setSaving(true);
     try {
+      const createStatus: "draft" | "ordered" = status === "ordered" ? "ordered" : "draft";
       const payload = {
         businessId: business.id,
         branchId: writeBranchId,
         supplierId: supplierId ?? null,
         orderNumber: orderNumber.trim(),
-        status,
+        status: createStatus,
         orderDate,
         expectedDate: expectedDate.trim() || null,
-        receivedAt: editing?.receivedAt ?? null,
         subtotal,
         taxTotal: Number(taxTotal || 0),
         total,
@@ -160,7 +168,7 @@ export function PurchaseOrdersScreen() {
         }))
       };
       if (editing) {
-        await updatePurchaseOrder(editing.id, payload);
+        await updatePurchaseOrder(editing.id, { ...payload, status });
       } else {
         await createPurchaseOrder(payload);
       }
@@ -171,6 +179,54 @@ export function PurchaseOrdersScreen() {
       Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to save purchase order");
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openReceipt(order: PurchaseOrder) {
+    const byProduct = new Map<string, ReceiptLine>();
+    for (const item of order.items) {
+      const remaining = Math.max(0, Number(item.quantity) - Number(item.receivedQuantity ?? 0));
+      if (remaining <= 0) continue;
+      const current = byProduct.get(item.productId);
+      if (current) {
+        current.remaining += remaining;
+        current.quantity = String(current.remaining);
+      } else {
+        byProduct.set(item.productId, { productId: item.productId, productName: item.productName, remaining, quantity: String(remaining) });
+      }
+    }
+    setReceivingOrder(order);
+    setReceiptId(createId());
+    setReceiptLines([...byProduct.values()]);
+  }
+
+  async function submitReceipt() {
+    if (!receivingOrder || !receiptId || receiving) return;
+    const itemsToReceive = receiptLines
+      .map((line) => ({ productId: line.productId, quantity: Number(line.quantity || 0), remaining: line.remaining }))
+      .filter((line) => line.quantity > 0);
+    if (!itemsToReceive.length) {
+      Alert.alert("Enter quantities", "Enter a quantity for at least one product.");
+      return;
+    }
+    if (itemsToReceive.some((line) => !Number.isFinite(line.quantity) || line.quantity > line.remaining)) {
+      Alert.alert("Check quantities", "Each quantity must be greater than zero and no more than the outstanding amount.");
+      return;
+    }
+    setReceiving(true);
+    try {
+      await receivePurchaseOrder(receivingOrder.id, {
+        receiptId,
+        items: itemsToReceive.map(({ productId, quantity }) => ({ productId, quantity }))
+      }, writeBranchId);
+      setReceivingOrder(null);
+      setReceiptLines([]);
+      setReceiptId("");
+      await refreshAll();
+    } catch (error) {
+      Alert.alert("Receipt failed", error instanceof Error ? error.message : "Could not record received stock.");
+    } finally {
+      setReceiving(false);
     }
   }
 
@@ -192,7 +248,7 @@ export function PurchaseOrdersScreen() {
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Inbound planning</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredOrders.length} visible of {orders.length} orders</Text>
             </View>
-            <PrimaryButton title="Create order" onPress={() => openEditor(null)} />
+            {canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
           </View>
           <InputField label="Search orders" value={search} onChangeText={setSearch} placeholder="Order number, supplier, or status" />
         </Card>
@@ -214,21 +270,22 @@ export function PurchaseOrdersScreen() {
                   <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{order.items.length} line{order.items.length === 1 ? "" : "s"}</Text>
                 </View>
                 <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(order)} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Archive"
-                      variant="danger"
-                      onPress={async () => {
+                  {canManageOrders && (order.status === "ordered" || order.status === "partially_received") ? (
+                    <View style={{ flex: 1 }}><PrimaryButton title="Receive stock" onPress={() => openReceipt(order)} /></View>
+                  ) : null}
+                  {canManageOrders && order.status !== "partially_received" && order.status !== "received" && order.status !== "cancelled" && !(order.receipts?.length) ? (
+                    <View style={{ flex: 1 }}><PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(order)} /></View>
+                  ) : null}
+                  {canManageOrders && order.status !== "partially_received" && order.status !== "received" ? (
+                    <View style={{ flex: 1 }}>
+                      <PrimaryButton title="Archive" variant="danger" onPress={async () => {
                         const confirmed = await confirmMobile(`Archive ${order.orderNumber}?`);
                         if (!confirmed) return;
-                        await archivePurchaseOrder(order.id, selectedBranchId);
-                        await refreshAll();
-                      }}
-                    />
-                  </View>
+                        try { await archivePurchaseOrder(order.id, writeBranchId); await refreshAll(); }
+                        catch (error) { Alert.alert("Archive failed", error instanceof Error ? error.message : "Could not archive this order."); }
+                      }} />
+                    </View>
+                  ) : null}
                 </View>
               </Card>
             );
@@ -237,7 +294,7 @@ export function PurchaseOrdersScreen() {
           <EmptyState
             title={search ? "No matching purchase orders" : "No purchase orders yet"}
             subtitle={search ? "Try a different order number or supplier." : "Create purchase orders to plan incoming inventory."}
-            action={<PrimaryButton title="Create order" onPress={() => openEditor(null)} />}
+            action={canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
             icon="cart-outline"
           />
         )}
@@ -254,7 +311,7 @@ export function PurchaseOrdersScreen() {
             ))}
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            {(["draft", "ordered", "partially_received", "received", "cancelled"] as const).map((option) => (
+            {(editing ? (["draft", "ordered", "cancelled"] as const) : (["draft", "ordered"] as const)).map((option) => (
               <View key={option} style={{ flex: 1 }}>
                 <Tag label={option.replaceAll("_", " ")} tone="primary" selected={status === option} fullWidth onPress={() => setStatus(option)} />
               </View>
@@ -311,6 +368,20 @@ export function PurchaseOrdersScreen() {
             ))}
           </View>
           <PrimaryButton title={saving ? "Saving..." : "Save purchase order"} loading={saving} onPress={() => void saveOrder()} />
+        </AppScrollView>
+      </SimpleModal>
+
+      <SimpleModal visible={!!receivingOrder} title="Record stock receipt" onClose={() => { if (!receiving) setReceivingOrder(null); }}>
+        <AppScrollView contentContainerStyle={{ gap: 12 }}>
+          <Text style={{ color: tokens.colors.textSecondary }}>Purchase order {receivingOrder?.orderNumber}. Received stock is added to this branch inventory.</Text>
+          {receiptLines.map((line) => (
+            <Card key={line.productId} style={{ gap: 6 }}>
+              <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{line.productName}</Text>
+              <Text style={{ color: tokens.colors.textSecondary }}>Outstanding: {line.remaining}</Text>
+              <InputField label="Received now" value={line.quantity} onChangeText={(value) => setReceiptLines((current) => current.map((item) => item.productId === line.productId ? { ...item, quantity: value } : item))} keyboardType="decimal-pad" />
+            </Card>
+          ))}
+          <PrimaryButton title={receiving ? "Recording…" : "Record receipt"} loading={receiving} onPress={() => void submitReceipt()} />
         </AppScrollView>
       </SimpleModal>
     </Screen>

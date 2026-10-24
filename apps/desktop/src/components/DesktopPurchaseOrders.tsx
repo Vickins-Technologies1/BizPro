@@ -6,8 +6,10 @@ import { api, isOfflineError, queueOffline, type Session } from "../lib/desktop-
 import styles from "./DesktopPurchaseOrders.module.css";
 
 type OrderLine = { productId: string; productName: string; quantity: number; unitCost: number; batchNumber: string; expiryDate: string };
+type ReceiptLine = { productId: string; productName: string; remaining: number; quantity: string };
 type OrderStatus = PurchaseOrder["status"];
 const statuses: OrderStatus[] = ["draft", "ordered", "partially_received", "received", "cancelled"];
+const editableStatuses: OrderStatus[] = ["draft", "ordered", "cancelled"];
 
 function money(value: unknown, currency: string) {
   const amount = Number(value ?? 0);
@@ -25,6 +27,10 @@ export function DesktopPurchaseOrders({ session }: { session: Session }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [editing, setEditing] = useState<PurchaseOrder | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [receivingOrder, setReceivingOrder] = useState<PurchaseOrder | null>(null);
+  const [receiptLines, setReceiptLines] = useState<ReceiptLine[]>([]);
+  const [receiptId, setReceiptId] = useState("");
+  const [receiving, setReceiving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +98,7 @@ export function DesktopPurchaseOrders({ session }: { session: Session }) {
     const body = {
       businessId: session.user.businessId, branchId, supplierId: supplierId || null,
       ...(editing ? {} : { externalId: crypto.randomUUID() }), orderNumber: orderNumber.trim(), status,
-      orderDate, expectedDate: expectedDate || null, receivedAt: editing?.receivedAt ?? null,
+      orderDate, expectedDate: expectedDate || null,
       subtotal, taxTotal: tax, total, notes: notes.trim() || null,
       items: lines.map((line) => ({ productId: line.productId, productName: line.productName, quantity: Number(line.quantity), unitCost: Number(line.unitCost), batchNumber: line.batchNumber.trim() || null, expiryDate: line.expiryDate || null }))
     };
@@ -112,6 +118,47 @@ export function DesktopPurchaseOrders({ session }: { session: Session }) {
     } finally { setSaving(false); }
   }
 
+  function openReceipt(order: PurchaseOrder) {
+    const byProduct = new Map<string, ReceiptLine>();
+    for (const item of order.items) {
+      const remaining = Math.max(0, Number(item.quantity) - Number(item.receivedQuantity ?? 0));
+      if (remaining <= 0) continue;
+      const current = byProduct.get(item.productId);
+      if (current) {
+        current.remaining += remaining;
+        current.quantity = String(current.remaining);
+      } else {
+        byProduct.set(item.productId, { productId: item.productId, productName: item.productName, remaining, quantity: String(remaining) });
+      }
+    }
+    setReceivingOrder(order);
+    setReceiptLines([...byProduct.values()]);
+    setReceiptId(crypto.randomUUID());
+    setError(""); setMessage("");
+  }
+
+  async function saveReceipt(event: React.FormEvent) {
+    event.preventDefault(); setError(""); setMessage("");
+    if (!receivingOrder || !canManage || !receiptId) { setError("Select a purchase order and branch before receiving stock."); return; }
+    const items = receiptLines.map((line) => ({ productId: line.productId, quantity: Number(line.quantity || 0), remaining: line.remaining })).filter((line) => line.quantity > 0);
+    if (!items.length) { setError("Enter a quantity for at least one product."); return; }
+    if (items.some((line) => !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > line.remaining)) {
+      setError("Each quantity must be positive and no greater than the outstanding amount."); return;
+    }
+    setReceiving(true);
+    try {
+      const saved = await api.receivePurchaseOrder(receivingOrder.id, {
+        receiptId,
+        items: items.map(({ productId, quantity }) => ({ productId, quantity }))
+      }, branchId);
+      setOrders((current) => current.map((order) => order.id === saved.id ? saved : order));
+      setMessage(`${receivingOrder.orderNumber} receipt recorded.`);
+      setReceivingOrder(null); setReceiptLines([]); setReceiptId("");
+    } catch (receiptError) {
+      setError(receiptError instanceof Error ? receiptError.message : "Could not record received stock.");
+    } finally { setReceiving(false); }
+  }
+
   async function archiveOrder(order: PurchaseOrder) {
     if (!canManage) return;
     if (!window.confirm(`Archive purchase order ${order.orderNumber}?`)) return;
@@ -124,7 +171,7 @@ export function DesktopPurchaseOrders({ session }: { session: Session }) {
     <div className="page-heading"><div><span className="eyebrow">INVENTORY</span><h1>Purchase orders</h1><p>Plan supplier orders and track expected inventory.</p></div><div className="heading-actions"><button className="secondary" onClick={() => setReload((value) => value + 1)}>Refresh</button>{canManage && <button className="primary" onClick={() => openEditor()}>Create order</button>}</div></div>
     {error && !showEditor && <div className="error-banner" role="alert">{error}</div>}{message && !showEditor && <div className={styles.message}>{message}</div>}
     <div className={`toolbar ${styles.filters}`}><div className="search-field">⌕<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order, supplier, or status" /></div><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by order status"><option value="all">All statuses</option>{statuses.map((value) => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}</select><span className="toolbar-count">{filtered.length} orders</span></div>
-    <div className="table-panel panel"><table><thead><tr><th>Order</th><th>Supplier</th><th>Order date</th><th>Expected</th><th>Lines</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filtered.slice(0, 100).map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? "No supplier"}</td><td>{new Date(order.orderDate).toLocaleDateString()}</td><td>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : "—"}</td><td>{order.items.length}</td><td>{money(order.total, currency)}</td><td><span className={`badge ${order.status === "received" ? "success" : order.status === "cancelled" ? "warning" : "info"}`}>{order.status.replace(/_/g, " ")}{(order as PurchaseOrder & { pendingSync?: boolean }).pendingSync ? " · pending sync" : ""}</span></td><td className="record-actions">{canManage && <><button className="text-button" onClick={() => openEditor(order)}>Edit</button><button className="text-button" onClick={() => void archiveOrder(order)}>Archive</button></>}</td></tr>)}</tbody></table>{!loading && !filtered.length && <div className="empty">{error ? "Could not load purchase orders." : "No purchase orders match your search."}</div>}{loading && <div className="empty">Loading purchase orders…</div>}</div>
+    <div className="table-panel panel"><table><thead><tr><th>Order</th><th>Supplier</th><th>Order date</th><th>Expected</th><th>Lines</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filtered.slice(0, 100).map((order) => <tr key={order.id}><td><strong>{order.orderNumber}</strong></td><td>{suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? "No supplier"}</td><td>{new Date(order.orderDate).toLocaleDateString()}</td><td>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : "—"}</td><td>{order.items.length}</td><td>{money(order.total, currency)}</td><td><span className={`badge ${order.status === "received" ? "success" : order.status === "cancelled" ? "warning" : "info"}`}>{order.status.replace(/_/g, " ")}{(order as PurchaseOrder & { pendingSync?: boolean }).pendingSync ? " · pending sync" : ""}</span></td><td className="record-actions">{canManage && <>{(order.status === "ordered" || order.status === "partially_received") && <button className="text-button" onClick={() => openReceipt(order)}>Receive</button>}{order.status !== "partially_received" && order.status !== "received" && order.status !== "cancelled" && !(order.receipts?.length) && <button className="text-button" onClick={() => openEditor(order)}>Edit</button>}{order.status !== "partially_received" && order.status !== "received" && <button className="text-button" onClick={() => void archiveOrder(order)}>Archive</button>}</>}</td></tr>)}</tbody></table>{!loading && !filtered.length && <div className="empty">{error ? "Could not load purchase orders." : "No purchase orders match your search."}</div>}{loading && <div className="empty">Loading purchase orders…</div>}</div>
     {showEditor && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setShowEditor(false); }}><form className={`modal-card ${styles.editor}`} onSubmit={(event) => void saveOrder(event)}><div className="panel-heading"><div><span className="eyebrow">INBOUND STOCK</span><h2>{editing ? "Edit purchase order" : "Create purchase order"}</h2></div><button type="button" className="text-button" onClick={() => setShowEditor(false)} disabled={saving}>Close</button></div>
       <div className={styles.formGrid}><label>Order number<input value={orderNumber} onChange={(event) => setOrderNumber(event.target.value)} required /></label><label>Supplier<select value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">No supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>{statuses.map((value) => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}</select></label><label>Order date<input type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} required /></label><label>Expected date<input type="date" value={expectedDate} onChange={(event) => setExpectedDate(event.target.value)} /></label><label>Tax total<input type="number" min="0" step="0.01" value={taxTotal} onChange={(event) => setTaxTotal(event.target.value)} /></label></div>
       <label className={styles.notes}>Notes<textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
@@ -133,6 +180,13 @@ export function DesktopPurchaseOrders({ session }: { session: Session }) {
       <div className={styles.orderLines}>{lines.map((line, index) => <div className={styles.orderLine} key={`${line.productId}-${index}`}><div className={styles.lineName}><strong>{line.productName}</strong><button type="button" className="text-button" onClick={() => setLines((current) => current.filter((_, currentIndex) => currentIndex !== index))}>Remove</button></div><label>Qty<input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} /></label><label>Unit cost<input type="number" min="0" step="0.01" value={line.unitCost} onChange={(event) => updateLine(index, { unitCost: Number(event.target.value) })} /></label><label>Batch<input value={line.batchNumber} onChange={(event) => updateLine(index, { batchNumber: event.target.value })} /></label><label>Expiry<input type="date" value={line.expiryDate} onChange={(event) => updateLine(index, { expiryDate: event.target.value })} /></label><strong>{money(line.quantity * line.unitCost, currency)}</strong></div>)}</div>
       <div className="basket-total"><span>Subtotal</span><b>{money(subtotal, currency)}</b><span>Tax</span><b>{money(tax, currency)}</b><strong>Total</strong><strong>{money(total, currency)}</strong></div>{error && <div className="error-banner" role="alert">{error}</div>}
       <div className="modal-actions"><button type="button" className="secondary" onClick={() => setShowEditor(false)} disabled={saving}>Cancel</button><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save purchase order"}</button></div>
+    </form></div>}
+    {receivingOrder && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !receiving) setReceivingOrder(null); }}><form className={`modal-card ${styles.receiptModal}`} onSubmit={(event) => void saveReceipt(event)}>
+      <div className="panel-heading"><div><span className="eyebrow">INBOUND STOCK</span><h2>Receive {receivingOrder.orderNumber}</h2></div><button type="button" className="text-button" onClick={() => setReceivingOrder(null)} disabled={receiving}>Close</button></div>
+      <p>Record the quantities delivered. Stock and receipt history update together for {session.branches?.find((branch) => branch.id === branchId)?.name ?? "the selected branch"}.</p>
+      <div className={styles.receiptLines}>{receiptLines.map((line) => <label key={line.productId}><span><strong>{line.productName}</strong><small>{line.remaining} outstanding</small></span><input aria-label={`Received quantity for ${line.productName}`} type="number" min="0" max={line.remaining} step="0.01" value={line.quantity} onChange={(event) => setReceiptLines((current) => current.map((item) => item.productId === line.productId ? { ...item, quantity: event.target.value } : item))} /></label>)}</div>
+      {error && <div className="error-banner" role="alert">{error}</div>}
+      <div className="modal-actions"><button type="button" className="secondary" onClick={() => setReceivingOrder(null)} disabled={receiving}>Cancel</button><button className="primary" disabled={receiving}>{receiving ? "Recording…" : "Record receipt"}</button></div>
     </form></div>}
   </>;
 }

@@ -22,6 +22,7 @@ const REACT_NATIVE_SCREENS_STACK = path.join(
   "ScreenStack.kt",
 );
 const ANDROID_MANIFEST = path.join("android", "app", "src", "main", "AndroidManifest.xml");
+const ANDROID_ROOT_BUILD_GRADLE = path.join("android", "build.gradle");
 const ANDROID_APP_BUILD_GRADLE = path.join("android", "app", "build.gradle");
 const ANDROID_GRADLE_PROPERTIES = path.join("android", "gradle.properties");
 const ANDROID_PROGUARD_RULES = path.join("android", "app", "proguard-rules.pro");
@@ -53,6 +54,13 @@ function patchExpoModulesCorePermissionsService(contents) {
   );
 }
 
+function patchExpoGradleHelperExtension(contents) {
+  return contents.replace(
+    "reactNativeDir = reactNativeDirFromSource ?: File(",
+    'reactNativeDir = System.getenv("DIRAOS_REACT_NATIVE_DIR")?.let { File(it) } ?: reactNativeDirFromSource ?: File('
+  );
+}
+
 function patchReactNativeScreens(contents) {
   return contents.replace(
     /drawingOpPool\.removeLast\(\)/g,
@@ -75,7 +83,21 @@ function patchAndroidWindowConfiguration(contents) {
   if (!patched.includes("GmsBarcodeScanningDelegateActivity")) {
     patched = patched.replace(
       "  </application>",
-      '    <activity android:name="com.google.mlkit.vision.codescanner.internal.GmsBarcodeScanningDelegateActivity" android:screenOrientation="unspecified" tools:replace="android:screenOrientation" />\n  </application>'
+      '    <activity android:name="com.google.mlkit.vision.codescanner.internal.GmsBarcodeScanningDelegateActivity" android:screenOrientation="unspecified" tools:replace="android:screenOrientation" tools:ignore="MissingClass" />\n  </application>'
+    );
+  } else {
+    patched = patched.replace(
+      /(<activity\s+android:name="com\.google\.mlkit\.vision\.codescanner\.internal\.GmsBarcodeScanningDelegateActivity"[^>]*)(\/>)/,
+      (match, activity, closing) => activity.includes('tools:ignore="MissingClass"')
+        ? match
+        : `${activity} tools:ignore="MissingClass"${closing}`
+    );
+  }
+
+  if (!patched.includes('android:name="android.hardware.camera"')) {
+    patched = patched.replace(
+      "  <application",
+      '  <uses-feature android:name="android.hardware.camera" android:required="false" />\n  <application'
     );
   }
 
@@ -90,20 +112,38 @@ function patchAndroidStrings(contents) {
   return contents.replace(/\s*<string name="expo_splash_screen_status_bar_translucent"[^>]*>[^<]*<\/string>\r?\n/g, "");
 }
 
-function patchAndroidAppBuildGradle(contents) {
-  if (/abiFilters\.addAll\(\(findProperty\('reactNativeArchitectures'\)/.test(contents)) return contents;
+function patchAndroidAppBuildGradle(contents, versionName, versionCode) {
+  let patched = contents
+    .replace(/^\s*versionCode\s+\d+\s*$/m, `        versionCode ${versionCode}`)
+    .replace(/^\s*versionName\s+['"][^'"]+['"]\s*$/m, `        versionName "${versionName}"`);
 
-  const marker = '        versionName "0.1.0"';
-  if (!contents.includes(marker)) return contents;
+  if (!/abiFilters\.addAll\(\(findProperty\('reactNativeArchitectures'\)/.test(patched)) {
+    patched = patched.replace(
+      /^\s*versionName\s+['"][^'"]+['"]\s*$/m,
+      (marker) => `${marker}\n        // Ship ARM ABIs for physical devices and x86_64 for Android emulators.\n        ndk {\n            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86_64').split(',') as List)\n        }`
+    );
+  }
 
-  return contents.replace(
-    marker,
-    `${marker}\n        // Ship ARM ABIs for physical devices and x86_64 for Android emulators.\n        ndk {\n            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86_64').split(',') as List)\n        }`
-  );
+  if (process.platform === "win32") {
+    // Keep the React Native source path short enough for Windows Ninja builds.
+    const reactNativeDir = (process.env.DIRAOS_REACT_NATIVE_DIR || "../../node_modules/react-native").replace(/\\/g, "/");
+    patched = patched
+      .replace(/^\s*reactNativeDir = .*$/m, `    reactNativeDir = file("${reactNativeDir}")`)
+      .replace(/^\s*hermesCommand = .*$/m, `    hermesCommand = file("${reactNativeDir}/sdks/hermesc/%OS-BIN%/hermesc").absolutePath`);
+  }
+  return patched;
+}
+
+function patchAndroidRootBuildGradle(contents) {
+  const marker = "// Use the NDK version selected by expo-build-properties for native app and module builds.";
+  if (contents.includes(marker)) return contents;
+
+  return `${contents.trimEnd()}\n\n${marker}\nrootProject.ext.ndkVersion = findProperty("android.ndkVersion") ?: rootProject.ext.ndkVersion\n`;
 }
 
 function patchAndroidGradleProperties(contents, versionCode) {
   const required = [
+    // Expo SDK and React Native provide scoped consumer rules for reflective APIs.
     "android.enableProguardInReleaseBuilds=true",
     "android.enableShrinkResourcesInReleaseBuilds=true",
     "android.ndkVersion=28.1.13356709",
@@ -126,13 +166,22 @@ function patchAndroidGradleProperties(contents, versionCode) {
 
 function patchAndroidProguardRules(contents) {
   const marker = "# Dira SecureStore R8 compatibility";
-  const rules = `${marker}\n# Expo Modules Core resolves native argument converters reflectively; keep the full module surface stable under R8.\n-keep class expo.modules.** { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault`;
+  const rules = `${marker}\n# Expo SDK consumer rules preserve module registration, reflected records, and DoNotStrip APIs.\n# Keep the Kotlin and Java reflection metadata used by Expo Modules Core converters.\n-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault`;
   const markerIndex = contents.indexOf(marker);
   if (markerIndex >= 0) {
-    return `${contents.slice(0, markerIndex).trimEnd()}\n\n${rules}\n`;
+    const prefix = contents
+      .slice(0, markerIndex)
+      .replace(/^\s*-keep class com\.swmansion\.reanimated\.\*\* \{ \*; \}\s*$/gm, "")
+      .replace(/^\s*-keep class com\.facebook\.react\.turbomodule\.\*\* \{ \*; \}\s*$/gm, "")
+      .trimEnd();
+    return `${prefix}\n\n${rules}\n`;
   }
 
-  return `${contents.trimEnd()}\n\n${rules}\n`;
+  const prefix = contents
+    .replace(/^\s*-keep class com\.swmansion\.reanimated\.\*\* \{ \*; \}\s*$/gm, "")
+    .replace(/^\s*-keep class com\.facebook\.react\.turbomodule\.\*\* \{ \*; \}\s*$/gm, "")
+    .trimEnd();
+  return `${prefix}\n\n${rules}\n`;
 }
 
 module.exports = function withPatchedBluetoothEscpos(config) {
@@ -174,7 +223,8 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
       for (const [relativePath, patchFile] of [
         [ANDROID_MANIFEST, patchAndroidWindowConfiguration],
-        [ANDROID_APP_BUILD_GRADLE, patchAndroidAppBuildGradle],
+        [ANDROID_ROOT_BUILD_GRADLE, patchAndroidRootBuildGradle],
+        [ANDROID_APP_BUILD_GRADLE, (contents) => patchAndroidAppBuildGradle(contents, config.version, config.android?.versionCode)],
         [ANDROID_GRADLE_PROPERTIES, (contents) => patchAndroidGradleProperties(contents, config.android?.versionCode)],
         [ANDROID_PROGUARD_RULES, patchAndroidProguardRules],
         [ANDROID_STYLES, patchAndroidStyles],
@@ -200,6 +250,27 @@ module.exports = function withPatchedBluetoothEscpos(config) {
 
         if (expoModulesPatched !== expoModulesCurrent) {
           fs.writeFileSync(expoModulesCoreGradlePath, expoModulesPatched);
+        }
+      }
+
+      const expoGradleHelperPath = path.join(
+        path.dirname(expoModulesCorePackageJson),
+        "expo-module-gradle-plugin",
+        "src",
+        "main",
+        "kotlin",
+        "expo",
+        "modules",
+        "plugin",
+        "gradle",
+        "ExpoGradleHelperExtension.kt"
+      );
+
+      if (fs.existsSync(expoGradleHelperPath)) {
+        const expoGradleHelperCurrent = fs.readFileSync(expoGradleHelperPath, "utf8");
+        const expoGradleHelperPatched = patchExpoGradleHelperExtension(expoGradleHelperCurrent);
+        if (expoGradleHelperPatched !== expoGradleHelperCurrent) {
+          fs.writeFileSync(expoGradleHelperPath, expoGradleHelperPatched);
         }
       }
 

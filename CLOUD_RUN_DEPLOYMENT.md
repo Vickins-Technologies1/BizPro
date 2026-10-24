@@ -172,6 +172,8 @@ Optional:
 - `EXPO_PUSH_ACCESS_TOKEN`
 - `CORS_ORIGINS`
 
+Email delivery configuration and Cloud Run secret setup are documented in [`apps/api/EMAIL.md`](./apps/api/EMAIL.md). SMTP is disabled until `MAIL_ENABLED=true`; when enabled, add the provider settings to the Cloud Run service and store `SMTP_USER` / `SMTP_PASS` as Secret Manager-backed runtime secrets. No production SMTP secret has been provisioned by this repository change.
+
 ## Secrets
 
 Store sensitive values outside the repository.

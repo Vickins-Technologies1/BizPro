@@ -5,9 +5,10 @@ import { useNavigation } from "@react-navigation/native";
 import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
-import { archiveStockTransfer, createStockTransfer, listStockTransfers, updateStockTransfer } from "@/services/apiClient";
+import { archiveStockTransfer, createStockTransfer, dispatchStockTransfer, listProducts, listStockTransfers, receiveStockTransfer, updateStockTransfer } from "@/services/apiClient";
 import { formatDate } from "@/utils/date";
 import { formatMoney } from "@/utils/money";
+import { createId } from "@/utils/id";
 import { Ionicons } from "@expo/vector-icons";
 
 type TransferLine = {
@@ -22,6 +23,8 @@ type TransferLine = {
 export function StockTransfersScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
+  const user = useAppStore((state) => state.user);
+  const branches = useAppStore((state) => state.branches);
   const products = useAppStore((state) => state.products);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [transfers, setTransfers] = React.useState<StockTransfer[]>([]);
@@ -30,12 +33,11 @@ export function StockTransfersScreen() {
   const [visible, setVisible] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [branchProducts, setBranchProducts] = React.useState(products);
   const [fromBranchId, setFromBranchId] = React.useState("");
   const [toBranchId, setToBranchId] = React.useState("");
   const [transferNumber, setTransferNumber] = React.useState("");
-  const [status, setStatus] = React.useState<StockTransfer["status"]>("draft");
   const [transferDate, setTransferDate] = React.useState("");
-  const [receivedAt, setReceivedAt] = React.useState("");
   const [note, setNote] = React.useState("");
   const [productSearch, setProductSearch] = React.useState("");
   const [items, setItems] = React.useState<TransferLine[]>([]);
@@ -45,6 +47,13 @@ export function StockTransfersScreen() {
     refreshTransfers().catch(() => undefined);
   }, [loadCatalog]);
 
+  React.useEffect(() => {
+    let active = true;
+    if (!fromBranchId) { setBranchProducts([]); return () => { active = false; }; }
+    void listProducts(fromBranchId).then((items) => { if (active) setBranchProducts(items); }).catch(() => { if (active) setBranchProducts([]); });
+    return () => { active = false; };
+  }, [fromBranchId]);
+
   const filteredTransfers = React.useMemo(() => {
     const query = search.trim().toLowerCase();
     return transfers.filter((transfer) => [transfer.transferNumber, transfer.status, transfer.fromBranchId ?? "", transfer.toBranchId ?? "", transfer.note ?? ""].join(" ").toLowerCase().includes(query));
@@ -52,8 +61,8 @@ export function StockTransfersScreen() {
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
-    return products.filter((product) => [product.name, product.sku ?? "", product.barcode ?? ""].join(" ").toLowerCase().includes(query));
-  }, [productSearch, products]);
+    return branchProducts.filter((product) => product.branchId === fromBranchId && Boolean(product.externalId) && [product.name, product.sku ?? "", product.barcode ?? ""].join(" ").toLowerCase().includes(query));
+  }, [productSearch, branchProducts, fromBranchId]);
 
   const subtotal = React.useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitCost || 0), 0), [items]);
 
@@ -74,12 +83,10 @@ export function StockTransfersScreen() {
 
   function openEditor(transfer?: StockTransfer | null) {
     setEditing(transfer ?? null);
-    setFromBranchId(transfer?.fromBranchId ?? "");
+    setFromBranchId(transfer?.fromBranchId ?? user?.branchId ?? "");
     setToBranchId(transfer?.toBranchId ?? "");
     setTransferNumber(transfer?.transferNumber ?? `TR-${Date.now()}`);
-    setStatus(transfer?.status ?? "draft");
     setTransferDate(transfer?.transferDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
-    setReceivedAt(transfer?.receivedAt?.slice(0, 10) ?? "");
     setNote(transfer?.note ?? "");
     setItems(
       (transfer?.items ?? []).map((item) => ({
@@ -96,15 +103,19 @@ export function StockTransfersScreen() {
   }
 
   function addProduct(productId: string) {
-    const product = products.find((candidate) => candidate.id === productId);
+    const product = branchProducts.find((candidate) => candidate.id === productId);
     if (!product) return;
+    if (!product.externalId?.trim()) {
+      Alert.alert("Product cannot be transferred", "This product has no shared catalog ID for branch stock matching.");
+      return;
+    }
     setItems((current) => {
-      if (current.some((item) => item.productId === product.id)) {
+      if (current.some((item) => item.productId === product.externalId)) {
         return current;
       }
       return current.concat([
         {
-          productId: product.id,
+          productId: product.externalId!,
           productName: product.name,
           quantity: "1",
           unitCost: String(product.buyingPrice),
@@ -125,16 +136,23 @@ export function StockTransfersScreen() {
       Alert.alert("Add items", "Add at least one product to the stock transfer.");
       return;
     }
+    if (!fromBranchId.trim() || !toBranchId.trim() || fromBranchId.trim() === toBranchId.trim()) {
+      Alert.alert("Choose branches", "Choose two different source and destination branches.");
+      return;
+    }
+    if (items.some((item) => !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0 || !Number.isFinite(Number(item.unitCost)) || Number(item.unitCost) < 0)) {
+      Alert.alert("Check transfer quantities", "Each product needs a positive quantity and a non-negative unit cost.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         businessId: business.id,
+        ...(editing ? {} : { externalId: createId() }),
         fromBranchId: fromBranchId.trim() || null,
         toBranchId: toBranchId.trim() || null,
         transferNumber: transferNumber.trim(),
-        status,
         transferDate,
-        receivedAt: receivedAt.trim() || null,
         note: note.trim() || null,
         items: items.map((item) => ({
           productId: item.productId,
@@ -162,6 +180,18 @@ export function StockTransfersScreen() {
     }
   }
 
+  async function runTransferAction(transfer: StockTransfer, action: "dispatch" | "receive") {
+    if (user?.role !== "owner" && user?.role !== "manager") return;
+    try {
+      const updated = action === "dispatch" ? await dispatchStockTransfer(transfer.id) : await receiveStockTransfer(transfer.id);
+      setTransfers((current) => current.map((item) => item.id === transfer.id ? updated : item));
+      await loadCatalog();
+      Alert.alert(action === "dispatch" ? "Transfer dispatched" : "Transfer received", action === "dispatch" ? "Source branch stock has been deducted." : "Destination branch stock has been updated.");
+    } catch (error) {
+      Alert.alert("Transfer failed", error instanceof Error ? error.message : `Could not ${action} this transfer.`);
+    }
+  }
+
   return (
     <Screen>
       <GradientHeader
@@ -180,7 +210,7 @@ export function StockTransfersScreen() {
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Movement ledger</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredTransfers.length} visible of {transfers.length} transfers</Text>
             </View>
-            <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} />
+            {user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : null}
           </View>
           <InputField label="Search transfers" value={search} onChangeText={setSearch} placeholder="Transfer number, branch, or status" />
         </Card>
@@ -201,30 +231,24 @@ export function StockTransfersScreen() {
                 <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(transfer.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0), business?.currency)}</Text>
                 <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
               </View>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(transfer)} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton
-                    title="Archive"
-                    variant="danger"
-                    onPress={async () => {
-                      const confirmed = await confirmMobile(`Archive ${transfer.transferNumber}?`);
-                      if (!confirmed) return;
-                      await archiveStockTransfer(transfer.id);
-                      await refreshAll();
-                    }}
-                  />
-                </View>
-              </View>
+              {user?.role === "owner" || user?.role === "manager" ? <View style={{ flexDirection: "row", gap: 10 }}>
+                {transfer.status === "draft" && (user?.role === "owner" || user?.branchId === transfer.fromBranchId) ? <View style={{ flex: 1 }}><PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(transfer)} /></View> : null}
+                {transfer.status === "draft" && (user?.role === "owner" || user?.branchId === transfer.fromBranchId) ? <View style={{ flex: 1 }}><PrimaryButton title="Dispatch" onPress={() => void runTransferAction(transfer, "dispatch")} /></View> : null}
+                {transfer.status === "in_transit" && transfer.dispatchedAt && (user?.role === "owner" || user?.branchId === transfer.toBranchId) ? <View style={{ flex: 1 }}><PrimaryButton title="Receive" onPress={() => void runTransferAction(transfer, "receive")} /></View> : null}
+                {(transfer.status === "draft" || transfer.status === "cancelled") && (user?.role === "owner" || user?.branchId === transfer.fromBranchId) ? <View style={{ flex: 1 }}><PrimaryButton title="Archive" variant="danger" onPress={async () => {
+                  const confirmed = await confirmMobile(`Archive ${transfer.transferNumber}?`);
+                  if (!confirmed) return;
+                  try { await archiveStockTransfer(transfer.id); await refreshAll(); }
+                  catch (error) { Alert.alert("Archive failed", error instanceof Error ? error.message : "Failed to archive transfer"); }
+                }} /></View> : null}
+              </View> : null}
             </Card>
           ))
         ) : (
           <EmptyState
             title={search ? "No matching transfers" : "No stock transfers yet"}
             subtitle={search ? "Try a different transfer number or branch." : "Create transfers to document stock movement between branches."}
-            action={<PrimaryButton title="Create transfer" onPress={() => openEditor(null)} />}
+            action={user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : undefined}
             icon="swap-horizontal-outline"
           />
         )}
@@ -233,27 +257,21 @@ export function StockTransfersScreen() {
       <SimpleModal visible={visible} title={editing ? "Edit transfer" : "Create transfer"} onClose={() => setVisible(false)}>
         <AppScrollView contentContainerStyle={{ gap: 12 }}>
           <InputField label="Transfer number" value={transferNumber} onChangeText={setTransferNumber} />
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <InputField label="From branch ID" value={fromBranchId} onChangeText={setFromBranchId} helperText="Use the source branch identifier." />
-            </View>
-            <View style={{ flex: 1 }}>
-              <InputField label="To branch ID" value={toBranchId} onChangeText={setToBranchId} helperText="Use the destination branch identifier." />
-            </View>
+          <View style={{ gap: 6 }}>
+            <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>Source branch</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {branches.filter((branch) => branch.status !== "inactive" && (user?.role === "owner" || branch.id === user?.branchId)).map((branch) => <Tag key={branch.id} label={branch.name} tone="primary" selected={fromBranchId === branch.id} onPress={() => setFromBranchId(branch.id)} />)}
+            </ScrollView>
           </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            {(["draft", "in_transit", "received", "cancelled"] as const).map((option) => (
-              <View key={option} style={{ flex: 1 }}>
-                <Tag label={option.replaceAll("_", " ")} tone="primary" selected={status === option} fullWidth onPress={() => setStatus(option)} />
-              </View>
-            ))}
+          <View style={{ gap: 6 }}>
+            <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>Destination branch</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {branches.filter((branch) => branch.status !== "inactive" && branch.id !== fromBranchId).map((branch) => <Tag key={branch.id} label={branch.name} tone="primary" selected={toBranchId === branch.id} onPress={() => setToBranchId(branch.id)} />)}
+            </ScrollView>
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <InputField label="Transfer date" value={transferDate} onChangeText={setTransferDate} placeholder="YYYY-MM-DD" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <InputField label="Received at" value={receivedAt} onChangeText={setReceivedAt} placeholder="YYYY-MM-DD" />
             </View>
           </View>
           <InputField label="Note" value={note} onChangeText={setNote} multiline numberOfLines={3} />

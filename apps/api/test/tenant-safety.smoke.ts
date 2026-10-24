@@ -69,28 +69,40 @@ function loadServices() {
 
 async function testStockTransferIdentity(StockTransfersService: any) {
   const calls: CallRecord[] = [];
+  const current = { status: "draft", fromBranchId: "branch-1", toBranchId: "branch-2" };
   const stockTransferModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "stockTransfer.findOne", query });
+      return leanResult(current);
+    },
     findOneAndUpdate(query: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown>) {
       calls.push({ method: "stockTransfer.findOneAndUpdate", query, update, options });
       return leanResult({ id: "transfer-1", ...update });
     }
   };
-  const service = new StockTransfersService(stockTransferModel as any);
-  await service.update("business-1", "transfer-external-1", { businessId: "ignored", note: "updated" } as any);
-  assert.deepEqual(calls[0], {
+  const service = new StockTransfersService(stockTransferModel as any, {} as any, {} as any, {} as any, {} as any);
+  await service.update("business-1", "transfer-external-1", { businessId: "ignored", note: "updated" } as any, { role: "manager", branchId: "branch-1" });
+  const identityFilter = { businessId: "business-1", deletedAt: null, $and: [{ externalId: "transfer-external-1" }] };
+  assert.deepEqual(calls[0], { method: "stockTransfer.findOne", query: identityFilter });
+  assert.deepEqual(calls[1], {
     method: "stockTransfer.findOneAndUpdate",
-    query: { businessId: "business-1", deletedAt: null, $and: [{ externalId: "transfer-external-1" }] },
-    update: { note: "updated" },
+    query: { ...identityFilter, status: "draft" },
+    update: { note: "updated", fromBranchId: "branch-1", toBranchId: "branch-2" },
     options: { new: true }
   });
   calls.length = 0;
-  await service.archive("business-1", "transfer-external-1");
-  assert.deepEqual(calls[0]?.query, { businessId: "business-1", deletedAt: null, $and: [{ externalId: "transfer-external-1" }] });
+  await service.archive("business-1", "transfer-external-1", { role: "owner" });
+  assert.deepEqual(calls[0]?.query, identityFilter);
+  assert.deepEqual(calls[1]?.query, { ...identityFilter, status: "draft" });
 }
 
 async function testPurchaseOrderIdentityAndBranch(PurchaseOrdersService: any) {
   const calls: CallRecord[] = [];
   const purchaseOrderModel = {
+    findOne(query: Record<string, unknown>) {
+      calls.push({ method: "purchaseOrder.findOne", query });
+      return leanResult({ status: "ordered", items: [], receipts: [] });
+    },
     findOneAndUpdate(query: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown>) {
       calls.push({ method: "purchaseOrder.findOneAndUpdate", query, update, options });
       return leanResult({ id: "purchase-1", ...update });
@@ -98,16 +110,18 @@ async function testPurchaseOrderIdentityAndBranch(PurchaseOrdersService: any) {
   };
   const service = new PurchaseOrdersService(purchaseOrderModel as any);
   await service.update("business-1", "po-external-1", { branchId: "branch-2", notes: "Updated", businessId: "ignored" } as any, { role: "cashier", branchId: "branch-1" });
-  assert.deepEqual(calls[0], {
+  const purchaseOrderQuery = {
+    businessId: "business-1",
+    deletedAt: null,
+    $and: [
+      { externalId: "po-external-1" },
+      { $or: [{ branchId: "branch-1" }, { branchId: null }] }
+    ]
+  };
+  assert.deepEqual(calls[0], { method: "purchaseOrder.findOne", query: purchaseOrderQuery });
+  assert.deepEqual(calls[1], {
     method: "purchaseOrder.findOneAndUpdate",
-    query: {
-      businessId: "business-1",
-      deletedAt: null,
-      $and: [
-        { externalId: "po-external-1" },
-        { $or: [{ branchId: "branch-1" }, { branchId: null }] }
-      ]
-    },
+    query: purchaseOrderQuery,
     update: { notes: "Updated" },
     options: { new: true }
   });
@@ -119,6 +133,7 @@ async function testPurchaseOrderIdentityAndBranch(PurchaseOrdersService: any) {
     { externalId: "po-external-1" },
     { $or: [{ branchId: "branch-2" }, { branchId: null }] }
   ]);
+  assert.deepEqual(calls[1]?.query, archivedQuery);
 }
 
 async function testInvoicePaymentBranchQuery(InvoicesController: any) {

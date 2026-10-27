@@ -462,9 +462,9 @@ export function ProductsScreen() {
           </View>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog}>
-        <View style={{ gap: 12 }}>
-          <InputField label={`Search ${itemLabelPlural.toLowerCase()}`} value={search} onChangeText={setSearch} placeholder={isMenu ? "Search menu item or category" : isService ? "Search service or category" : "Search name, SKU, or barcode"} leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+      <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog} contentContainerStyle={{ paddingBottom: 24 }}>
+        <View style={{ gap: 10 }}>
+          <InputField label={`Search ${itemLabelPlural.toLowerCase()}`} value={search} onChangeText={setSearch} placeholder={isMenu ? "Name or category" : isService ? "Service or category" : "Name, SKU, or barcode"} leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable onPress={() => setFiltersVisible(true)} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
               <Ionicons name="options-outline" size={16} color={tokens.colors.textSecondary} />
@@ -475,9 +475,15 @@ export function ProductsScreen() {
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>More</Text>
             </Pressable>
           </View>
+          {(selectedCategoryId || selectedBrandId || selectedSupplierId) ? <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+            {selectedCategoryId ? <Tag label={categoryMap.get(selectedCategoryId)?.name ?? "Category"} tone="primary" selected onPress={() => setSelectedCategoryId(null)} /> : null}
+            {selectedBrandId ? <Tag label={brandMap.get(selectedBrandId)?.name ?? "Brand"} tone="primary" selected onPress={() => setSelectedBrandId(null)} /> : null}
+            {selectedSupplierId ? <Tag label={supplierMap.get(selectedSupplierId)?.name ?? "Supplier"} tone="primary" selected onPress={() => setSelectedSupplierId(null)} /> : null}
+            <Pressable onPress={() => { setSelectedCategoryId(null); setSelectedBrandId(null); setSelectedSupplierId(null); }} accessibilityRole="button"><Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "700", padding: 6 }}>Clear all</Text></Pressable>
+          </View> : null}
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "700" }}>{totalProducts || products.length} {itemLabelPlural.toLowerCase()}</Text>
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Page {currentPage}{totalPages > 1 ? ` of ${totalPages}` : ""}</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }}>{totalProducts} {itemLabelPlural.toLowerCase()}</Text>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Page {currentPage}{totalPages > 1 ? ` of ${totalPages}` : ""}</Text>
           </View>
         </View>
         {listLoading ? (
@@ -489,50 +495,46 @@ export function ProductsScreen() {
           </Card>
         ) : pageProducts.length ? (
           <>
-            <View style={{ gap: 10 }}>
+            <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
               {pageProducts.map((product) => {
                 const categoryName = categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized";
                 const brandName = brands.find((brand) => brand.id === product.brandId)?.name ?? "No brand";
-                const supplierName = suppliers.find((supplier) => supplier.id === product.supplierId)?.name ?? "No supplier";
+                const outOfStock = businessConfig.capabilities.inventory && product.stockOnHand <= 0;
+                const lowStock = businessConfig.capabilities.inventory && !outOfStock && product.stockOnHand <= product.lowStockThreshold;
                 return (
                   <Pressable
                     key={product.id}
                     onPress={() => navigation.navigate("ProductDetail", { productId: product.id })}
-                    style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${product.name}, ${businessConfig.capabilities.inventory ? `${product.stockOnHand} in stock, ` : ""}${formatMoney(product.sellingPrice, business?.currency)}. Open details.`}
+                    style={({ pressed }) => [{ borderBottomWidth: 1, borderBottomColor: tokens.colors.border, paddingVertical: 11, paddingHorizontal: 2, opacity: pressed ? 0.72 : 1 }]}
                   >
-                    <Card style={{ gap: 10, padding: 12 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                        <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>
+                    <View style={{ gap: 7 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "700" }} numberOfLines={1}>
                             {product.name}
                           </Text>
-                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>
-                            {product.sku ?? "No SKU"} • {product.unit} • {categoryName}
-                          </Text>
-                          <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 15 }} numberOfLines={1}>
-                            {brandName} • {supplierName}
+                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                            {product.sku ?? (product.barcode ? `Barcode ${product.barcode}` : "No SKU")} · {categoryName}{brandName !== "No brand" ? ` · ${brandName}` : ""}
                           </Text>
                         </View>
-                        <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />
+                        <View style={{ alignItems: "flex-end", gap: 4 }}>
+                          <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit>{formatMoney(product.sellingPrice, business?.currency)}</Text>
+                          {businessConfig.capabilities.inventory ? <Text style={{ color: outOfStock ? tokens.colors.danger : lowStock ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11, fontWeight: outOfStock || lowStock ? "700" : "500" }}>
+                            {outOfStock ? "Out of stock" : lowStock ? `Low · ${product.stockOnHand} ${product.unit}` : `${product.stockOnHand} ${product.unit}`}
+                          </Text> : <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />}
+                        </View>
                       </View>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                        {businessConfig.capabilities.inventory ? <>
-                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Stock {product.stockOnHand}</Text>
-                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Low {product.lowStockThreshold}</Text>
-                        </> : <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{product.serviceDurationMinutes ? `${product.serviceDurationMinutes} min` : "Available"}</Text>}
-                        <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>View details</Text>
-                      </View>
-                      <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "800" }}>
-                        {formatMoney(product.sellingPrice, business?.currency)}
-                      </Text>
                       {product.batchNumber || product.expiryDate || product.serialNumber ? (
-                        <Text style={{ color: tokens.colors.textMuted, fontSize: 11, lineHeight: 15 }}>
+                        <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>
                           {[product.batchNumber ? `Batch ${product.batchNumber}` : null, product.expiryDate ? `Expiry ${product.expiryDate}` : null, product.serialNumber ? `Serial ${product.serialNumber}` : null]
                             .filter(Boolean)
                             .join(" • ")}
                         </Text>
                       ) : null}
-                      <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        {!product.isActive ? <Badge label="Archived" tone="warning" /> : null}
                         {businessConfig.capabilities.inventory ? <Pressable
                           onPress={(event) => {
                             event?.stopPropagation?.();
@@ -542,7 +544,7 @@ export function ProductsScreen() {
                             setRestockVisible(true);
                           }}
                         >
-                          <Badge label="Restock" tone="success" />
+                          <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "700", paddingVertical: 5 }}>Restock</Text>
                         </Pressable> : null}
                         <Pressable
                           onPress={(event) => {
@@ -550,10 +552,11 @@ export function ProductsScreen() {
                             void handleDeleteProduct(product.id, product.name);
                           }}
                         >
-                          <Badge label={deletingProductId === product.id ? "Deleting..." : "Delete"} tone="danger" />
+                          <Text style={{ color: tokens.colors.danger, fontSize: 11, fontWeight: "600", paddingVertical: 5 }}>{deletingProductId === product.id ? "Deleting…" : "Delete"}</Text>
                         </Pressable>
+                        <Ionicons name="chevron-forward" size={15} color={tokens.colors.textMuted} style={{ marginLeft: "auto" }} />
                       </View>
-                    </Card>
+                    </View>
                   </Pressable>
                 );
               })}

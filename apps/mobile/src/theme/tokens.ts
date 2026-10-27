@@ -19,6 +19,8 @@ type ThemeColors = {
   success: string;
   warning: string;
   danger: string;
+  info: string;
+  neutral: string;
   text: string;
   textPrimary: string;
   textSecondary: string;
@@ -110,13 +112,15 @@ const lightTheme: ThemeTokens = {
     divider: "#E1E7EF",
     primary: "#155EEF",
     primaryStrong: "#155EEF",
-    success: "#079455",
-    warning: "#DC6803",
-    danger: "#D92D20",
+    success: "#067647",
+    warning: "#B54708",
+    danger: "#B42318",
+    info: "#155EEF",
+    neutral: "#667085",
     text: "#111827",
     textPrimary: "#111827",
     textSecondary: "#596579",
-    textMuted: "#98A2B3",
+    textMuted: "#667085",
     icon: "#667085",
     disabled: "#94A3B8",
     overlay: "rgba(15, 23, 42, 0.42)"
@@ -158,13 +162,15 @@ const darkTheme: ThemeTokens = {
     divider: "#223A57",
     primary: "#3B82F6",
     primaryStrong: "#3B82F6",
-    success: "#32D583",
-    warning: "#FDB022",
-    danger: "#F97066",
+    success: "#6CE9A6",
+    warning: "#FEC84B",
+    danger: "#FDA29B",
+    info: "#84ADFF",
+    neutral: "#98A2B3",
     text: "#F5F7FA",
     textPrimary: "#F5F7FA",
     textSecondary: "#A9B8CA",
-    textMuted: "#737D8C",
+    textMuted: "#98A2B3",
     icon: "#A8B0BC",
     disabled: "#505966",
     overlay: "rgba(0, 0, 0, 0.55)"

@@ -10,6 +10,8 @@ export const theme = {
     success: "#10B981",
     warning: "#F59E0B",
     danger: "#EF4444",
+    info: "#3B82F6",
+    neutral: "#64748B",
     text: "#F8FAFC",
     textSecondary: "#CBD5E1",
     textMuted: "#94A3B8",
@@ -21,6 +23,7 @@ export const theme = {
     md: 12,
     lg: 14,
     xl: 18,
+    xxl: 24,
   },
   spacing: {
     xxs: 4,
@@ -30,6 +33,7 @@ export const theme = {
     lg: 16,
     xl: 20,
     xxl: 24,
+    xxxl: 32,
   },
   typography: {
     title: 22,
@@ -37,5 +41,10 @@ export const theme = {
     body: 14,
     small: 12,
     micro: 11,
+    display: 28,
+    heading: 20,
+    label: 12,
+    caption: 10,
+    numeric: 20,
   },
 } as const;

@@ -444,13 +444,14 @@ export function StatCard({
   const styles = usePrimitiveStyles();
   return (
     <Card style={styles.statCard}>
-      <View style={[styles.statAccentBar, { backgroundColor: toneColor(tone, 1) }]} />
       <View style={[styles.iconWrap, { backgroundColor: toneColor(tone, 0.16) }]}>
         <Ionicons name={icon} size={18} color={toneColor(tone, 1)} />
       </View>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      {hint ? <Text style={styles.statHint}>{hint}</Text> : null}
+      <View style={styles.statCopy}>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{value}</Text>
+        {hint ? <Text style={styles.statHint} numberOfLines={1}>{hint}</Text> : null}
+      </View>
     </Card>
   );
 }
@@ -711,14 +712,20 @@ export function SimpleModal({
   visible,
   title,
   children,
-  onClose
+  onClose,
+  footer,
+  subtitle,
+  fixedFooter = false
 }: {
   visible: boolean;
   title: string;
   children: React.ReactNode;
   onClose: () => void;
+  footer?: React.ReactNode;
+  subtitle?: string;
+  fixedFooter?: boolean;
 }) {
-  return <Dialog visible={visible} title={title} onClose={onClose}>{children}</Dialog>;
+  return <Dialog visible={visible} title={title} onClose={onClose} {...(footer ? { footer } : {})} {...(subtitle ? { subtitle } : {})} {...(fixedFooter ? { fixedFooter: true } : {})}>{children}</Dialog>;
 }
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
@@ -925,7 +932,8 @@ export function Dialog({
   children,
   onClose,
   footer,
-  subtitle
+  subtitle,
+  fixedFooter = false
 }: {
   visible: boolean;
   title: string;
@@ -933,6 +941,7 @@ export function Dialog({
   onClose: () => void;
   footer?: React.ReactNode;
   subtitle?: string;
+  fixedFooter?: boolean;
 }) {
   const styles = usePrimitiveStyles();
   const insets = useSafeAreaInsets();
@@ -948,6 +957,7 @@ export function Dialog({
         </Pressable>
       </View>
       <ScrollView
+        style={fixedFooter ? { flexShrink: 1 } : undefined}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
@@ -955,8 +965,9 @@ export function Dialog({
         contentContainerStyle={{ gap: 10, paddingBottom: 8 }}
       >
         {children}
-        {footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
+        {!fixedFooter && footer ? <View style={{ marginTop: 10 }}>{footer}</View> : null}
       </ScrollView>
+      {fixedFooter && footer ? <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: tokens.colors.border }}>{footer}</View> : null}
     </View>
   );
   return (
@@ -1220,7 +1231,7 @@ export function Tag({
       ]}
     >
       {iconLeft ? <Ionicons name={iconLeft} size={12} color={selected ? toneColor(tone, 1) : tokens.colors.textSecondary} /> : null}
-      <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.45, textTransform: "uppercase", color: selected ? toneColor(tone, 1) : tokens.colors.textSecondary }}>{label}</Text>
+      <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0, color: selected ? toneColor(tone, 1) : tokens.colors.textSecondary }}>{label}</Text>
     </View>
   );
 
@@ -1354,7 +1365,7 @@ export function Typography({
                 : variant === "micro"
                   ? { fontSize: 11, fontWeight: fontWeight as any, lineHeight: 16 }
                   : variant === "label"
-                    ? { fontSize: 11, fontWeight: fontWeight as any, textTransform: "uppercase", letterSpacing: 0.7 }
+                    ? { fontSize: 12, fontWeight: fontWeight as any, letterSpacing: 0 }
                   : { fontSize: 14, fontWeight: fontWeight as any, lineHeight: 20 },
         { color, textAlign: align ?? "left" },
         variant === "label" ? styles.fieldLabel : null
@@ -1665,10 +1676,10 @@ function prefetchImage(uri: string) {
 }
 
 function buttonStyle(variant: ButtonVariant) {
-  if (variant === "secondary") return { backgroundColor: tokens.colors.surfaceElevated, borderWidth: 1, borderColor: tokens.colors.border };
-  if (variant === "danger") return { backgroundColor: tokens.colors.danger, ...tokens.shadow.card };
-  if (variant === "ghost") return { backgroundColor: "transparent", borderWidth: 1, borderColor: tokens.colors.border };
-  return { backgroundColor: tokens.colors.primary, ...tokens.shadow.card };
+  if (variant === "secondary") return { backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border };
+  if (variant === "danger") return { backgroundColor: tokens.colors.danger };
+  if (variant === "ghost") return { backgroundColor: "transparent", borderWidth: 0 };
+  return { backgroundColor: tokens.colors.primaryStrong };
 }
 
 function usePrimitiveStyles() {
@@ -1760,42 +1771,37 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderColor: withAlpha(tokens.colors.primaryStrong, 0.26)
     },
     headerBrand: { color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
-    title: { color: tokens.colors.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.45, lineHeight: 25 },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 1, fontSize: 11, lineHeight: 15 },
+    title: { color: tokens.colors.text, fontSize: 20, fontWeight: "700", letterSpacing: -0.3, lineHeight: 25 },
+    subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 12, lineHeight: 17 },
     card: {
       backgroundColor: tokens.colors.surfaceCard,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: tokens.colors.border,
-      padding: 14,
-      overflow: "hidden",
-      ...tokens.shadow.card
+      borderColor: tokens.colors.divider,
+      padding: 12,
+      overflow: "hidden"
     },
-    statCard: { gap: 6, minHeight: 96, paddingTop: 12 },
-    statAccentBar: {
-      height: 3,
-      width: 40,
-      borderRadius: 99
-    },
+    statCard: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 68, padding: 11 },
+    statCopy: { flex: 1, minWidth: 0, gap: 2 },
     iconWrap: {
-      width: 30,
-      height: 30,
-      borderRadius: 12,
+      width: 32,
+      height: 32,
+      borderRadius: 10,
       alignItems: "center",
       justifyContent: "center"
     },
-    statLabel: { color: tokens.colors.textMuted, fontSize: 9, textTransform: "uppercase", letterSpacing: 0.7 },
-    statValue: { color: tokens.colors.text, fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
+    statLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "600" },
+    statValue: { color: tokens.colors.text, fontSize: 16, fontWeight: "700", letterSpacing: -0.2, fontVariant: ["tabular-nums"] },
     statHint: { color: tokens.colors.textSecondary, fontSize: 11 },
     button: {
       minHeight: 44,
-      borderRadius: 12,
+      borderRadius: 10,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 14
     },
-    buttonText: { color: tokens.colors.text, fontSize: 12, fontWeight: "800", letterSpacing: 0.1 },
-    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
+    buttonText: { color: tokens.colors.text, fontSize: 13, fontWeight: "700", letterSpacing: 0 },
+    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "600", letterSpacing: 0.1 },
     fieldLabelRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1813,8 +1819,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       color: tokens.colors.primaryStrong,
       fontSize: 12,
       fontWeight: "800",
-      textTransform: "uppercase",
-      letterSpacing: 0.4
+      letterSpacing: 0
     },
     input: {
       minHeight: 20,
@@ -1857,7 +1862,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       paddingVertical: 4,
       alignSelf: "flex-start"
     },
-    badgeText: { fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.4 },
+    badgeText: { fontSize: 11, fontWeight: "700", letterSpacing: 0 },
     empty: { alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 10 },
     emptyIcon: {
       width: 42,
@@ -1880,10 +1885,9 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     },
     emptyBadgeText: {
       color: tokens.colors.primaryStrong,
-      fontSize: 9,
-      fontWeight: "800",
-      letterSpacing: 0.7,
-      textTransform: "uppercase"
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.1
     },
     emptyTitle: { color: tokens.colors.text, fontSize: 15, fontWeight: "900", textAlign: "center", letterSpacing: -0.1 },
     emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 16, maxWidth: 340, fontSize: 11 },
@@ -1900,10 +1904,9 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     },
     successBadgeText: {
       color: tokens.colors.success,
-      fontSize: 9,
-      fontWeight: "800",
-      letterSpacing: 0.7,
-      textTransform: "uppercase"
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.1
     },
     errorIconWrap: {
       width: 44,

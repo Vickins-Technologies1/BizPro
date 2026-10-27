@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, View, useWindowDimensions, StyleSheet } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions, StyleSheet } from "react-native";
 import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startOfYear, subMonths } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -9,7 +9,8 @@ import {
   resolveIndustryModule,
   type DailySummary,
   type EnterpriseAnalytics,
-  type DashboardWidget
+  type BusinessOperation,
+  type Sale
 } from "@shared";
 import {
   AppScrollView,
@@ -25,8 +26,10 @@ import {
   PrimaryButton,
   Screen,
   SkeletonBlock,
+  StatCard,
   Tag
 } from "@/components/Primitives";
+import { ChartContainer, MetricSummary } from "@/components/DesignSystem";
 import { lightTokens, tokens, type ThemeTokens } from "@/theme/tokens";
 import { useThemeMode, useThemeTokens } from "@/theme";
 import { formatMoney } from "@/utils/money";
@@ -73,32 +76,15 @@ export function DashboardScreen() {
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
   const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
   const isRetail = business?.businessType === "retail_shop";
-  const dashboardWidgets: readonly DashboardWidget[] = business?.businessType === "pharmacy"
-    ? [
-        { key: "pharmacy-sales", label: "Medicine Sales", metric: "salesTotal", tone: "primary", icon: "medkit-outline", description: "Dispensing revenue in the selected period." },
-        { key: "pharmacy-stock", label: "Low Stock", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Medicines below threshold." },
-        { key: "pharmacy-expiry", label: "Expiring Medicines", metric: "expiringCount", tone: "danger", icon: "time-outline", description: "Medicines expiring within 90 days." },
-        { key: "pharmacy-suppliers", label: "Suppliers", metric: "suppliersCount", tone: "success", icon: "business-outline", description: "Medicine suppliers on file." },
-        { key: "pharmacy-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Collections in the selected period." }
-      ]
-    : business?.businessType === "auto_parts"
-      ? [
-          { key: "parts-sales", label: "Parts Sales", metric: "salesTotal", tone: "primary", icon: "settings-outline", description: "Parts revenue in the selected period." },
-          { key: "parts-stock", label: "Stock Value", metric: "inventoryValue", tone: "success", icon: "cube-outline", description: "Parts stock value on hand." },
-          { key: "parts-low-stock", label: "Low Stock", metric: "lowStockCount", tone: "warning", icon: "warning-outline", description: "Parts below reorder threshold." },
-          { key: "parts-suppliers", label: "Suppliers", metric: "suppliersCount", tone: "primary", icon: "business-outline", description: "Parts suppliers on file." },
-          { key: "parts-revenue", label: "Revenue", metric: "revenueTotal", tone: "primary", icon: "cash-outline", description: "Collections in the selected period." }
-        ]
-      : industry.dashboard.widgets;
-
   const [activeFilter, setActiveFilter] = React.useState<Filter>("month");
   const [customRange, setCustomRange] = React.useState<RangeState | null>(null);
   const [summary, setSummary] = React.useState<DailySummary | null>(null);
+  const [previousSummary, setPreviousSummary] = React.useState<DailySummary | null>(null);
   const [topProducts, setTopProducts] = React.useState<ReportRow[]>([]);
   const [paymentBreakdown, setPaymentBreakdown] = React.useState<PaymentRow[]>([]);
   const [analytics, setAnalytics] = React.useState<EnterpriseAnalytics | null>(null);
   const [employeesCount, setEmployeesCount] = React.useState<number | null>(null);
-  const [operations, setOperations] = React.useState<Array<{ status: string; tableName?: string | null; scheduledAt?: string | null }>>([]);
+  const [operations, setOperations] = React.useState<BusinessOperation[]>([]);
   const [domainSummary, setDomainSummary] = React.useState<Awaited<ReturnType<typeof getIndustryDomainSummary>> | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -151,8 +137,11 @@ export function DashboardScreen() {
     else setLoading(true);
 
     try {
-      const [summaryResponse, topProductsResponse, paymentResponse, employeesResponse, analyticsResponse, operationsResponse, domainSummaryResponse] = await Promise.all([
+      const requestedRange = { from: format(new Date(from), "yyyy-MM-dd"), to: format(new Date(to), "yyyy-MM-dd") };
+      const comparisonApiRange = toApiRange(getPreviousRange(requestedRange));
+      const [summaryResponse, previousSummaryResponse, topProductsResponse, paymentResponse, employeesResponse, analyticsResponse, operationsResponse, domainSummaryResponse] = await Promise.all([
         getReportsSummary(from, to, selectedBranchId),
+        getReportsSummary(comparisonApiRange.from, comparisonApiRange.to, selectedBranchId).catch(() => null),
         getTopProducts(from, to, selectedBranchId),
         getPaymentBreakdown(from, to, selectedBranchId),
         listEmployees(selectedBranchId).catch(() => null),
@@ -166,6 +155,7 @@ export function DashboardScreen() {
       ]);
       if (requestId !== requestIdRef.current) return;
       setSummary(summaryResponse);
+      setPreviousSummary(previousSummaryResponse);
       setTopProducts(topProductsResponse);
       setPaymentBreakdown(paymentResponse);
       setEmployeesCount(employeesResponse ? employeesResponse.length : null);
@@ -201,23 +191,34 @@ export function DashboardScreen() {
     setActiveFilter("custom");
   }
 
-  const revenueTotal = summary?.salesTotal ?? analytics?.summary.revenueTotal ?? 0;
+  const periodSales = React.useMemo(
+    () => filterSalesToRange(sales, currentRange),
+    [sales, currentRange?.from, currentRange?.to]
+  );
+  const periodSalesTotal = periodSales.reduce((total, sale) => total + sale.grandTotal, 0);
+  const revenueTotal = summary?.salesTotal ?? (periodSales.length ? periodSalesTotal : null);
+  const comparisonPercent = summary && previousSummary && previousSummary.salesTotal > 0
+    ? ((summary.salesTotal - previousSummary.salesTotal) / previousSummary.salesTotal) * 100
+    : null;
   const outstandingDebt = summary?.debtTotal ?? 0;
   const lowStockCount = summary?.lowStockCount ?? 0;
   const paymentTotal = paymentBreakdown.reduce((sum, row) => sum + row.total, 0);
-  const paymentCount = paymentBreakdown.reduce((sum, row) => sum + row.count, 0);
   const customerCount = analytics?.summary.customerCount ?? customers.length;
-  const salesCount = analytics?.summary.salesCount ?? sales.length;
+  const salesCount = summary?.transactionsCount ?? periodSales.length;
   const productCount = analytics?.summary.productCount ?? products.length;
   const inventoryValue = products.reduce((total, product) => total + product.stockOnHand * product.buyingPrice, 0);
   const expiringCount = products.filter((product) => product.expiryDate && new Date(product.expiryDate).getTime() <= Date.now() + 90 * 24 * 60 * 60 * 1000).length;
-  const overdueCustomers = customers.filter((customer) => (customer.balance ?? 0) > 0).length;
-  const trendSeries = analytics?.revenueTrend ?? [];
-  const trendLabels = trendSeries.map((point) => point.period);
-  const trendValues = trendSeries.map((point) => point.revenue);
-  const growthPercent = analytics?.summary.monthlyGrowthPercent ?? 0;
-  const forecastRevenue = analytics?.summary.forecastRevenue ?? 0;
-  const averageOrderValue = analytics?.summary.averageOrderValue ?? 0;
+  const selectedTrend = React.useMemo(() => buildSalesTrend(periodSales, currentRange), [periodSales, currentRange?.from, currentRange?.to]);
+  const trendValues = selectedTrend.map((point) => point.value);
+  const trendLabels = selectedTrend.map((point) => point.label);
+  const visibleRecentSales = React.useMemo(
+    () => [...sales].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5),
+    [sales]
+  );
+  const recentActivity = React.useMemo(
+    () => buildRecentActivity(visibleRecentSales, operations),
+    [visibleRecentSales, operations]
+  );
   const activeOrders = operations.filter((operation) => !["completed", "cancelled"].includes(operation.status));
   const completedOperationCount = operations.filter((operation) => operation.status === "completed").length;
   const kitchenQueueCount = operations.filter((operation) => ["open", "preparing", "ready"].includes(operation.status)).length;
@@ -227,13 +228,14 @@ export function DashboardScreen() {
   const isMobile = width < 700;
   const metricWrapStyle = width >= 900 ? [styles.metricWrap, styles.metricWrapWide] : styles.metricWrap;
   const hasContent =
-    Boolean(summary) &&
-    (revenueTotal > 0 ||
+    (Boolean(summary) || periodSales.length > 0) &&
+    (Boolean(revenueTotal && revenueTotal > 0) ||
       outstandingDebt > 0 ||
       paymentTotal > 0 ||
       customerCount > 0 ||
       lowStockCount > 0 ||
-      trendValues.length > 0 ||
+      periodSales.length > 0 ||
+      trendValues.some((value) => value > 0) ||
       topProducts.length > 0 || activeOrders.length > 0 || Boolean(domainSummary && (domainSummary.rooms || domainSummary.patients || domainSummary.matters || domainSummary.tasks)));
 
   if (!canViewDashboard) {
@@ -257,6 +259,13 @@ export function DashboardScreen() {
       <Screen>
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.scrollContent}>
         <View style={styles.homeHeader}>
+          <View style={styles.homeGreeting}>
+            <Text style={styles.homeGreetingText} numberOfLines={1}>Good {getGreeting()}, {firstName}</Text>
+            <Text style={styles.homeShopText} numberOfLines={1}>
+              {business?.name ? `${business.name} · ${activeBranchLabel}` : activeBranchLabel} · <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success }}>{pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
           <Pressable
             onPress={() => (navigation.getParent?.() ?? navigation).navigate("Profile")}
             style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
@@ -266,12 +275,15 @@ export function DashboardScreen() {
             <Ionicons name="person-circle-outline" size={25} color={tokens.colors.text} />
           </Pressable>
 
-          <View style={styles.homeGreeting}>
-            <Text style={styles.homeGreetingText}>Good {getGreeting()}, {firstName} 👋</Text>
-            <Text style={styles.homeShopText}>
-              {business?.name ?? activeBranchLabel} · <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success }}>{pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
-            </Text>
-          </View>
+          <Pressable
+            onPress={handleSync}
+            disabled={syncing}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={syncing ? "Synchronizing" : "Synchronize now"}
+          >
+            <Ionicons name={syncing ? "sync" : "sync-outline"} size={20} color={pendingSync ? tokens.colors.warning : tokens.colors.text} />
+          </Pressable>
 
           <Pressable
             onPress={() => void setThemeMode(themeMode === "dark" ? "light" : "dark")}
@@ -296,15 +308,19 @@ export function DashboardScreen() {
               </View>
             ) : null}
           </Pressable>
+          </View>
         </View>
 
         <View style={styles.primarySales}>
           <View style={{ flex: 1, gap: 5 }}>
-            <Text style={styles.primarySalesLabel}>{activeFilter === "today" ? `TODAY'S ${businessConfig.workspace.activityLabel.toUpperCase()}` : `${businessConfig.workspace.activityLabel.toUpperCase()} THIS PERIOD`}</Text>
-            <Text style={styles.primarySalesValue}>{formatMoney(summary?.salesTotal ?? revenueTotal, business?.currency)}</Text>
-            <Text style={styles.primarySalesMeta}>{formatPercent(growthPercent)} vs previous period · {salesCount} {businessConfig.workspace.primaryEntity.toLowerCase()}{salesCount === 1 ? "" : "s"}</Text>
+            <Text style={styles.primarySalesLabel}>{businessConfig.workspace.activityLabel.toUpperCase()} · {currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Selected period"}</Text>
+            <Text style={styles.primarySalesValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{revenueTotal === null ? "—" : formatMoney(revenueTotal, business?.currency)}</Text>
+            <View style={styles.primaryMetaRow}>
+              <Text style={styles.primarySalesMeta}>{salesCount} {businessConfig.workspace.primaryEntity.toLowerCase()}{salesCount === 1 ? "" : "s"}</Text>
+              {comparisonPercent !== null ? <Text style={[styles.comparisonText, { color: comparisonPercent >= 0 ? tokens.colors.success : tokens.colors.danger }]}>{comparisonPercent >= 0 ? "↑" : "↓"} {formatPercent(Math.abs(comparisonPercent))} vs previous</Text> : null}
+            </View>
           </View>
-          <PrimaryButton title={businessConfig.workspace.primaryAction} iconLeft="add" onPress={() => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS")} style={styles.recordSaleButton} />
+          {hasPermission(user, "createSales") ? <PrimaryButton title={businessConfig.workspace.primaryAction} iconLeft="add" onPress={() => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS")} style={styles.recordSaleButton} /> : null}
         </View>
 
         {isMobile ? (
@@ -324,7 +340,7 @@ export function DashboardScreen() {
           />
         )}
 
-        {loading && !summary ? (
+        {loading && !summary && !periodSales.length ? (
           <View style={{ gap: 14 }}>
             <SkeletonBlock height={210} radius={28} />
             <View style={styles.metricGrid}>
@@ -338,7 +354,7 @@ export function DashboardScreen() {
             <SkeletonBlock height={170} radius={28} />
             <SkeletonBlock height={220} radius={28} />
           </View>
-        ) : error && !summary ? (
+        ) : error && !summary && !periodSales.length ? (
           <ErrorState
             title="Dashboard unavailable"
             subtitle={error}
@@ -361,24 +377,23 @@ export function DashboardScreen() {
           />
         ) : (
           <>
-            <View style={styles.metricGrid}>
-              {dashboardWidgets.map((widget) => (
-                <View key={widget.key} style={metricWrapStyle}>
-                  <MetricCard
-                    label={widget.label}
-                    value={dashboardMetricValue(widget.metric, { revenueTotal, paymentTotal, customerCount, lowStockCount, salesCount, productCount, inventoryValue, business, analytics, employeesCount, summary, domainSummary, kitchenQueueCount, occupiedTablesCount, activeOrderCount: activeOrders.length, completedOperationCount, suppliersCount: suppliers.length, expiringCount })}
-                    hint={widget.description ?? `${businessConfig.label} activity`}
-                    icon={(widget.icon ?? "analytics-outline") as any}
-                    tone={widget.tone ?? "primary"}
-                  />
-                </View>
+            <View style={styles.compactMetrics} accessibilityLabel="Key business metrics">
+              {[
+                { label: "Transactions", value: String(salesCount) },
+                ...(summary?.grossProfit !== undefined ? [{ label: "Gross profit", value: formatMoney(summary.grossProfit, business?.currency) }] : []),
+                ...(businessConfig.capabilities.products ? [{ label: "Stock value", value: formatMoney(inventoryValue, business?.currency) }] : []),
+                ...(businessConfig.capabilities.products && summary ? [{ label: "Low stock", value: String(lowStockCount), detail: lowStockCount > 0 ? "Needs attention" : undefined }] : []),
+                ...(businessConfig.capabilities.customers ? [{ label: businessConfig.terminology.customers, value: String(customerCount) }] : []),
+                ...(summary?.debtTotal !== undefined && summary.debtTotal > 0 ? [{ label: "Outstanding", value: formatMoney(summary.debtTotal, business?.currency) }] : [])
+              ].slice(0, 4).map((metric) => (
+                <MetricSummary key={metric.label} label={metric.label} value={metric.value} {...(metric.detail ? { detail: metric.detail } : {})} tone={metric.detail ? "warning" : "neutral"} />
               ))}
             </View>
 
             <IndustryDashboardPanel
               config={businessConfig}
               business={business}
-              revenueTotal={revenueTotal}
+              revenueTotal={revenueTotal ?? 0}
               customerCount={customerCount}
               lowStockCount={lowStockCount}
               activeOperationCount={activeOrders.length}
@@ -393,39 +408,28 @@ export function DashboardScreen() {
               onCatalog={() => navigation.navigate("Catalog")}
             />
 
-            <Card style={[styles.chartCard, isLightTheme && styles.lightCard]}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>{businessConfig.operatingModel === "commerce" ? "Revenue Overview" : `${businessConfig.workspace.activityLabel} Overview`}</Text>
-                  <View style={styles.sectionMetaRow}>
-                    <Text style={styles.sectionSubtitle}>6-month trend</Text>
-                    <InfoIcon message="Revenue trend across the last six completed monthly periods." />
-                  </View>
-                </View>
-                <Tag label="Last 6 months" tone="primary" selected />
-              </View>
+            <ChartContainer
+              title={businessConfig.operatingModel === "commerce" ? "Revenue overview" : `${businessConfig.workspace.activityLabel} overview`}
+              description={currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Selected period"}
+              legend={<InfoIcon message="Revenue is grouped into intervals within the selected reporting period. Select a point for its amount." />}
+              style={styles.chartCard}
+            >
 
               <View style={styles.chartSummaryRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.chartValue}>{formatMoney(revenueTotal, business?.currency)}</Text>
-                  <Text style={styles.chartCaption}>Total Revenue</Text>
+                  <Text style={styles.chartValue}>{revenueTotal === null ? "—" : formatMoney(revenueTotal, business?.currency)}</Text>
+                  <Text style={styles.chartCaption}>{businessConfig.workspace.activityLabel} in this period</Text>
                 </View>
-                <Badge label={`↑ ${formatPercent(growthPercent)}`} tone="success" />
+                {comparisonPercent !== null ? <Badge label={`${comparisonPercent >= 0 ? "↑" : "↓"} ${formatPercent(Math.abs(comparisonPercent))}`} tone={comparisonPercent >= 0 ? "success" : "danger"} /> : null}
               </View>
 
-              <MiniLineChart
-                data={trendValues.length ? trendValues : [0]}
-                labels={trendLabels.length ? trendLabels : ["No data"]}
-                tone={tokens.colors.primaryStrong}
-                currency={business?.currency ?? "KES"}
-              />
+              {trendValues.some((value) => value > 0) ? <MiniLineChart data={trendValues} labels={trendLabels} tone={tokens.colors.primaryStrong} currency={business?.currency ?? "KES"} /> : <Text style={styles.emptyCopy}>No revenue recorded in this period yet.</Text>}
 
               <View style={styles.chartFooter}>
-                <InfoPill label="Profit" value={formatMoney(analytics?.summary.profitTotal ?? 0, business?.currency)} tone="success" />
-                <InfoPill label="Forecast" value={formatMoney(forecastRevenue, business?.currency)} tone="primary" />
-                <InfoPill label="Avg. Ticket" value={formatMoney(averageOrderValue, business?.currency)} tone="warning" />
+                {summary?.grossProfit !== undefined ? <InfoPill label="Gross profit" value={formatMoney(summary.grossProfit, business?.currency)} tone="success" /> : null}
+                {salesCount > 0 && revenueTotal !== null ? <InfoPill label="Avg. transaction" value={formatMoney(revenueTotal / salesCount, business?.currency)} tone="primary" /> : null}
               </View>
-            </Card>
+            </ChartContainer>
 
             <Card style={[styles.quickCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
@@ -437,7 +441,7 @@ export function DashboardScreen() {
                   <Text style={styles.viewAllText}>View All</Text>
                 </Pressable>
               </View>
-              <View style={styles.actionGrid}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionGrid}>
                 {availableQuickActions({
                   primaryAction: businessConfig.workspace.primaryAction,
                   customerLabel: businessConfig.terminology.customers,
@@ -461,7 +465,21 @@ export function DashboardScreen() {
                 }).map((action) => (
                   <QuickAction key={action.label} {...action} />
                 ))}
+              </ScrollView>
+            </Card>
+
+            <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
+              <View style={styles.sectionHeadingRow}>
+                <View style={{ flex: 1 }}><Text style={styles.sectionTitle}>Recent activity</Text><Text style={styles.sectionSubtitle}>Latest transactions and operations</Text></View>
+                <Pressable onPress={() => navigation.navigate("Reports")} accessibilityRole="button"><Text style={styles.viewAllText}>Reports</Text></Pressable>
               </View>
+              {recentActivity.length ? recentActivity.map((item) => (
+                <View key={item.id} style={styles.activityRow}>
+                  <View style={styles.activityIcon}><Ionicons name={item.kind === "sale" ? "receipt-outline" : "briefcase-outline"} size={17} color={tokens.colors.primaryStrong} /></View>
+                  <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text><Text style={styles.activityMeta} numberOfLines={1}>{item.subtitle}</Text></View>
+                  <View style={{ alignItems: "flex-end" }}><Text style={styles.activityAmount}>{item.amount === null ? item.status : formatMoney(item.amount, business?.currency)}</Text>{item.amount !== null ? <Text style={styles.activityMeta}>{item.status}</Text> : null}</View>
+                </View>
+              )) : <Text style={styles.emptyCopy}>New sales and operational activity will appear here.</Text>}
             </Card>
 
             {isRetail && branches.length > 1 ? (
@@ -526,56 +544,18 @@ export function DashboardScreen() {
               </Card>
             )}
 
-            <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
+            {paymentBreakdown.length ? <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>Tasks Overview</Text>
-                  <View style={styles.sectionMetaRow}>
-                    <Text style={styles.sectionSubtitle}>Activity status</Text>
-                    <InfoIcon message="Completed payments, sales activity, low-stock items, and customers with balances." />
-                  </View>
+                  <Text style={styles.sectionTitle}>Payment methods</Text>
+                  <Text style={styles.sectionSubtitle}>Collected in the selected period</Text>
                 </View>
-                <Tag label="This Week" tone="primary" selected />
+                <Text style={styles.paymentTotal}>{formatMoney(paymentTotal, business?.currency)}</Text>
               </View>
-
-              <View style={styles.statusContent}>
-                <StatusRing
-                  total={paymentCount + salesCount + lowStockCount + overdueCustomers}
-                  items={[
-                    { label: "Completed", value: paymentCount, tone: tokens.colors.success },
-                    { label: "In Progress", value: salesCount, tone: tokens.colors.primary },
-                    { label: "Pending", value: lowStockCount, tone: tokens.colors.warning },
-                    { label: "Overdue", value: overdueCustomers, tone: tokens.colors.danger }
-                  ]}
-                />
-
-                <View style={{ flex: 1, gap: 14 }}>
-                  {[
-                    { label: "Completed", value: paymentCount, tone: "success" as const },
-                    { label: "In Progress", value: salesCount, tone: "primary" as const },
-                    { label: "Pending", value: lowStockCount, tone: "warning" as const },
-                    { label: "Overdue", value: overdueCustomers, tone: "danger" as const }
-                  ].map((item) => (
-                    <StatusRow
-                      key={item.label}
-                      label={item.label}
-                      value={item.value}
-                      total={Math.max(1, paymentCount + salesCount + lowStockCount + overdueCustomers)}
-                      tone={item.tone}
-                    />
-                  ))}
-                </View>
-
-                <Pressable
-                  onPress={() => navigation.navigate("Reports")}
-                  style={({ pressed }) => [styles.statusArrowButton, pressed && styles.iconButtonPressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open reports"
-                >
-                  <Ionicons name="chevron-forward" size={22} color={tokens.colors.text} />
-                </Pressable>
-              </View>
-            </Card>
+              <View style={styles.paymentList}>{paymentBreakdown.slice(0, 4).map((row) => (
+                <View key={row._id} style={styles.paymentRow}><Text style={styles.statusLabel}>{row._id}</Text><Text style={styles.paymentMeta}>{row.count} transactions</Text><Text style={styles.statusValue}>{formatMoney(row.total, business?.currency)}</Text></View>
+              ))}</View>
+            </Card> : null}
           </>
         )}
       </AppScrollView>
@@ -714,22 +694,7 @@ function MetricCard({
   icon: keyof typeof Ionicons.glyphMap;
   tone: "primary" | "success" | "warning" | "danger";
 }) {
-  const styles = useDashboardStyles();
-  const accent = toneColor(tone);
-  const isLightTheme = useThemeMode() === "light";
-  return (
-    <Card style={[styles.metricCard, isLightTheme && styles.lightCard]}>
-      <View style={styles.metricTopRow}>
-        <View style={[styles.metricIconWrap, { backgroundColor: withAlpha(accent, 0.14) }]}>
-          <Ionicons name={icon} size={18} color={accent} />
-        </View>
-        <View style={[styles.metricAccent, { backgroundColor: accent }]} />
-      </View>
-      <Text style={[styles.metricLabel, isLightTheme && styles.lightTextSecondary]}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      {hint ? <Text style={styles.metricHint}>{hint}</Text> : null}
-    </Card>
-  );
+  return <StatCard label={label} value={value} hint={hint} icon={icon} tone={tone} />;
 }
 
 function QuickAction({
@@ -979,7 +944,9 @@ function MiniLineChart({
   const { width } = useWindowDimensions();
   const isLightTheme = useThemeMode() === "light";
   const [selectedIndex, setSelectedIndex] = React.useState(Math.max(data.length - 1, 0));
-  const chartWidth = Math.max(280, width - 64);
+  React.useEffect(() => setSelectedIndex(Math.max(data.length - 1, 0)), [data.length, labels.join("|")]);
+  const safeSelectedIndex = Math.min(selectedIndex, Math.max(0, data.length - 1));
+  const chartWidth = Math.max(190, width - 84);
   const plotWidth = chartWidth - 20;
   const plotHeight = 118;
   const max = Math.max(1, ...data);
@@ -990,11 +957,11 @@ function MiniLineChart({
     const y = plotHeight - ((value - min) / denominator) * (plotHeight - 6);
     return { x: x + 10, y: y + 12, value };
   });
-  const selectedLabel = labels[selectedIndex] ?? "Selected period";
+  const selectedLabel = labels[safeSelectedIndex] ?? "Selected period";
   const yValues = [max, Math.round(max * 0.66), Math.round(max * 0.33), 0].map((value) => formatCompactValue(value));
 
   return (
-    <View style={[styles.chartShell, { width: chartWidth }]}>
+    <View style={[styles.chartShell, { width: chartWidth }]} accessibilityRole="summary" accessibilityLabel={`Revenue trend with ${data.length} intervals. Selected ${selectedLabel}: ${formatMoney(data[safeSelectedIndex] ?? 0, currency)}.`}>
       <View style={styles.chartYAxis}>
         {yValues.map((label, index) => (
           <Text key={`${label}-${index}`} style={[styles.chartYAxisLabel, isLightTheme && styles.lightTextSecondary]}>
@@ -1009,7 +976,7 @@ function MiniLineChart({
           <View style={[styles.chartGridLine, { top: "33%" }]} />
           <View style={[styles.chartGridLine, { top: "66%" }]} />
 
-          {points[selectedIndex] && selectedLabel !== "No data" ? (
+          {points[safeSelectedIndex] ? (
             <View style={[styles.chartTooltip, isLightTheme && styles.lightCard]}>
               <Text style={[styles.chartTooltipLabel, isLightTheme && styles.lightTextSecondary]}>{formatTrendLabel(selectedLabel)}</Text>
               <Text style={styles.chartTooltipMetric}>Revenue</Text>
@@ -1045,7 +1012,8 @@ function MiniLineChart({
             <Pressable
               key={`point-${index}`}
               accessibilityRole="button"
-              accessibilityLabel={`Show revenue for ${formatTrendLabel(labels[index] ?? "selected period")}`}
+              accessibilityLabel={`${formatTrendLabel(labels[index] ?? "selected period")}, revenue ${formatMoney(point.value, currency)}`}
+              accessibilityState={{ selected: safeSelectedIndex === index }}
               onPress={() => setSelectedIndex(index)}
               style={[
                 styles.chartPoint,
@@ -1054,7 +1022,7 @@ function MiniLineChart({
                   top: point.y - 5,
                   borderColor: "#FFFFFF",
                   backgroundColor: tone,
-                  transform: [{ scale: selectedIndex === index ? 1.35 : 1 }]
+                  transform: [{ scale: safeSelectedIndex === index ? 1.35 : 1 }]
                 }
               ]}
             />
@@ -1116,7 +1084,74 @@ function formatRangeLabel(fromDate: string, toDate: string) {
 }
 
 function formatTrendLabel(label: string) {
-  return label.split(" ")[0] ?? label;
+  return label;
+}
+
+function parseDateOnly(value: string) {
+  return new Date(`${value.slice(0, 10)}T00:00:00`);
+}
+
+function getPreviousRange(range: RangeState): RangeState {
+  const start = parseDateOnly(range.from).getTime();
+  const end = parseDateOnly(range.to).getTime();
+  const day = 24 * 60 * 60 * 1000;
+  const duration = Math.max(day, end - start + day);
+  const previousEnd = new Date(start - day);
+  const previousStart = new Date(start - duration);
+  return { from: format(previousStart, "yyyy-MM-dd"), to: format(previousEnd, "yyyy-MM-dd") };
+}
+
+function filterSalesToRange(sales: Sale[], range: RangeState | null) {
+  if (!range) return [];
+  const from = parseDateOnly(range.from).getTime();
+  const to = parseDateOnly(range.to).getTime() + 24 * 60 * 60 * 1000;
+  return sales.filter((sale) => {
+    const createdAt = new Date(sale.createdAt).getTime();
+    return Number.isFinite(createdAt) && createdAt >= from && createdAt < to;
+  });
+}
+
+function buildSalesTrend(sales: Sale[], range: RangeState | null) {
+  if (!range) return [] as Array<{ label: string; value: number }>;
+  const start = parseDateOnly(range.from).getTime();
+  const end = parseDateOnly(range.to).getTime() + 24 * 60 * 60 * 1000;
+  const duration = Math.max(1, end - start);
+  const count = Math.min(6, Math.max(1, Math.ceil(duration / (24 * 60 * 60 * 1000))));
+  const buckets = Array.from({ length: count }, (_, index) => {
+    const from = start + Math.floor((duration * index) / count);
+    const to = start + Math.floor((duration * (index + 1)) / count);
+    return { from, to, value: 0 };
+  });
+  for (const sale of sales) {
+    const createdAt = new Date(sale.createdAt).getTime();
+    if (!Number.isFinite(createdAt) || createdAt < start || createdAt >= end) continue;
+    const index = Math.min(count - 1, Math.floor(((createdAt - start) / duration) * count));
+    const bucket = buckets[index];
+    if (bucket) bucket.value += sale.grandTotal;
+  }
+  return buckets.map((bucket) => ({ label: format(new Date(bucket.from), count <= 6 && duration <= 14 * 86400000 ? "MMM d" : "MMM"), value: bucket.value }));
+}
+
+function buildRecentActivity(sales: Sale[], operations: BusinessOperation[]) {
+  const saleItems = sales.map((sale) => ({
+    id: `sale-${sale.id}`,
+    kind: "sale" as const,
+    timestamp: new Date(sale.createdAt).getTime(),
+    title: sale.receiptNumber || "Sale",
+    subtitle: `${format(new Date(sale.createdAt), "MMM d, h:mm a")} · ${sale.paymentMethod.replace(/_/g, " ")}`,
+    amount: sale.grandTotal,
+    status: sale.paymentStatus.replace(/_/g, " ")
+  }));
+  const operationItems = operations.filter((operation) => operation.createdAt).map((operation) => ({
+    id: `operation-${operation.id}`,
+    kind: "operation" as const,
+    timestamp: new Date(operation.createdAt!).getTime(),
+    title: operation.title,
+    subtitle: `${format(new Date(operation.createdAt!), "MMM d, h:mm a")} · ${operation.kind.replace(/_/g, " ")}`,
+    amount: operation.total > 0 ? operation.total : null,
+    status: operation.status.replace(/_/g, " ")
+  }));
+  return [...saleItems, ...operationItems].filter((item) => Number.isFinite(item.timestamp)).sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 }
 
 function formatGrowth(value: number) {
@@ -1331,6 +1366,7 @@ function createStyles(theme: ThemeTokens) {
     alignItems: "center",
     gap: 10
   },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 2 },
   homeGreeting: {
     flex: 1,
     gap: 3
@@ -1368,10 +1404,12 @@ function createStyles(theme: ThemeTokens) {
     letterSpacing: -0.8
   },
   primarySalesMeta: {
-    color: tokens.colors.success,
+    color: tokens.colors.textSecondary,
     fontSize: 12,
     fontWeight: "600"
   },
+  primaryMetaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 9 },
+  comparisonText: { fontSize: 11, fontWeight: "700" },
   recordSaleButton: {
     minHeight: 42,
     paddingHorizontal: 12
@@ -1620,54 +1658,22 @@ function createStyles(theme: ThemeTokens) {
     flexWrap: "wrap",
     gap: 8
   },
+  compactMetrics: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: tokens.colors.border
+  },
   metricWrap: {
     width: "48%"
   },
   metricWrapWide: {
     width: "23.5%"
-  },
-  metricCard: {
-    minHeight: 104,
-    padding: 11,
-    borderRadius: 14,
-    gap: 5
-  },
-  metricTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  metricIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  metricAccent: {
-    width: 42,
-    height: 4,
-    borderRadius: 999,
-    opacity: 0.9
-  },
-  metricLabel: {
-    color: tokens.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
-  },
-  metricValue: {
-    color: tokens.colors.text,
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: -0.2,
-    lineHeight: 24
-  },
-  metricHint: {
-    color: tokens.colors.textSecondary,
-    fontSize: 10,
-    lineHeight: 14
   },
   chartCard: {
     gap: 9,
@@ -1821,25 +1827,24 @@ function createStyles(theme: ThemeTokens) {
   },
   actionGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10
+    alignItems: "flex-start",
+    gap: 15,
+    paddingVertical: 3
   },
   actionTile: {
-    width: "18%",
-    minWidth: 68,
-    flexGrow: 1,
+    minWidth: 66,
+    maxWidth: 76,
     alignItems: "center",
-    gap: 8
+    gap: 5
   },
   actionTilePressed: {
     opacity: 0.9,
     transform: [{ scale: 0.985 }]
   },
   actionIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -1847,7 +1852,7 @@ function createStyles(theme: ThemeTokens) {
   },
   actionLabel: {
     color: tokens.colors.text,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 16
@@ -1884,6 +1889,15 @@ function createStyles(theme: ThemeTokens) {
     fontSize: 13,
     lineHeight: 19
   },
+  activityRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderColor: tokens.colors.border, paddingVertical: 7 },
+  activityIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.1) },
+  activityTitle: { color: tokens.colors.text, fontSize: 12, fontWeight: "700" },
+  activityMeta: { color: tokens.colors.textSecondary, fontSize: 10, marginTop: 2, textTransform: "capitalize" },
+  activityAmount: { color: tokens.colors.text, fontSize: 11, fontWeight: "700" },
+  paymentTotal: { color: tokens.colors.text, fontSize: 13, fontWeight: "700" },
+  paymentList: { gap: 7 },
+  paymentRow: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderColor: tokens.colors.border, paddingVertical: 5 },
+  paymentMeta: { flex: 1, color: tokens.colors.textSecondary, fontSize: 11 },
   statusCard: {
     gap: 9,
     borderRadius: 14

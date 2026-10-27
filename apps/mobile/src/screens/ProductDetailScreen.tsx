@@ -149,7 +149,8 @@ export function ProductDetailScreen() {
   }
 
   const currentProduct = product;
-  const lowStock = currentProduct.stockOnHand <= currentProduct.lowStockThreshold;
+  const outOfStock = currentProduct.stockOnHand <= 0;
+  const lowStock = !outOfStock && currentProduct.stockOnHand <= currentProduct.lowStockThreshold;
   const margin = Math.max(0, currentProduct.sellingPrice - currentProduct.buyingPrice);
   const categoryName = categories.find((category) => category.id === currentProduct.categoryId)?.name ?? "Uncategorized";
   const brandName = brands.find((brand) => brand.id === currentProduct.brandId)?.name ?? "No brand";
@@ -171,9 +172,9 @@ export function ProductDetailScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshHistory} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 9, padding: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Quick lookup</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Find another item</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
             Jump to another {itemLabel.toLowerCase()} by {supportsBarcode ? "SKU or barcode" : "name or code"} without leaving the catalog.
           </Text>
           <InputField
@@ -196,7 +197,7 @@ export function ProductDetailScreen() {
               setLookupCode("");
             }}
           />
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton
                 title={`Open ${itemLabel.toLowerCase()}`}
@@ -222,38 +223,29 @@ export function ProductDetailScreen() {
             <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>No exact match yet. Try a full code or barcode.</Text>
           ) : null}
         </Card>
-        <Card style={{ gap: 10, padding: 14 }}>
+        <Card style={{ gap: 10, padding: 12 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{currentProduct.name}</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{currentProduct.barcode ?? "No barcode"}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{currentProduct.sku ?? "No SKU"} · {currentProduct.barcode ?? "No barcode"}</Text>
             </View>
-            <Badge label={businessConfig.capabilities.inventory ? (lowStock ? "Low stock" : "Healthy") : "Available"} tone={businessConfig.capabilities.inventory && lowStock ? "danger" : "success"} />
+            <Badge label={businessConfig.capabilities.inventory ? (outOfStock ? "Out of stock" : lowStock ? "Low stock" : "Healthy") : "Available"} tone={businessConfig.capabilities.inventory && (outOfStock || lowStock) ? "danger" : "success"} />
           </View>
-          {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12 }}>
+          <Text style={{ color: tokens.colors.primaryStrong, fontSize: 20, lineHeight: 26, fontWeight: "800" }} adjustsFontSizeToFit numberOfLines={1}>{formatMoney(currentProduct.sellingPrice, business?.currency)}</Text>
+          {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12, paddingVertical: 9, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
             <Metric label="Units on hand" value={String(currentProduct.stockOnHand)} />
             <Metric label="Low stock limit" value={String(currentProduct.lowStockThreshold)} />
             <Metric label="Profit per unit" value={formatMoney(margin, business?.currency)} />
           </View> : <View style={{ flexDirection: "row", gap: 12 }}>
             <Metric label="Duration" value={currentProduct.serviceDurationMinutes ? `${currentProduct.serviceDurationMinutes} min` : "Flexible"} />
-            <Metric label="Price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
             <Metric label="Pricing" value={currentProduct.pricingModel ?? "Fixed"} />
           </View>}
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Buying price" value={formatMoney(currentProduct.buyingPrice, business?.currency)} />
-            <Metric label="Selling price" value={formatMoney(currentProduct.sellingPrice, business?.currency)} />
-          </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Brand" value={brandName} />
-            <Metric label="Supplier" value={supplierName} />
-          </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Batch" value={currentProduct.batchNumber ?? "None"} />
-            <Metric label="Expiry" value={currentProduct.expiryDate ?? "None"} />
-          </View>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Metric label="Serial" value={currentProduct.serialNumber ?? "None"} />
-            <Metric label="Barcode" value={currentProduct.barcode ?? "No barcode"} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 8, columnGap: 14 }}>
+            <DetailValue label="Buying price" value={formatMoney(currentProduct.buyingPrice, business?.currency)} />
+            <DetailValue label="Brand" value={brandName} />
+            <DetailValue label="Supplier" value={supplierName} />
+            {currentProduct.batchNumber ? <DetailValue label="Batch" value={currentProduct.batchNumber} /> : null}
+            {currentProduct.expiryDate ? <DetailValue label="Expiry" value={currentProduct.expiryDate} /> : null}
+            {currentProduct.serialNumber ? <DetailValue label="Serial" value={currentProduct.serialNumber} /> : null}
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
             {businessConfig.capabilities.inventory ? <View style={{ flex: 1 }}>
@@ -372,11 +364,18 @@ export function ProductDetailScreen() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flex: 1, padding: 12, borderRadius: 16, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border, gap: 4 }}>
+    <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
       <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>{label}</Text>
       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{value}</Text>
     </View>
   );
+}
+
+function DetailValue({ label, value }: { label: string; value: string }) {
+  return <View style={{ minWidth: "46%", flexGrow: 1, gap: 2 }}>
+    <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>{label}</Text>
+    <Text style={{ color: tokens.colors.text, fontSize: 12, fontWeight: "600" }} numberOfLines={2}>{value}</Text>
+  </View>;
 }
 
 function formatReferenceLabel(value: string) {

@@ -1,9 +1,10 @@
 import React from "react";
-import { Alert, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resolveBusinessTypeConfig } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
-import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, Dropdown, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
+import { MetricSummary, SectionHeader } from "@/components/DesignSystem";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
@@ -25,10 +26,12 @@ type CartLine = {
 };
 
 type PaymentStep = PosPaymentLine;
+type SaleFilter = "all" | "open" | "paid";
 
 export function PosScreen() {
   const products = useAppStore((state) => state.products);
   const sales = useAppStore((state) => state.sales);
+  const customers = useAppStore((state) => state.customers);
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
@@ -44,6 +47,8 @@ export function PosScreen() {
   const supportsBarcode = businessConfig.capabilities.barcode;
 
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<SaleFilter>("all");
+  const [showDrafts, setShowDrafts] = React.useState(false);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [lookupCode, setLookupCode] = React.useState("");
   const [productSearch, setProductSearch] = React.useState("");
@@ -51,6 +56,7 @@ export function PosScreen() {
   const [drafts, setDrafts] = React.useState<PosDraft[]>([]);
   const [currentDraftId, setCurrentDraftId] = React.useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = React.useState<PosMode>("sale");
+  const [customerId, setCustomerId] = React.useState<string | null>(null);
   const [discountMode, setDiscountMode] = React.useState<"flat" | "percent">("flat");
   const [discountValue, setDiscountValue] = React.useState("0");
   const [taxMode, setTaxMode] = React.useState<"flat" | "percent">("flat");
@@ -61,6 +67,7 @@ export function PosScreen() {
   const [previewReceipt, setPreviewReceipt] = React.useState<ReceiptArtifacts | null>(null);
   const [paymentMode, setPaymentMode] = React.useState<PaymentMode>("cash");
   const [saving, setSaving] = React.useState(false);
+  const savingRef = React.useRef(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [stkInitiating, setStkInitiating] = React.useState(false);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
@@ -112,13 +119,18 @@ export function PosScreen() {
     return () => globalWindow.removeEventListener?.("keydown", handleKeyDown);
   }, [cart, discountMode, discountValue, paymentMode, payments, productSearch, taxMode, taxValue, checkoutNote]);
 
+  const customerOptions = React.useMemo(() => [{ label: "Walk-in customer", value: "" }, ...customers.map((customer) => ({ label: customer.name, value: customer.id, ...(customer.phone ? { description: customer.phone } : {}) }))], [customers]);
   const filteredSales = React.useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     return sales.filter((sale) => {
+      const state = String(sale.paymentStatus ?? "paid");
+      if (statusFilter === "paid" && state !== "paid") return false;
+      if (statusFilter === "open" && !["partial", "unpaid", "credit", "pending_confirmation"].includes(state)) return false;
       if (!query) return true;
-      return [sale.receiptNumber, sale.customerId ?? "", sale.paymentMethod, sale.paymentStatus].join(" ").toLowerCase().includes(query);
-    });
-  }, [deferredSearch, sales]);
+      const customerName = customers.find((customer) => customer.id === sale.customerId)?.name ?? "";
+      return [sale.receiptNumber, sale.customerId ?? "", customerName, sale.paymentMethod, state, sale.notes ?? ""].join(" ").toLowerCase().includes(query);
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [customers, deferredSearch, sales, statusFilter]);
 
   const filteredProducts = React.useMemo(() => {
     const query = deferredProductSearch.trim().toLowerCase();
@@ -221,6 +233,7 @@ export function PosScreen() {
     setScannerVisible(false);
     setPaymentMode("cash");
     setCheckoutMode("sale");
+    setCustomerId(null);
     setDiscountMode("flat");
     setDiscountValue("0");
     setTaxMode("flat");
@@ -305,7 +318,7 @@ export function PosScreen() {
       id: currentDraftId ?? "preview",
       businessId: business?.id ?? "preview",
       branchId: selectedBranchId,
-      customerId: null,
+      customerId,
       receiptNumber: `PREVIEW-${Date.now().toString().slice(-6)}`,
       subtotal,
       discountTotal: lineDiscountTotal + orderDiscountTotal,
@@ -345,8 +358,8 @@ export function PosScreen() {
       discountValue: Number(discountValue || 0),
       taxMode,
       taxValue: Number(taxValue || 0),
-      customerId: null,
       relatedSaleId: null,
+      customerId,
       ...(currentDraftId ? { id: currentDraftId } : {}),
       ...(checkoutNote.trim() ? { notes: checkoutNote.trim() } : {}),
       ...(lookupCode.trim() ? { lookupCode: lookupCode.trim() } : {}),
@@ -373,6 +386,7 @@ export function PosScreen() {
 
   async function loadDraft(draft: PosDraft) {
     setCheckoutMode(draft.mode);
+    setCustomerId(draft.customerId ?? null);
     setCart(draft.cart);
     setPaymentMode(draft.paymentMethod);
     setPayments(draft.payments.length ? draft.payments : [{ id: createId(), method: draft.paymentMethod, amount: 0, reference: "", note: "" }]);
@@ -388,25 +402,37 @@ export function PosScreen() {
   }
 
   async function saveSale() {
+    if (savingRef.current) return;
     if (!cart.length) {
       Alert.alert(`Add ${catalogItemLabel.toLowerCase()}s`, `Choose at least one ${catalogItemLabel.toLowerCase()} before recording the transaction.`);
       return;
     }
 
     if (checkoutMode === "return") {
-      await saveCurrentDraft("return");
-      setPreviewReceipt(buildSalePreview());
-      setPreviewVisible(true);
+      savingRef.current = true;
+      setSaving(true);
+      try {
+        await saveCurrentDraft("return");
+        setPreviewReceipt(buildSalePreview());
+        setPreviewVisible(true);
+      } finally {
+        savingRef.current = false;
+        setSaving(false);
+      }
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       const note = buildCheckoutNote();
       const result = await createSale({
+        customerId,
         paymentMethod: paymentMode,
         paymentStatus,
         amountPaid,
+        discountTotal: lineDiscountTotal + orderDiscountTotal,
+        taxTotal,
         notes: note ?? (paymentMode === "mpesa" ? "Mobile payment pending STK confirmation" : null),
         items: cart.map((line) => ({
           productId: line.productId,
@@ -425,6 +451,7 @@ export function PosScreen() {
     } catch (error) {
       Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to record sale");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -433,165 +460,134 @@ export function PosScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.posLabel}
-        subtitle={`${sales.length} ${businessConfig.workspace.activityLabel.toLowerCase()} · ${pendingSync ? `${pendingSync} queued` : "Synced"}`}
+        subtitle={`${sales.length} ${businessConfig.workspace.activityLabel.toLowerCase()} · ${pendingSync ? `${pendingSync} pending sync` : "Synced"}`}
         right={
-          <Pressable onPress={() => setModalVisible(true)}>
-            <Ionicons name="add-circle-outline" size={28} color={tokens.colors.text} />
+          <Pressable onPress={() => setModalVisible(true)} accessibilityRole="button" accessibilityLabel={`Record ${primaryAction}`} hitSlop={8}>
+            <Ionicons name="add-circle-outline" size={26} color={tokens.colors.primaryStrong} />
           </Pressable>
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={refreshSales} contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8 }}>TODAY</Text>
-            <Text style={{ color: tokens.colors.text, fontSize: 22, fontWeight: "700" }}>{businessConfig.workflow.headline}</Text>
-            <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success, fontSize: 12, fontWeight: "600" }}>{syncMessage}</Text>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshSales} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }} numberOfLines={1}>{businessConfig.workflow.headline}</Text>
+            <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{pendingSync ? `${pendingSync} transaction${pendingSync === 1 ? "" : "s"} waiting to sync` : syncMessage || "All transactions synced"}</Text>
           </View>
-          <PrimaryButton title={primaryAction} iconLeft="add" onPress={() => setModalVisible(true)} style={{ minWidth: 126 }} />
+          <PrimaryButton title={primaryAction} iconLeft="add" onPress={() => setModalVisible(true)} style={{ minHeight: 42, paddingHorizontal: 13 }} />
         </View>
 
-        <View style={{ flexDirection: "row", gap: 22, paddingVertical: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
-          <Metric label="Drafts" value={String(drafts.length)} />
-          <Metric label="Queued" value={String(pendingSync)} />
+        <View style={{ flexDirection: "row", gap: 18, paddingVertical: 9, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <MetricSummary label="Drafts" value={String(drafts.length)} />
+          <MetricSummary label="Pending sync" value={String(pendingSync)} tone={pendingSync ? "warning" : "neutral"} />
+          <MetricSummary label="Transactions" value={String(sales.length)} />
         </View>
 
-        <InputField label="Search sales" value={search} onChangeText={setSearch} placeholder="Receipt, method, or status" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+        <InputField label="Search transactions" value={search} onChangeText={setSearch} placeholder="Receipt, customer, payment method" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 7 }} accessibilityLabel="Transaction status filters">
+          {([{ key: "all", label: "All" }, { key: "open", label: "Outstanding" }, { key: "paid", label: "Paid" }] as const).map((filter) => (
+            <Pressable key={filter.key} onPress={() => setStatusFilter(filter.key)} accessibilityRole="button" accessibilityState={{ selected: statusFilter === filter.key }}>
+              <Badge label={filter.label} tone={statusFilter === filter.key ? "primary" : "success"} />
+            </Pressable>
+          ))}
+        </ScrollView>
 
-        <Card style={{ gap: 8, padding: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <View style={{ gap: 4, flex: 1 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Draft {businessConfig.workspace.primaryEntity.toLowerCase()}s</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>Hold a basket and resume it later.</Text>
-            </View>
-            <Badge label={`${drafts.length} saved`} tone={drafts.length ? "success" : "primary"} />
-          </View>
-          {drafts.length ? (
-            drafts.map((draft) => (
-              <Card key={draft.id} style={{ gap: 8, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{draft.title}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                      {draft.mode === "return" ? "Return draft" : "Sale draft"} • {formatDate(draft.updatedAt, "PPP p")}
-                    </Text>
+        <Card style={{ gap: 8, padding: 10 }}>
+          <Pressable onPress={() => setShowDrafts((visible) => !visible)} accessibilityRole="button" accessibilityState={{ expanded: showDrafts }} style={{ minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="file-tray-full-outline" size={18} color={tokens.colors.icon} />
+            <Text style={{ flex: 1, color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{businessConfig.workspace.primaryEntity} drafts</Text>
+            <Badge label={String(drafts.length)} tone={drafts.length ? "warning" : "primary"} />
+            <Ionicons name={showDrafts ? "chevron-up" : "chevron-down"} size={18} color={tokens.colors.textSecondary} />
+          </Pressable>
+          {showDrafts ? drafts.length ? (
+            <View style={{ gap: 6 }}>
+              {drafts.map((draft) => (
+                <View key={draft.id} style={{ paddingVertical: 8, borderTopWidth: 1, borderColor: tokens.colors.border, gap: 7 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: tokens.colors.text, fontWeight: "700" }} numberOfLines={1}>{draft.title}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{draft.mode === "return" ? "Return draft" : "Sale draft"} · {formatDate(draft.updatedAt, "MMM d, p")} · {draft.cart.length} items · {formatMoney(draft.cart.reduce((sum, line) => sum + line.unitPrice * line.quantity - line.discount, 0), business?.currency ?? "KES")}</Text>
+                    </View>
+                    <Badge label={draft.mode === "return" ? "Return" : "Sale"} tone={draft.mode === "return" ? "warning" : "primary"} />
                   </View>
-                  <Badge label={draft.mode === "return" ? "Return" : "Sale"} tone={draft.mode === "return" ? "warning" : "primary"} />
-                </View>
-                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                  {draft.cart.length} item{draft.cart.length === 1 ? "" : "s"} • {formatMoney(draft.cart.reduce((sum, line) => sum + line.unitPrice * line.quantity - line.discount, 0), business?.currency ?? "KES")}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton title="Resume" variant="secondary" onPress={() => void loadDraft(draft)} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Delete"
-                      variant="secondary"
-                      onPress={async () => {
-                        await removePosDraft(draft.id);
-                        await refreshDrafts();
-                      }}
-                    />
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View style={{ flex: 1 }}><PrimaryButton title="Resume" variant="secondary" onPress={() => void loadDraft(draft)} /></View>
+                    <View style={{ flex: 1 }}><PrimaryButton title="Delete draft" variant="secondary" onPress={() => Alert.alert("Delete this draft?", "This saved basket cannot be recovered.", [{ text: "Keep draft", style: "cancel" }, { text: "Delete", style: "destructive", onPress: async () => { await removePosDraft(draft.id); await refreshDrafts(); } }])} /></View>
                   </View>
                 </View>
-              </Card>
-            ))
-          ) : (
-            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>No drafts yet. Hold a {businessConfig.workspace.primaryEntity.toLowerCase()} to save one here.</Text>
-          )}
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Refresh drafts" variant="secondary" onPress={() => void refreshDrafts()} />
+              ))}
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flex: 1 }}><PrimaryButton title="Refresh drafts" variant="secondary" onPress={() => void refreshDrafts()} /></View>
+                <View style={{ flex: 1 }}><PrimaryButton title="Clear all" variant="secondary" onPress={() => Alert.alert("Clear all drafts?", "All saved sale and return drafts will be deleted.", [{ text: "Cancel", style: "cancel" }, { text: "Clear drafts", style: "destructive", onPress: async () => { await clearPosDrafts(); await refreshDrafts(); } }])} /></View>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title="Clear drafts"
-                variant="secondary"
-                onPress={async () => {
-                  await clearPosDrafts();
-                  await refreshDrafts();
-                }}
-              />
-            </View>
-          </View>
+          ) : <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>No saved drafts.</Text> : null}
         </Card>
 
+        <SectionHeader title={businessConfig.workspace.activityLabel} description={`${filteredSales.length} shown · ${sales.length} total`} />
         {filteredSales.length ? (
           filteredSales.map((sale) => {
             const methodLabel = formatPaymentMethodLabel(String(sale.paymentMethod ?? "cash"));
             const paymentState = String(sale.paymentStatus ?? "paid");
             const transactionType = (sale as any).transactionType ?? "sale";
             return (
-              <Card key={sale.id} style={{ gap: 6, padding: 12 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{sale.receiptNumber}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                      {formatDate(sale.createdAt, "PPP p")} • {methodLabel}
-                    </Text>
+              <View key={sale.id} style={{ gap: 6, paddingVertical: 10, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }} numberOfLines={1}>{sale.receiptNumber}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{formatDate(sale.createdAt, "MMM d, yyyy · p")} · {methodLabel}{sale.customerId ? ` · ${customers.find((customer) => customer.id === sale.customerId)?.name ?? "Customer"}` : " · Walk-in"}</Text>
                   </View>
-                  <View style={{ alignItems: "flex-end", gap: 6 }}>
-                    <Badge label={transactionType === "refund" ? "Refund" : transactionType === "return" ? "Return" : "Sale"} tone={transactionType === "refund" || transactionType === "return" ? "warning" : "success"} />
-                    <Badge label={formatPaymentStatusLabel(paymentState)} tone={paymentState === "paid" ? "success" : paymentState === "unpaid" ? "danger" : "warning"} />
-                  </View>
+                  <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{formatMoney(sale.grandTotal, business?.currency ?? "KES")}</Text>
                 </View>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(sale.grandTotal, business?.currency ?? "KES")}</Text>
-                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                  {sale.items.length} item{sale.items.length === 1 ? "" : "s"} • {sale.customerId ? "Linked customer" : "Walk-in sale"}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Preview"
-                      variant="secondary"
-                      onPress={() => {
-                        const receiptArtifacts = buildReceiptArtifacts(sale as any, sale.items as any, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Dira OS");
-                        setPreviewReceipt(receiptArtifacts);
-                        setPreviewVisible(true);
-                      }}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Return"
-                      variant="secondary"
-                      onPress={() => {
-                        setCheckoutMode("return");
-                        setCurrentDraftId(null);
-                        setCart(
-                          sale.items.map((item) => ({
-                            productId: item.productId,
-                            name: item.productName,
-                            quantity: item.quantity,
-                            unitPrice: item.unitPrice,
-                            costPrice: item.costPrice,
-                            discount: item.lineDiscount
-                          }))
-                        );
-                        setPayments([{ id: createId(), method: "cash", amount: 0, reference: "", note: `Return for ${sale.receiptNumber}` }]);
-                        setCheckoutNote(`Return draft for ${sale.receiptNumber}`);
-                        setLookupCode("");
-                        setProductSearch("");
-                        setModalVisible(true);
-                      }}
-                    />
-                  </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                  <Badge label={transactionType === "refund" ? "Refund" : transactionType === "return" ? "Return" : "Sale"} tone={transactionType === "refund" || transactionType === "return" ? "warning" : "success"} />
+                  <Badge label={formatPaymentStatusLabel(paymentState)} tone={paymentState === "paid" ? "success" : paymentState === "unpaid" ? "danger" : "warning"} />
+                  {sale.balanceDue > 0 ? <Text style={{ color: tokens.colors.warning, fontSize: 11, fontWeight: "700" }}>Due {formatMoney(sale.balanceDue, business?.currency ?? "KES")}</Text> : null}
+                  <View style={{ flex: 1 }} />
+                  <Pressable onPress={() => { const receiptArtifacts = buildReceiptArtifacts(sale as any, sale.items as any, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Dira OS"); setPreviewReceipt(receiptArtifacts); setPreviewVisible(true); }} accessibilityRole="button" accessibilityLabel={`Preview receipt ${sale.receiptNumber}`} hitSlop={5} style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="receipt-outline" size={19} color={tokens.colors.primaryStrong} />
+                  </Pressable>
+                  <Pressable onPress={() => { setCheckoutMode("return"); setCurrentDraftId(null); setCustomerId(sale.customerId ?? null); setCart(sale.items.map((item) => ({ productId: item.productId, name: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, costPrice: item.costPrice, discount: item.lineDiscount }))); setPayments([{ id: createId(), method: "cash", amount: 0, reference: "", note: `Return for ${sale.receiptNumber}` }]); setCheckoutNote(`Return draft for ${sale.receiptNumber}`); setLookupCode(""); setProductSearch(""); setModalVisible(true); }} accessibilityRole="button" accessibilityLabel={`Start return draft for ${sale.receiptNumber}`} hitSlop={5} style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="return-up-back-outline" size={19} color={tokens.colors.textSecondary} />
+                  </Pressable>
                 </View>
-              </Card>
+              </View>
             );
           })
         ) : (
           <EmptyState
-            title={search ? "No matching sales" : "No sales yet"}
-            subtitle={search ? `Try a different ${businessConfig.workspace.primaryEntity.toLowerCase()} number, method, or status.` : `Use ${primaryAction} to create the first entry.`}
+            title={search || statusFilter !== "all" ? "No matching transactions" : "No sales yet"}
+            subtitle={search || statusFilter !== "all" ? "Try another search or change the status filter." : `Use ${primaryAction} to create the first entry.`}
             icon="receipt-outline"
           />
         )}
       </AppScrollView>
 
-      <SimpleModal visible={modalVisible} title={primaryAction} onClose={() => setModalVisible(false)}>
+      <SimpleModal
+        visible={modalVisible}
+        title={primaryAction}
+        subtitle={`${checkoutMode === "return" ? "Return draft" : "Checkout"} · ${cart.length} item${cart.length === 1 ? "" : "s"}`}
+        fixedFooter
+        onClose={() => setModalVisible(false)}
+        footer={(
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>TOTAL · PAID · BALANCE</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{formatMoney(total, business?.currency ?? "KES")}</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ color: tokens.colors.success, fontSize: 11 }}>Paid {formatMoney(amountPaid, business?.currency ?? "KES")}</Text>
+                <Text style={{ color: balanceDue ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11 }}>Due {formatMoney(balanceDue, business?.currency ?? "KES")}</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flex: 1 }}><PrimaryButton title="Close" variant="secondary" onPress={() => setModalVisible(false)} /></View>
+              <View style={{ flex: 1 }}><PrimaryButton title={saving ? "Saving…" : checkoutMode === "return" ? "Save return draft" : `Record · ${formatMoney(total, business?.currency ?? "KES")}`} onPress={saveSale} loading={saving} disabled={!cart.length} /></View>
+            </View>
+          </View>
+        )}
+      >
         <AppScrollView contentContainerStyle={{ gap: 8, paddingBottom: 20 }}>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
             {businessConfig.operatingModel === "commerce" ? `Add ${catalogLabel.toLowerCase()}, confirm payment, and record the sale.` : `Add ${catalogLabel.toLowerCase()}, confirm payment, and close the ${businessConfig.workspace.primaryEntity.toLowerCase()}.`}
@@ -614,6 +610,8 @@ export function PosScreen() {
             </View>
           </Card>
 
+          <Dropdown label="Customer" value={customerId ?? ""} options={customerOptions} onChange={(value) => setCustomerId(value || null)} placeholder="Walk-in customer" helperText="Optional. Choose a customer to link this transaction and any balance." />
+
           <Card style={{ gap: 9, padding: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{catalogLabel}</Text>
@@ -627,7 +625,7 @@ export function PosScreen() {
             </View>
             {filteredProducts.length ? (
               <View style={{ gap: 8 }}>
-                {filteredProducts.map((product) => (
+                {filteredProducts.slice(0, 12).map((product) => (
                   <Pressable
                     key={product.id}
                     onPress={() => addToCart(product.id)}
@@ -649,6 +647,7 @@ export function PosScreen() {
                     </Text>
                   </Pressable>
                 ))}
+                {filteredProducts.length > 12 ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Showing 12 of {filteredProducts.length}. Refine your search to find another item.</Text> : null}
               </View>
             ) : (
               <EmptyState title={`No matching ${businessConfig.terminology.catalogItem.toLowerCase()}s`} subtitle={`Try a different ${businessConfig.terminology.catalogItem.toLowerCase()} name or code.`} icon="cube-outline" />
@@ -678,8 +677,8 @@ export function PosScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Decrease ${line.name}`}
                       style={{
-                        width: 30,
-                        height: 30,
+                        width: 44,
+                        height: 44,
                         borderRadius: 10,
                         alignItems: "center",
                         justifyContent: "center",
@@ -698,8 +697,8 @@ export function PosScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Increase ${line.name}`}
                       style={{
-                        width: 30,
-                        height: 30,
+                        width: 44,
+                        height: 44,
                         borderRadius: 10,
                         alignItems: "center",
                         justifyContent: "center",
@@ -712,7 +711,16 @@ export function PosScreen() {
                     </Pressable>
                     <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900", marginLeft: "auto" }}>{formatMoney(line.unitPrice * line.quantity - line.discount, business?.currency ?? "KES")}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-end" }}>
+                  <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+                    <View style={{ flex: 1 }}>
+                      <InputField
+                        label="Unit price"
+                        value={String(line.unitPrice)}
+                        onChangeText={(text) => setCart((current) => current.map((item) => item.productId === line.productId ? { ...item, unitPrice: Number(text || 0) } : item))}
+                        keyboardType="decimal-pad"
+                        helperText="Current item price."
+                      />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <InputField
                         label="Line discount"
@@ -724,7 +732,6 @@ export function PosScreen() {
                         helperText="Optional discount for this item."
                       />
                     </View>
-                    <View style={{ flex: 1 }} />
                   </View>
                 </View>
               ))
@@ -749,7 +756,12 @@ export function PosScreen() {
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {[
                 { value: "cash" as const, label: "Cash" },
-                { value: "mpesa" as const, label: "Mobile" }
+                { value: "mpesa" as const, label: "Mobile" },
+                { value: "bank" as const, label: "Bank" },
+                { value: "card" as const, label: "Card" },
+                { value: "cheque" as const, label: "Cheque" },
+                { value: "other" as const, label: "Other" },
+                { value: "credit" as const, label: "Credit" }
               ].map((option) => (
                 <Pressable key={option.value} onPress={() => setPrimaryPaymentMethod(option.value)}>
                   <Badge label={option.label} tone={paymentMode === option.value ? "success" : "primary"} />
@@ -972,15 +984,6 @@ export function PosScreen() {
             </>
           ) : null}
 
-          <View style={{ gap: 10 }}>
-            <PrimaryButton
-              title={saving ? "Recording..." : checkoutMode === "return" ? "Save return draft" : "Record Sale"}
-              onPress={saveSale}
-              loading={saving}
-              disabled={!cart.length}
-            />
-            <PrimaryButton title="Close" variant="secondary" onPress={() => setModalVisible(false)} />
-          </View>
         </AppScrollView>
       </SimpleModal>
 

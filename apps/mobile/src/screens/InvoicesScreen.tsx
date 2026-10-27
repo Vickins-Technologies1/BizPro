@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { format, addDays } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
@@ -22,9 +22,9 @@ import {
   PrimaryButton,
   Screen,
   SimpleModal,
-  StatCard,
   Tag
 } from "@/components/Primitives";
+import { MetricSummary, SectionHeader } from "@/components/DesignSystem";
 import { env } from "@/config/env";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -524,51 +524,29 @@ export function InvoicesScreen() {
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={() => void refresh()} contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 26 }}>
-        <Card style={{ gap: 12 }}>
-          <View style={{ gap: 4 }}>
-            <Text style={{ color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11 }}>Invoice desk</Text>
-            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>Keep billing, balances, and payment follow-up in one place.</Text>
-            <Text style={{ color: "#cbd5e1", lineHeight: 19, fontSize: 12 }}>
-              Draft invoices, sendable invoices, payment tracking, and future fiscalization hooks are all wired in.
-            </Text>
-          </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="New invoice" onPress={openCreate} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Refresh" variant="secondary" onPress={() => void refresh()} />
-            </View>
-          </View>
-        </Card>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Total invoiced" value={formatMoney(dashboard?.totalInvoiced ?? totals.totalInvoiced, business?.currency)} icon="document-text-outline" tone="primary" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Outstanding" value={formatMoney(dashboard?.outstanding ?? totals.outstanding, business?.currency)} icon="time-outline" tone="warning" />
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Paid" value={formatMoney(dashboard?.paid ?? totals.paid, business?.currency)} icon="checkmark-done-outline" tone="success" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <StatCard label="Overdue" value={formatMoney(dashboard?.overdue ?? 0, business?.currency)} icon="alert-circle-outline" tone="danger" />
-          </View>
+      <AppScrollView refreshing={refreshing} onRefresh={() => void refresh()} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 26 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ flex: 1, minWidth: 0 }}><Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{business?.name ?? "Billing"} · invoices and balances</Text></View>
+          <PrimaryButton title="New invoice" iconLeft="add" onPress={openCreate} style={{ minHeight: 42, paddingHorizontal: 13 }} />
+          <Pressable onPress={() => void refresh()} accessibilityRole="button" accessibilityLabel="Refresh invoices" hitSlop={6} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}><Ionicons name="refresh-outline" size={19} color={tokens.colors.icon} /></Pressable>
         </View>
 
-        <Card style={{ gap: 10 }}>
-          <InputField label="Search invoices" value={search} onChangeText={setSearch} placeholder="Invoice number, customer, reference..." />
-          <Dropdown label="Customer filter" value={customerFilter} options={customerOptions} onChange={setCustomerFilter} placeholder="All customers" />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {FILTERS.map((filter) => (
-              <Tag key={filter} label={filter.replaceAll("_", " ").toUpperCase()} tone={filter === statusFilter ? "success" : "primary"} selected={filter === statusFilter} onPress={() => setStatusFilter(filter)} />
-            ))}
-          </View>
-        </Card>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, paddingHorizontal: 4, paddingVertical: 9, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <MetricSummary label="Invoiced" value={formatMoney(dashboard?.totalInvoiced ?? totals.totalInvoiced, business?.currency)} style={{ flexBasis: "44%" }} />
+          <MetricSummary label="Outstanding" value={formatMoney(dashboard?.outstanding ?? totals.outstanding, business?.currency)} tone="warning" style={{ flexBasis: "44%" }} />
+          <MetricSummary label="Paid" value={formatMoney(dashboard?.paid ?? totals.paid, business?.currency)} tone="success" style={{ flexBasis: "44%" }} />
+          <MetricSummary label="Overdue" value={formatMoney(dashboard?.overdue ?? 0, business?.currency)} tone="danger" style={{ flexBasis: "44%" }} />
+        </View>
+
+        <InputField label="Search invoices" value={search} onChangeText={setSearch} placeholder="Invoice number, customer, reference" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
+        <Dropdown label="Customer" value={customerFilter} options={customerOptions} onChange={setCustomerFilter} placeholder="All customers" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 7 }} accessibilityLabel="Invoice status filters">
+          {FILTERS.map((filter) => (
+            <Pressable key={filter} onPress={() => setStatusFilter(filter)} accessibilityRole="button" accessibilityState={{ selected: filter === statusFilter }}>
+              <Tag label={filter.replaceAll("_", " ")} tone={filter === statusFilter ? "success" : "primary"} selected={filter === statusFilter} />
+            </Pressable>
+          ))}
+        </ScrollView>
 
         {loading && !items.length ? (
           <View style={{ gap: 12 }}>
@@ -576,29 +554,22 @@ export function InvoicesScreen() {
             <Loader />
           </View>
         ) : items.length ? (
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: 2 }}>
+            <SectionHeader title="Invoices" description={`${items.length} loaded${totalPages > 1 ? ` · page ${page} of ${totalPages}` : ""}`} />
             {items.map((invoice, index) => (
-              <Pressable key={invoice.id} onPress={() => void openInvoice(invoice.id)} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
-                <Card style={{ gap: 10, padding: 14 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: "#fff", fontSize: 16, fontWeight: "900" }}>{invoice.invoiceNumber}</Text>
-                      <Text style={{ color: "#cbd5e1", fontSize: 12 }}>
-                        {invoice.customerName ?? "No customer"} {invoice.customerBusinessName ? `• ${invoice.customerBusinessName}` : "" }
-                      </Text>
-                      <Text style={{ color: "#94a3b8", fontSize: 12 }}>
-                        {invoice.issueDate.slice(0, 10)} • due {invoice.dueDate.slice(0, 10)}
-                      </Text>
+              <Pressable key={invoice.id} onPress={() => void openInvoice(invoice.id)} style={({ pressed }) => [{ opacity: pressed ? 0.72 : 1 }, { paddingVertical: 11, borderTopWidth: index === 0 ? 1 : 0, borderBottomWidth: 1, borderColor: tokens.colors.border, gap: 6 }]}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+                    <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                      <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }} numberOfLines={1}>{invoice.invoiceNumber} · {invoice.customerName ?? "No customer"}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{invoice.issueDate.slice(0, 10)} · Due {invoice.dueDate.slice(0, 10)}</Text>
                     </View>
-                    <Badge label={invoice.status.replaceAll("_", " ").toUpperCase()} tone={invoice.status === "paid" ? "success" : invoice.status === "overdue" ? "danger" : invoice.status === "partially_paid" ? "warning" : "primary"} />
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{formatMoney(invoice.grandTotal, invoice.currency)}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                    <Text style={{ color: "#cbd5e1" }}>{formatMoney(invoice.grandTotal, invoice.currency)}</Text>
-                    <Text style={{ color: "#94a3b8" }}>
-                      Paid {formatMoney(invoice.amountPaid, invoice.currency)} • Balance {formatMoney(invoice.balanceDue, invoice.currency)}
-                    </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Badge label={invoice.status.replaceAll("_", " ")} tone={invoice.status === "paid" ? "success" : invoice.status === "overdue" ? "danger" : invoice.status === "partially_paid" ? "warning" : "primary"} />
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Paid {formatMoney(invoice.amountPaid, invoice.currency)}</Text>
+                    {invoice.balanceDue > 0 ? <Text style={{ color: tokens.colors.warning, fontSize: 11, fontWeight: "700" }}>Due {formatMoney(invoice.balanceDue, invoice.currency)}</Text> : null}
                   </View>
-                </Card>
               </Pressable>
             ))}
             {page < totalPages ? <PrimaryButton title="Load more" variant="secondary" onPress={() => void reloadInvoices(page + 1, true)} loading={refreshing} /> : null}

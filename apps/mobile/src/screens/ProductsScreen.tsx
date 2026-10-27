@@ -453,7 +453,7 @@ export function ProductsScreen() {
     <Screen>
       <GradientHeader
         title={businessConfig.navigation.catalogLabel}
-        subtitle={`${totalProducts || products.length} ${itemLabelPlural.toLowerCase()}${isService ? " · appointment-ready services" : ` · ${formatMoney(inventoryValue, business?.currency)} ${isMenu ? "ingredient" : "stock"}`}`}
+        subtitle={`${totalProducts} ${itemLabelPlural.toLowerCase()}${isService ? " · appointment-ready services" : ` · ${formatMoney(inventoryValue, business?.currency)} ${isMenu ? "ingredient" : "stock"}`}`}
         right={
           <View style={{ flexDirection: "row", gap: 16 }}>
             <Pressable onPress={() => setVisible(true)}>
@@ -462,7 +462,7 @@ export function ProductsScreen() {
           </View>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog} contentContainerStyle={{ paddingBottom: 24 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshCatalog} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
         <View style={{ gap: 10 }}>
           <InputField label={`Search ${itemLabelPlural.toLowerCase()}`} value={search} onChangeText={setSearch} placeholder={isMenu ? "Name or category" : isService ? "Service or category" : "Name, SKU, or barcode"} leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -499,6 +499,7 @@ export function ProductsScreen() {
               {pageProducts.map((product) => {
                 const categoryName = categories.find((category) => category.id === product.categoryId)?.name ?? "Uncategorized";
                 const brandName = brands.find((brand) => brand.id === product.brandId)?.name ?? "No brand";
+                const supplierName = suppliers.find((supplier) => supplier.id === product.supplierId)?.name;
                 const outOfStock = businessConfig.capabilities.inventory && product.stockOnHand <= 0;
                 const lowStock = businessConfig.capabilities.inventory && !outOfStock && product.stockOnHand <= product.lowStockThreshold;
                 return (
@@ -516,14 +517,12 @@ export function ProductsScreen() {
                             {product.name}
                           </Text>
                           <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
-                            {product.sku ?? (product.barcode ? `Barcode ${product.barcode}` : "No SKU")} · {categoryName}{brandName !== "No brand" ? ` · ${brandName}` : ""}
+                            {[product.sku ?? (product.barcode ? `Barcode ${product.barcode}` : "No SKU"), categoryName, brandName !== "No brand" ? brandName : null, supplierName ?? null].filter(Boolean).join(" · ")}
                           </Text>
                         </View>
                         <View style={{ alignItems: "flex-end", gap: 4 }}>
                           <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit>{formatMoney(product.sellingPrice, business?.currency)}</Text>
-                          {businessConfig.capabilities.inventory ? <Text style={{ color: outOfStock ? tokens.colors.danger : lowStock ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11, fontWeight: outOfStock || lowStock ? "700" : "500" }}>
-                            {outOfStock ? "Out of stock" : lowStock ? `Low · ${product.stockOnHand} ${product.unit}` : `${product.stockOnHand} ${product.unit}`}
-                          </Text> : <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />}
+                          {businessConfig.capabilities.inventory ? <Badge label={outOfStock ? "Out of stock" : lowStock ? `Low · ${product.stockOnHand} ${product.unit}` : `${product.stockOnHand} ${product.unit}`} tone={outOfStock ? "danger" : lowStock ? "warning" : "success"} /> : <Badge label={product.isActive ? "Active" : "Archived"} tone={product.isActive ? "success" : "warning"} />}
                         </View>
                       </View>
                       {product.batchNumber || product.expiryDate || product.serialNumber ? (
@@ -543,6 +542,9 @@ export function ProductsScreen() {
                             setRestockCost(String(product.buyingPrice));
                             setRestockVisible(true);
                           }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Restock ${product.name}`}
+                          style={{ minHeight: 36, justifyContent: "center", paddingHorizontal: 5 }}
                         >
                           <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "700", paddingVertical: 5 }}>Restock</Text>
                         </Pressable> : null}
@@ -551,8 +553,13 @@ export function ProductsScreen() {
                             event?.stopPropagation?.();
                             void handleDeleteProduct(product.id, product.name);
                           }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete ${product.name}`}
+                          disabled={Boolean(deletingProductId)}
+                          hitSlop={6}
+                          style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
                         >
-                          <Text style={{ color: tokens.colors.danger, fontSize: 11, fontWeight: "600", paddingVertical: 5 }}>{deletingProductId === product.id ? "Deleting…" : "Delete"}</Text>
+                          <Ionicons name="trash-outline" size={16} color={deletingProductId === product.id ? tokens.colors.textMuted : tokens.colors.danger} />
                         </Pressable>
                         <Ionicons name="chevron-forward" size={15} color={tokens.colors.textMuted} style={{ marginLeft: "auto" }} />
                       </View>
@@ -578,8 +585,10 @@ export function ProductsScreen() {
         ) : (
           <EmptyState
             title={search || selectedCategoryId || selectedBrandId || selectedSupplierId ? `No matching ${itemLabelPlural.toLowerCase()}` : `No ${itemLabelPlural.toLowerCase()} yet`}
-            subtitle={search ? `Try a different ${itemLabel.toLowerCase()} name or clear the search to see everything.` : `Create your first ${itemLabel.toLowerCase()} to start tracking availability and sales.`}
-            action={<PrimaryButton title={`Add ${itemLabel}`} onPress={() => setVisible(true)} />}
+            subtitle={search || selectedCategoryId || selectedBrandId || selectedSupplierId ? `Try a different ${itemLabel.toLowerCase()} name or clear your search and filters.` : `Create your first ${itemLabel.toLowerCase()} to start tracking availability and sales.`}
+            action={search || selectedCategoryId || selectedBrandId || selectedSupplierId
+              ? <PrimaryButton title="Clear search and filters" variant="secondary" onPress={() => { setSearch(""); setSelectedCategoryId(null); setSelectedBrandId(null); setSelectedSupplierId(null); }} />
+              : <PrimaryButton title={`Add ${itemLabel}`} onPress={() => setVisible(true)} />}
             icon="cube-outline"
           />
         )}

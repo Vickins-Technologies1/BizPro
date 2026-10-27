@@ -591,12 +591,12 @@ export function InvoicesScreen() {
           </View>
         ) : (
           <View style={{ gap: 14 }}>
-            <Card style={{ gap: 10 }}>
+            <View style={{ gap: 10, padding: 14, borderRadius: 14, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>{selectedInvoice.invoiceNumber}</Text>
-                  <Text style={{ color: "#cbd5e1", marginTop: 4 }}>{selectedInvoice.customerName ?? "Customer"}</Text>
-                  <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{selectedInvoice.invoiceNumber}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, marginTop: 4 }}>{selectedInvoice.customerName ?? "Customer"}</Text>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12, marginTop: 2 }}>
                     Issued {selectedInvoice.issueDate.slice(0, 10)} • Due {selectedInvoice.dueDate.slice(0, 10)}
                   </Text>
                 </View>
@@ -607,17 +607,17 @@ export function InvoicesScreen() {
                 <Badge label={`Paid ${formatMoney(selectedInvoice.amountPaid, selectedInvoice.currency)}`} tone="success" />
                 <Badge label={`Balance ${formatMoney(selectedInvoice.balanceDue, selectedInvoice.currency)}`} tone="warning" />
               </View>
-            </Card>
+            </View>
 
             <Card style={{ gap: 10 }}>
-              <Text style={{ color: "#fff", fontWeight: "900" }}>Line items</Text>
+              <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Line items</Text>
               {selectedInvoice.lineItems.map((line) => (
                 <View key={line.id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: tokens.colors.border, gap: 4 }}>
-                  <Text style={{ color: "#fff", fontWeight: "800" }}>{line.description}</Text>
-                  <Text style={{ color: "#cbd5e1", fontSize: 12 }}>
+                  <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{line.description}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                     {line.quantity} {line.unit} • {formatMoney(line.unitPrice, selectedInvoice.currency)} • tax {formatMoney(line.lineTax, selectedInvoice.currency)}
                   </Text>
-                  <Text style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
                     Discount {formatMoney(line.lineDiscount, selectedInvoice.currency)} • Total {formatMoney(line.lineTotal, selectedInvoice.currency)}
                   </Text>
                 </View>
@@ -625,22 +625,22 @@ export function InvoicesScreen() {
             </Card>
 
             <Card style={{ gap: 10 }}>
-              <Text style={{ color: "#fff", fontWeight: "900" }}>Totals</Text>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Subtotal</Text><Text style={{ color: "#fff" }}>{formatMoney(selectedInvoice.subtotal, selectedInvoice.currency)}</Text></View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Discount</Text><Text style={{ color: "#fff" }}>{formatMoney(selectedInvoice.discountTotal, selectedInvoice.currency)}</Text></View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Tax</Text><Text style={{ color: "#fff" }}>{formatMoney(selectedInvoice.taxTotal, selectedInvoice.currency)}</Text></View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Grand total</Text><Text style={{ color: "#fff" }}>{formatMoney(selectedInvoice.grandTotal, selectedInvoice.currency)}</Text></View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Paid</Text><Text style={{ color: "#fff" }}>{formatMoney(selectedInvoice.amountPaid, selectedInvoice.currency)}</Text></View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: "#cbd5e1" }}>Balance due</Text><Text style={{ color: "#fff", fontWeight: "900" }}>{formatMoney(selectedInvoice.balanceDue, selectedInvoice.currency)}</Text></View>
+              <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Totals</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Subtotal</Text><Text style={{ color: tokens.colors.text }}>{formatMoney(selectedInvoice.subtotal, selectedInvoice.currency)}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Discount</Text><Text style={{ color: tokens.colors.text }}>{formatMoney(selectedInvoice.discountTotal, selectedInvoice.currency)}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Tax</Text><Text style={{ color: tokens.colors.text }}>{formatMoney(selectedInvoice.taxTotal, selectedInvoice.currency)}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Grand total</Text><Text style={{ color: tokens.colors.text }}>{formatMoney(selectedInvoice.grandTotal, selectedInvoice.currency)}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Paid</Text><Text style={{ color: tokens.colors.text }}>{formatMoney(selectedInvoice.amountPaid, selectedInvoice.currency)}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: tokens.colors.textSecondary }}>Balance due</Text><Text style={{ color: tokens.colors.text, fontWeight: "900" }}>{formatMoney(selectedInvoice.balanceDue, selectedInvoice.currency)}</Text></View>
             </Card>
 
             {selectedInvoice.history?.length ? (
               <Card style={{ gap: 8 }}>
-                <Text style={{ color: "#fff", fontWeight: "900" }}>Activity</Text>
+                <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Activity</Text>
                 {selectedInvoice.history.map((entry) => (
                   <View key={entry.id} style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
-                    <Text style={{ color: "#fff", fontWeight: "800" }}>{entry.action}</Text>
-                    <Text style={{ color: "#94a3b8", fontSize: 12 }}>{entry.note ?? "Invoice event"}</Text>
+                    <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{entry.action}</Text>
+                    <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{entry.note ?? "Invoice event"}</Text>
                   </View>
                 ))}
               </Card>
@@ -648,9 +648,9 @@ export function InvoicesScreen() {
 
             {selectedInvoice.creditNotes?.length ? (
               <Card style={{ gap: 8 }}>
-                <Text style={{ color: "#fff", fontWeight: "900" }}>Credit notes</Text>
+                <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Credit notes</Text>
                 {selectedInvoice.creditNotes.map((note) => (
-                  <Text key={note.id} style={{ color: "#cbd5e1", fontSize: 12 }}>
+                  <Text key={note.id} style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                     {note.reference} • {note.status} • {formatMoney(note.amount, selectedInvoice.currency)}
                   </Text>
                 ))}
@@ -659,9 +659,9 @@ export function InvoicesScreen() {
 
             {selectedInvoice.debitNotes?.length ? (
               <Card style={{ gap: 8 }}>
-                <Text style={{ color: "#fff", fontWeight: "900" }}>Debit notes</Text>
+                <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Debit notes</Text>
                 {selectedInvoice.debitNotes.map((note) => (
-                  <Text key={note.id} style={{ color: "#cbd5e1", fontSize: 12 }}>
+                  <Text key={note.id} style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                     {note.reference} • {note.status} • {formatMoney(note.amount, selectedInvoice.currency)}
                   </Text>
                 ))}
@@ -670,8 +670,8 @@ export function InvoicesScreen() {
 
             {customerHistory ? (
               <Card style={{ gap: 8 }}>
-                <Text style={{ color: "#fff", fontWeight: "900" }}>Customer history</Text>
-                <Text style={{ color: "#cbd5e1", fontSize: 12 }}>
+                <Text style={{ color: tokens.colors.text, fontWeight: "900" }}>Customer history</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
                   Invoiced {formatMoney(customerHistory.totalInvoiced, selectedInvoice.currency)} • Paid {formatMoney(customerHistory.totalPaid, selectedInvoice.currency)} • Outstanding {formatMoney(customerHistory.outstandingBalance, selectedInvoice.currency)}
                 </Text>
               </Card>

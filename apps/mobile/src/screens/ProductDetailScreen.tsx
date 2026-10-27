@@ -162,21 +162,14 @@ export function ProductDetailScreen() {
       <GradientHeader
         title={currentProduct.name}
         subtitle={`${currentProduct.sku ?? "No SKU"} • ${currentProduct.unit} • ${categoryName}`}
-        right={
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Badge label={currentProduct.isActive ? "Active" : "Archived"} tone={currentProduct.isActive ? "success" : "warning"} />
-            <Pressable onPress={confirmDelete} accessibilityRole="button" accessibilityLabel="Delete product" disabled={deleting}>
-              <Ionicons name="trash-outline" size={22} color={tokens.colors.danger} />
-            </Pressable>
-          </View>
-        }
+        right={<Badge label={currentProduct.isActive ? "Active" : "Archived"} tone={currentProduct.isActive ? "success" : "warning"} />}
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshHistory} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 8, padding: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Find another item</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
-            Jump to another {itemLabel.toLowerCase()} by {supportsBarcode ? "SKU or barcode" : "name or code"} without leaving the catalog.
-          </Text>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshHistory} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <Card style={{ gap: 7, paddingHorizontal: 12, paddingVertical: 9 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+            <Ionicons name="search-outline" size={15} color={tokens.colors.textSecondary} />
+            <Text style={{ color: tokens.colors.text, fontSize: 12, fontWeight: "700" }}>Find another {itemLabel.toLowerCase()}</Text>
+          </View>
           <InputField
             label="Code"
             value={lookupCode}
@@ -185,9 +178,10 @@ export function ProductDetailScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="done"
-            rightAccessory={supportsBarcode ? <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner">
-                <Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} />
-              </Pressable> : null}
+            rightAccessory={<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              {lookupCode ? <Pressable onPress={() => setLookupCode("")} accessibilityRole="button" accessibilityLabel="Clear product code" hitSlop={6}><Ionicons name="close-circle" size={18} color={tokens.colors.textMuted} /></Pressable> : null}
+              {supportsBarcode ? <Pressable onPress={() => setScannerVisible(true)} accessibilityRole="button" accessibilityLabel="Open barcode scanner" hitSlop={6}><Ionicons name="scan-outline" size={20} color={tokens.colors.primaryStrong} /></Pressable> : null}
+            </View>}
             onSubmitEditing={() => {
               if (!lookupMatch) {
                 Alert.alert("No match", `Try the full ${supportsBarcode ? "SKU or barcode" : "catalog code"}.`);
@@ -197,24 +191,17 @@ export function ProductDetailScreen() {
               setLookupCode("");
             }}
           />
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton
-                title={`Open ${itemLabel.toLowerCase()}`}
-                onPress={() => {
-                  if (!lookupMatch) {
-                    Alert.alert("No match", `Try the full ${supportsBarcode ? "SKU or barcode" : "catalog code"}.`);
-                    return;
-                  }
-                  navigation.push("ProductDetail", { productId: lookupMatch.id });
-                  setLookupCode("");
-                }}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Clear" variant="secondary" onPress={() => setLookupCode("")} />
-            </View>
-          </View>
+          <PrimaryButton
+            title={`Open ${itemLabel.toLowerCase()}`}
+            onPress={() => {
+              if (!lookupMatch) {
+                Alert.alert("No match", `Try the full ${supportsBarcode ? "SKU or barcode" : "catalog code"}.`);
+                return;
+              }
+              navigation.push("ProductDetail", { productId: lookupMatch.id });
+              setLookupCode("");
+            }}
+          />
           {lookupMatch ? (
             <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>
               Match: {lookupMatch.name} • {lookupMatch.sku ?? "No SKU"} • {lookupMatch.barcode ?? "No barcode"}
@@ -228,7 +215,7 @@ export function ProductDetailScreen() {
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{currentProduct.sku ?? "No SKU"} · {currentProduct.barcode ?? "No barcode"}</Text>
             </View>
-            <Badge label={businessConfig.capabilities.inventory ? (outOfStock ? "Out of stock" : lowStock ? "Low stock" : "Healthy") : "Available"} tone={businessConfig.capabilities.inventory && (outOfStock || lowStock) ? "danger" : "success"} />
+            <Badge label={businessConfig.capabilities.inventory ? (outOfStock ? "Out of stock" : lowStock ? "Low stock" : "Healthy") : "Available"} tone={businessConfig.capabilities.inventory ? outOfStock ? "danger" : lowStock ? "warning" : "success" : "success"} />
           </View>
           <Text style={{ color: tokens.colors.primaryStrong, fontSize: 20, lineHeight: 26, fontWeight: "800" }} adjustsFontSizeToFit numberOfLines={1}>{formatMoney(currentProduct.sellingPrice, business?.currency)}</Text>
           {businessConfig.capabilities.inventory ? <View style={{ flexDirection: "row", gap: 12, paddingVertical: 9, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
@@ -257,7 +244,7 @@ export function ProductDetailScreen() {
           </View>
         </Card>
 
-        {businessConfig.capabilities.inventory ? <Card style={{ gap: 9, padding: 14 }}>
+        {businessConfig.capabilities.inventory ? <View style={{ gap: 9, paddingTop: 12, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Stock history</Text>
           {historyLoading ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
@@ -282,9 +269,9 @@ export function ProductDetailScreen() {
           ) : (
             <Text style={{ color: tokens.colors.textSecondary }}>No stock movements yet.</Text>
           )}
-        </Card> : null}
+        </View> : null}
 
-        <Card style={{ gap: 9, padding: 14 }}>
+        <View style={{ gap: 9, paddingTop: 12, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Sales history</Text>
           {historyLoading ? (
             <View style={{ alignItems: "center", gap: 10, paddingVertical: 12 }}>
@@ -307,7 +294,7 @@ export function ProductDetailScreen() {
           ) : (
             <Text style={{ color: tokens.colors.textSecondary }}>No sales history yet.</Text>
           )}
-        </Card>
+        </View>
       </AppScrollView>
 
       <BarcodeScannerModal

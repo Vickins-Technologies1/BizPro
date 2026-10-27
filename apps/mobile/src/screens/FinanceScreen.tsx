@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
@@ -218,7 +218,7 @@ export function FinanceScreen() {
 
   const hasContent =
     Boolean(overview) &&
-    (overview!.incomeTotal > 0 || overview!.expensesTotal > 0 || overview!.invoiceCount > 0 || overview!.creditNoteCount > 0 || payments.length > 0 || bankAccounts.length > 0 || pettyCash.length > 0);
+    (overview!.incomeTotal !== 0 || overview!.expensesTotal !== 0 || overview!.profitLossTotal !== 0 || overview!.invoiceCount > 0 || overview!.creditNoteCount > 0 || payments.length > 0 || bankAccounts.length > 0 || pettyCash.length > 0);
 
   if (!canManageExpenses && !canViewReports) {
     return (
@@ -248,25 +248,28 @@ export function FinanceScreen() {
         />
 
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 10, padding: 12 }}>
+        <View style={{ gap: 9, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Finance overview</Text>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.7, textTransform: "uppercase" }}>Reporting period</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{rangeLabel}</Text>
             </View>
-            <Ionicons name="calendar-outline" size={18} color={tokens.colors.icon} />
+            <Pressable onPress={() => setPickerVisible(true)} accessibilityRole="button" accessibilityLabel="Choose custom reporting dates" style={{ minHeight: 38, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}>
+              <Ionicons name="calendar-outline" size={15} color={tokens.colors.icon} />
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "700" }}>Custom</Text>
+            </Pressable>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 7 }} accessibilityLabel="Finance reporting periods">
             {([
               ["today", "Today"],
-              ["week", "This Week"],
-              ["month", "This Month"],
-              ["year", "This Year"]
+              ["week", "7 days"],
+              ["month", "This month"],
+              ["year", "Year to date"]
             ] as Array<[Exclude<Filter, "custom">, string]>).map(([filter, label]) => (
               <Tag key={filter} label={label} tone="primary" selected={activeFilter === filter} onPress={() => setActiveFilter(filter)} />
             ))}
-            <Tag label="Custom Range" tone="warning" selected={activeFilter === "custom"} onPress={() => setPickerVisible(true)} />
-          </View>
+            {activeFilter === "custom" ? <Tag label="Custom range" tone="primary" selected onPress={() => setPickerVisible(true)} /> : null}
+          </ScrollView>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton title="Export PDF" variant="secondary" onPress={exportPdf} />
@@ -276,7 +279,7 @@ export function FinanceScreen() {
             </View>
           </View>
           {error ? <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>{error}</Text> : null}
-        </Card>
+        </View>
 
         {loading && !overview ? (
           <View style={{ gap: 16 }}>
@@ -329,20 +332,20 @@ export function FinanceScreen() {
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
               <View style={{ flexDirection: "row", gap: 14 }}>
                 <FinanceMetric label="Payments received" value={formatMoney(overview?.paymentTotal ?? 0, business?.currency)} />
-                <FinanceMetric label="Outstanding invoices" value={formatMoney(overview?.invoiceTotal ?? 0, business?.currency)} tone="danger" />
+                <FinanceMetric label="Receivables*" value={formatMoney(overview?.invoiceTotal ?? 0, business?.currency)} tone="danger" />
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
               <View style={{ flexDirection: "row", gap: 14 }}>
                 <FinanceMetric label="Tax" value={formatMoney(overview?.taxTotal ?? 0, business?.currency)} />
-                <FinanceMetric label="Petty cash" value={formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)} />
+                <FinanceMetric label="Petty cash movement" value={formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)} />
               </View>
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, lineHeight: 14 }}>*Cash flow follows the existing overview formula, including payments, expenses, and petty cash movement.</Text>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, lineHeight: 14 }}>Cash flow follows the existing overview formula: period payments less period expenses plus petty-cash movement. *Receivables deduplicate linked sale/invoice balances and subtract standalone payments for this period.</Text>
             </Card>
 
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Invoices</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Invoice records</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>
-                {overview?.invoiceCount ?? 0} open invoices totaling {formatMoney(overview?.invoiceTotal ?? 0, business?.currency)}.
+                {overview?.invoiceCount ?? 0} invoices issued in this period. Receivable total is summarized above and also includes unpaid sales.
               </Text>
               {invoices.length ? (
                 invoices.map((invoice) => (
@@ -449,9 +452,9 @@ export function FinanceScreen() {
             </Card>
 
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Petty cash</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Petty cash activity</Text>
               <Text style={{ color: tokens.colors.textSecondary }}>
-                Current petty cash balance: {formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)}.
+                Net movement for the selected period: {formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)}.
               </Text>
               {pettyCash.length ? (
                 pettyCash.map((entry) => (

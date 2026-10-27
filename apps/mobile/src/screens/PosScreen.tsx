@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { resolveBusinessTypeConfig } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
 import { AppScrollView, Badge, Card, Dropdown, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
-import { MetricSummary, SectionHeader } from "@/components/DesignSystem";
+import { SectionHeader } from "@/components/DesignSystem";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
@@ -469,30 +469,41 @@ export function PosScreen() {
       />
 
       <AppScrollView refreshing={refreshing} onRefresh={refreshSales} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingBottom: 9, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }} numberOfLines={1}>{businessConfig.workflow.headline}</Text>
-            <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{pendingSync ? `${pendingSync} transaction${pendingSync === 1 ? "" : "s"} waiting to sync` : syncMessage || "All transactions synced"}</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{businessConfig.workflow.headline}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Ionicons name={pendingSync ? "cloud-upload-outline" : "cloud-done-outline"} size={13} color={pendingSync ? tokens.colors.warning : tokens.colors.success} />
+              <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{pendingSync ? `${pendingSync} waiting to sync` : syncMessage || "All transactions synced"}</Text>
+            </View>
           </View>
-          <PrimaryButton title={primaryAction} iconLeft="add" onPress={() => setModalVisible(true)} style={{ minHeight: 42, paddingHorizontal: 13 }} />
+          <PrimaryButton title={primaryAction} iconLeft="add" onPress={() => setModalVisible(true)} style={{ minHeight: 40, paddingHorizontal: 12 }} />
         </View>
 
-        <View style={{ flexDirection: "row", gap: 18, paddingVertical: 9, borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
-          <MetricSummary label="Drafts" value={String(drafts.length)} />
-          <MetricSummary label="Pending sync" value={String(pendingSync)} tone={pendingSync ? "warning" : "neutral"} />
-          <MetricSummary label="Transactions" value={String(sales.length)} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, paddingVertical: 2 }}>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{sales.length} transactions</Text>
+          <View style={{ flexDirection: "row", gap: 14 }}>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{drafts.length} drafts</Text>
+            {pendingSync > 0 ? <Text style={{ color: tokens.colors.warning, fontSize: 11, fontWeight: "700" }}>{pendingSync} pending</Text> : null}
+          </View>
         </View>
 
         <InputField label="Search transactions" value={search} onChangeText={setSearch} placeholder="Receipt, customer, payment method" leftAccessory={<Ionicons name="search-outline" size={18} color={tokens.colors.textMuted} />} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 7 }} accessibilityLabel="Transaction status filters">
           {([{ key: "all", label: "All" }, { key: "open", label: "Outstanding" }, { key: "paid", label: "Paid" }] as const).map((filter) => (
-            <Pressable key={filter.key} onPress={() => setStatusFilter(filter.key)} accessibilityRole="button" accessibilityState={{ selected: statusFilter === filter.key }}>
-              <Badge label={filter.label} tone={statusFilter === filter.key ? "primary" : "success"} />
+            <Pressable
+              key={filter.key}
+              onPress={() => setStatusFilter(filter.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: statusFilter === filter.key }}
+              style={{ minHeight: 34, justifyContent: "center", paddingHorizontal: 12, borderRadius: 18, backgroundColor: statusFilter === filter.key ? tokens.colors.surfaceAlt : tokens.colors.surface, borderWidth: 1, borderColor: statusFilter === filter.key ? tokens.colors.primary : tokens.colors.border }}
+            >
+              <Text style={{ color: statusFilter === filter.key ? tokens.colors.primaryStrong : tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>{filter.label}</Text>
             </Pressable>
           ))}
         </ScrollView>
 
-        <Card style={{ gap: 8, padding: 10 }}>
+        <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <Pressable onPress={() => setShowDrafts((visible) => !visible)} accessibilityRole="button" accessibilityState={{ expanded: showDrafts }} style={{ minHeight: 42, flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Ionicons name="file-tray-full-outline" size={18} color={tokens.colors.icon} />
             <Text style={{ flex: 1, color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{businessConfig.workspace.primaryEntity} drafts</Text>
@@ -521,8 +532,8 @@ export function PosScreen() {
                 <View style={{ flex: 1 }}><PrimaryButton title="Clear all" variant="secondary" onPress={() => Alert.alert("Clear all drafts?", "All saved sale and return drafts will be deleted.", [{ text: "Cancel", style: "cancel" }, { text: "Clear drafts", style: "destructive", onPress: async () => { await clearPosDrafts(); await refreshDrafts(); } }])} /></View>
               </View>
             </View>
-          ) : <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>No saved drafts.</Text> : null}
-        </Card>
+          ) : <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, paddingBottom: 10 }}>No saved drafts.</Text> : null}
+        </View>
 
         <SectionHeader title={businessConfig.workspace.activityLabel} description={`${filteredSales.length} shown · ${sales.length} total`} />
         {filteredSales.length ? (
@@ -629,14 +640,9 @@ export function PosScreen() {
                   <Pressable
                     key={product.id}
                     onPress={() => addToCart(product.id)}
-                    style={{
-                      padding: 9,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: tokens.colors.border,
-                      backgroundColor: tokens.colors.surfaceAlt,
-                      gap: 3
-                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${product.name}, ${formatMoney(product.sellingPrice, business?.currency ?? "KES")}`}
+                    style={({ pressed }) => ({ paddingVertical: 9, borderTopWidth: 1, borderColor: tokens.colors.border, gap: 3, opacity: pressed ? 0.72 : 1 })}
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                       <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900", flex: 1 }} numberOfLines={1}>{product.name}</Text>

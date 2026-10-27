@@ -29,9 +29,9 @@ import {
   StatCard,
   Tag
 } from "@/components/Primitives";
-import { ChartContainer, MetricSummary } from "@/components/DesignSystem";
-import { lightTokens, tokens, type ThemeTokens } from "@/theme/tokens";
-import { useThemeMode, useThemeTokens } from "@/theme";
+import { ChartContainer, ListRow, MetricSummary, SectionHeader } from "@/components/DesignSystem";
+import { tokens, type ThemeTokens } from "@/theme/tokens";
+import { useThemeTokens } from "@/theme";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
 import { getEnterpriseAnalytics, getIndustryDomainSummary, getPaymentBreakdown, getReportsSummary, getTopProducts, listBusinessOperationsOfflineFirst, listEmployees, listNotificationsPage } from "@/services/apiClient";
@@ -55,7 +55,6 @@ export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { openMore } = useMoreDrawer();
   const { width } = useWindowDimensions();
-  const isLightTheme = useThemeMode() === "light";
   const theme = useThemeTokens();
   const dashboardStyles = React.useMemo(() => createStyles(theme), [theme]);
   const styles = dashboardStyles;
@@ -226,7 +225,6 @@ export function DashboardScreen() {
   const activeBranchLabel = resolveBranchLabel(branches, selectedBranchId, user?.role);
   const firstName = getFirstName(user?.fullName);
   const isMobile = width < 700;
-  const metricWrapStyle = width >= 900 ? [styles.metricWrap, styles.metricWrapWide] : styles.metricWrap;
   const hasContent =
     (Boolean(summary) || periodSales.length > 0) &&
     (Boolean(revenueTotal && revenueTotal > 0) ||
@@ -260,9 +258,9 @@ export function DashboardScreen() {
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.scrollContent}>
         <View style={styles.homeHeader}>
           <View style={styles.homeGreeting}>
-            <Text style={styles.homeGreetingText} numberOfLines={1}>Good {getGreeting()}, {firstName}</Text>
+            <Text style={styles.homeGreetingText} numberOfLines={1}>{business?.name ?? `Good ${getGreeting()}, ${firstName}`}</Text>
             <Text style={styles.homeShopText} numberOfLines={1}>
-              {business?.name ? `${business.name} · ${activeBranchLabel}` : activeBranchLabel} · <Text style={{ color: pendingSync ? tokens.colors.warning : tokens.colors.success }}>{pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
+              {firstName} · {activeBranchLabel} · <Text style={{ color: syncing || pendingSync ? tokens.colors.warning : tokens.colors.success }}>{syncing ? "Syncing…" : pendingSync ? `${pendingSync} pending` : "Synced"}</Text>
             </Text>
           </View>
           <View style={styles.headerActions}>
@@ -313,7 +311,7 @@ export function DashboardScreen() {
 
         <View style={styles.primarySales}>
           <View style={{ flex: 1, gap: 5 }}>
-            <Text style={styles.primarySalesLabel}>{businessConfig.workspace.activityLabel.toUpperCase()} · {currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Selected period"}</Text>
+            <Text style={styles.primarySalesLabel}>{businessConfig.workspace.activityLabel.toUpperCase()}</Text>
             <Text style={styles.primarySalesValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{revenueTotal === null ? "—" : formatMoney(revenueTotal, business?.currency)}</Text>
             <View style={styles.primaryMetaRow}>
               <Text style={styles.primarySalesMeta}>{salesCount} {businessConfig.workspace.primaryEntity.toLowerCase()}{salesCount === 1 ? "" : "s"}</Text>
@@ -341,18 +339,11 @@ export function DashboardScreen() {
         )}
 
         {loading && !summary && !periodSales.length ? (
-          <View style={{ gap: 14 }}>
-            <SkeletonBlock height={210} radius={28} />
-            <View style={styles.metricGrid}>
-              {Array.from({ length: 4 }).map((_, index) => (
-              <View key={index} style={metricWrapStyle}>
-                  <SkeletonBlock height={132} radius={24} />
-                </View>
-              ))}
-            </View>
-            <SkeletonBlock height={300} radius={28} />
-            <SkeletonBlock height={170} radius={28} />
-            <SkeletonBlock height={220} radius={28} />
+          <View style={{ gap: 12 }}>
+            <SkeletonBlock height={76} radius={14} />
+            <SkeletonBlock height={78} radius={12} />
+            <SkeletonBlock height={176} radius={14} />
+            <SkeletonBlock height={112} radius={12} />
           </View>
         ) : error && !summary && !periodSales.length ? (
           <ErrorState
@@ -379,16 +370,72 @@ export function DashboardScreen() {
           <>
             <View style={styles.compactMetrics} accessibilityLabel="Key business metrics">
               {[
-                { label: "Transactions", value: String(salesCount) },
-                ...(summary?.grossProfit !== undefined ? [{ label: "Gross profit", value: formatMoney(summary.grossProfit, business?.currency) }] : []),
-                ...(businessConfig.capabilities.products ? [{ label: "Stock value", value: formatMoney(inventoryValue, business?.currency) }] : []),
-                ...(businessConfig.capabilities.products && summary ? [{ label: "Low stock", value: String(lowStockCount), detail: lowStockCount > 0 ? "Needs attention" : undefined }] : []),
-                ...(businessConfig.capabilities.customers ? [{ label: businessConfig.terminology.customers, value: String(customerCount) }] : []),
-                ...(summary?.debtTotal !== undefined && summary.debtTotal > 0 ? [{ label: "Outstanding", value: formatMoney(summary.debtTotal, business?.currency) }] : [])
+                { label: "Transactions", value: String(salesCount), onPress: hasPermission(user, "viewReports") ? () => navigation.navigate("Reports") : undefined },
+                ...(summary?.grossProfit !== undefined ? [{ label: "Gross profit", value: formatMoney(summary.grossProfit, business?.currency), onPress: hasPermission(user, "viewReports") ? () => navigation.navigate("Reports") : undefined }] : []),
+                ...(businessConfig.capabilities.products && lowStockCount > 0
+                  ? [{ label: "Low stock", value: String(lowStockCount), detail: "Needs attention", onPress: hasPermission(user, "manageInventory") || hasPermission(user, "addProducts") ? () => navigation.navigate("Catalog") : undefined }]
+                  : businessConfig.capabilities.products ? [{ label: "Stock value", value: formatMoney(inventoryValue, business?.currency), onPress: hasPermission(user, "manageInventory") || hasPermission(user, "addProducts") ? () => navigation.navigate("Catalog") : undefined }] : []),
+                ...(summary?.debtTotal !== undefined && summary.debtTotal > 0
+                  ? [{ label: "Outstanding", value: formatMoney(summary.debtTotal, business?.currency), onPress: hasPermission(user, "viewReports") || hasPermission(user, "manageExpenses") ? () => navigation.navigate("Finance") : undefined }]
+                  : businessConfig.capabilities.customers ? [{ label: businessConfig.terminology.customers, value: String(customerCount), onPress: hasPermission(user, "manageCustomers") ? () => navigation.navigate("Customers") : undefined }] : [])
               ].slice(0, 4).map((metric) => (
-                <MetricSummary key={metric.label} label={metric.label} value={metric.value} {...(metric.detail ? { detail: metric.detail } : {})} tone={metric.detail ? "warning" : "neutral"} />
+                <Pressable
+                  key={metric.label}
+                  disabled={!metric.onPress}
+                  onPress={metric.onPress}
+                  accessibilityRole={metric.onPress ? "button" : undefined}
+                  accessibilityLabel={`${metric.label}: ${metric.value}`}
+                  style={({ pressed }) => [styles.metricItem, pressed && styles.metricItemPressed]}
+                >
+                  <MetricSummary label={metric.label} value={metric.value} {...(metric.detail ? { detail: metric.detail } : {})} tone={metric.detail ? "warning" : "neutral"} />
+                </Pressable>
               ))}
             </View>
+
+
+            <View style={styles.quickActionsSection}>
+              <SectionHeader title="Quick actions" actionLabel="More" onAction={openMore} />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionGrid}>
+                {availableQuickActions({
+                  primaryAction: businessConfig.workspace.primaryAction,
+                  customerLabel: businessConfig.terminology.customers,
+                  primaryIcon: businessConfig.operatingModel === "commerce" ? "scan-outline" : businessConfig.capabilities.appointments ? "calendar-outline" : businessConfig.capabilities.workOrders ? "construct-outline" : "briefcase-outline",
+                  canViewReports: hasPermission(user, "viewReports"),
+                  onNewSale: () => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS"),
+                  onAddCustomer: () => navigation.navigate("Customers"),
+                  onInventory: () => navigation.navigate("Catalog"),
+                  onFinance: () => navigation.navigate("Finance"),
+                  onReports: () => navigation.navigate("Reports"),
+                  onPurchasing: () => (navigation.getParent?.() ?? navigation).navigate("PurchaseOrders"),
+                  onSuppliers: () => (navigation.getParent?.() ?? navigation).navigate("Suppliers"),
+                  onBranchTransfer: () => (navigation.getParent?.() ?? navigation).navigate("StockTransfers"),
+                  isRetail,
+                  canCreateSales: hasPermission(user, "createSales"),
+                  canManageCustomers: businessConfig.capabilities.customers && hasPermission(user, "manageCustomers"),
+                  canManageInventory: businessConfig.capabilities.products && (hasPermission(user, "manageInventory") || hasPermission(user, "addProducts")),
+                  canManageExpenses: hasPermission(user, "manageExpenses"),
+                  canManagePurchasing: isRetail && hasPermission(user, "manageInventory"),
+                  canManageSuppliers: isRetail && hasPermission(user, "manageSuppliers"),
+                  canManageTransfers: isRetail && hasPermission(user, "manageInventory")
+                }).map((action) => (
+                  <QuickAction key={action.label} {...action} />
+                ))}
+              </ScrollView>
+            </View>
+
+            <ChartContainer
+              title={businessConfig.operatingModel === "commerce" ? "Revenue overview" : `${businessConfig.workspace.activityLabel} overview`}
+              description={currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Selected period"}
+              legend={<InfoIcon message="Revenue is grouped into intervals within the selected reporting period. Select a point for its amount." />}
+              style={styles.chartCard}
+            >
+              {trendValues.some((value) => value > 0) ? <MiniLineChart data={trendValues} labels={trendLabels} tone={tokens.colors.primaryStrong} currency={business?.currency ?? "KES"} /> : <Text style={styles.emptyCopy}>{summary?.salesTotal === 0 ? "No revenue recorded in this period yet." : "Trend details are not available for this period."}</Text>}
+
+              <View style={styles.chartFooter}>
+                {summary?.grossProfit !== undefined ? <InfoPill label="Gross profit" value={formatMoney(summary.grossProfit, business?.currency)} tone="success" /> : null}
+                {salesCount > 0 && revenueTotal !== null ? <InfoPill label="Avg. transaction" value={formatMoney(revenueTotal / salesCount, business?.currency)} tone="primary" /> : null}
+              </View>
+            </ChartContainer>
 
             <IndustryDashboardPanel
               config={businessConfig}
@@ -403,87 +450,37 @@ export function DashboardScreen() {
               employeesCount={employeesCount ?? analytics?.summary.staffCount ?? 0}
               outstandingBalance={summary?.debtTotal ?? 0}
               upcomingOperationCount={operations.filter((operation) => operation.scheduledAt && new Date(operation.scheduledAt).getTime() >= Date.now()).length}
-              topProducts={topProducts}
+              canOpenOperations={["manageOperations", "manageAppointments", "manageBookings", "manageTables", "manageWorkOrders", "managePharmacy", "dispenseMedicines"].some((permission) => hasPermission(user, permission as Parameters<typeof hasPermission>[1]))}
+              canOpenCatalog={businessConfig.capabilities.products && (hasPermission(user, "manageInventory") || hasPermission(user, "addProducts"))}
               onOperations={() => navigation.navigate("Operations")}
               onCatalog={() => navigation.navigate("Catalog")}
             />
 
-            <ChartContainer
-              title={businessConfig.operatingModel === "commerce" ? "Revenue overview" : `${businessConfig.workspace.activityLabel} overview`}
-              description={currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Selected period"}
-              legend={<InfoIcon message="Revenue is grouped into intervals within the selected reporting period. Select a point for its amount." />}
-              style={styles.chartCard}
-            >
 
-              <View style={styles.chartSummaryRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.chartValue}>{revenueTotal === null ? "—" : formatMoney(revenueTotal, business?.currency)}</Text>
-                  <Text style={styles.chartCaption}>{businessConfig.workspace.activityLabel} in this period</Text>
-                </View>
-                {comparisonPercent !== null ? <Badge label={`${comparisonPercent >= 0 ? "↑" : "↓"} ${formatPercent(Math.abs(comparisonPercent))}`} tone={comparisonPercent >= 0 ? "success" : "danger"} /> : null}
-              </View>
 
-              {trendValues.some((value) => value > 0) ? <MiniLineChart data={trendValues} labels={trendLabels} tone={tokens.colors.primaryStrong} currency={business?.currency ?? "KES"} /> : <Text style={styles.emptyCopy}>No revenue recorded in this period yet.</Text>}
 
-              <View style={styles.chartFooter}>
-                {summary?.grossProfit !== undefined ? <InfoPill label="Gross profit" value={formatMoney(summary.grossProfit, business?.currency)} tone="success" /> : null}
-                {salesCount > 0 && revenueTotal !== null ? <InfoPill label="Avg. transaction" value={formatMoney(revenueTotal / salesCount, business?.currency)} tone="primary" /> : null}
-              </View>
-            </ChartContainer>
 
-            <Card style={[styles.quickCard, isLightTheme && styles.lightCard]}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>Quick Actions</Text>
-                  <Text style={styles.sectionSubtitle}>Common actions</Text>
-                </View>
-                <Pressable onPress={openMore} accessibilityRole="button">
-                  <Text style={styles.viewAllText}>View All</Text>
-                </Pressable>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionGrid}>
-                {availableQuickActions({
-                  primaryAction: businessConfig.workspace.primaryAction,
-                  customerLabel: businessConfig.terminology.customers,
-                  primaryIcon: businessConfig.operatingModel === "commerce" ? "scan-outline" : businessConfig.capabilities.appointments ? "calendar-outline" : businessConfig.capabilities.workOrders ? "construct-outline" : "briefcase-outline",
-                  onNewSale: () => navigation.navigate(businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders ? "Operations" : "POS"),
-                  onAddCustomer: () => navigation.navigate("Customers"),
-                  onInventory: () => navigation.navigate("Catalog"),
-                  onFinance: () => navigation.navigate("Finance"),
-                  onPurchasing: () => (navigation.getParent?.() ?? navigation).navigate("PurchaseOrders"),
-                  onSuppliers: () => (navigation.getParent?.() ?? navigation).navigate("Suppliers"),
-                  onBranchTransfer: () => (navigation.getParent?.() ?? navigation).navigate("StockTransfers"),
-                  onMore: openMore,
-                  isRetail,
-                  canCreateSales: hasPermission(user, "createSales"),
-                  canManageCustomers: hasPermission(user, "manageCustomers"),
-                  canManageInventory: hasPermission(user, "manageInventory"),
-                  canManageExpenses: hasPermission(user, "manageExpenses"),
-                  canManagePurchasing: isRetail && hasPermission(user, "manageInventory"),
-                  canManageSuppliers: isRetail && hasPermission(user, "manageSuppliers"),
-                  canManageTransfers: isRetail && hasPermission(user, "manageInventory")
-                }).map((action) => (
-                  <QuickAction key={action.label} {...action} />
-                ))}
-              </ScrollView>
-            </Card>
-
-            <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={{ flex: 1 }}><Text style={styles.sectionTitle}>Recent activity</Text><Text style={styles.sectionSubtitle}>Latest transactions and operations</Text></View>
-                <Pressable onPress={() => navigation.navigate("Reports")} accessibilityRole="button"><Text style={styles.viewAllText}>Reports</Text></Pressable>
-              </View>
+            <View style={styles.activitySection}>
+              <SectionHeader title="Recent activity" {...(hasPermission(user, "viewReports") ? { actionLabel: "Reports", onAction: () => navigation.navigate("Reports") } : {})} />
               {recentActivity.length ? recentActivity.map((item) => (
-                <View key={item.id} style={styles.activityRow}>
-                  <View style={styles.activityIcon}><Ionicons name={item.kind === "sale" ? "receipt-outline" : "briefcase-outline"} size={17} color={tokens.colors.primaryStrong} /></View>
-                  <View style={{ flex: 1, minWidth: 0 }}><Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text><Text style={styles.activityMeta} numberOfLines={1}>{item.subtitle}</Text></View>
-                  <View style={{ alignItems: "flex-end" }}><Text style={styles.activityAmount}>{item.amount === null ? item.status : formatMoney(item.amount, business?.currency)}</Text>{item.amount !== null ? <Text style={styles.activityMeta}>{item.status}</Text> : null}</View>
-                </View>
+                <ListRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  leading={<View style={styles.activityIcon}><Ionicons name={item.kind === "sale" ? "receipt-outline" : "briefcase-outline"} size={17} color={tokens.colors.primaryStrong} /></View>}
+                  trailing={(
+                    <View style={styles.activityTrailing}>
+                      <Text style={styles.activityAmount}>{item.amount === null ? item.status : formatMoney(item.amount, business?.currency)}</Text>
+                      {item.amount !== null ? <Text style={styles.activityMeta}>{item.status}</Text> : null}
+                    </View>
+                  )}
+                  style={styles.activityListRow}
+                />
               )) : <Text style={styles.emptyCopy}>New sales and operational activity will appear here.</Text>}
-            </Card>
+            </View>
 
             {isRetail && branches.length > 1 ? (
-              <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
+              <Card style={[styles.statusCard]}>
                 <View style={styles.sectionHeadingRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>Branch Performance</Text>
@@ -505,7 +502,7 @@ export function DashboardScreen() {
               </Card>
             ) : null}
 
-            {businessConfig.capabilities.products ? <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+            {businessConfig.capabilities.products ? <Card style={[styles.productsCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>{businessConfig.workspace.catalogMode === "products" ? "Top Products" : `Top ${businessConfig.navigation.catalogLabel}`}</Text>
@@ -531,7 +528,7 @@ export function DashboardScreen() {
                 <Text style={styles.emptyCopy}>No {businessConfig.navigation.catalogLabel.toLowerCase()} activity yet. {businessConfig.workspace.activityLabel} will populate this list automatically.</Text>
               )}
             </Card> : (
-              <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+              <Card style={[styles.productsCard]}>
                 <View style={styles.sectionHeadingRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.sectionTitle}>{businessConfig.workspace.activityLabel} Pipeline</Text>
@@ -544,7 +541,7 @@ export function DashboardScreen() {
               </Card>
             )}
 
-            {paymentBreakdown.length ? <Card style={[styles.statusCard, isLightTheme && styles.lightCard]}>
+            {paymentBreakdown.length ? <Card style={[styles.statusCard]}>
               <View style={styles.sectionHeadingRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionTitle}>Payment methods</Text>
@@ -612,7 +609,6 @@ function DashboardFilters({
   onBranchChange: (branchId: string) => void;
 }) {
   const styles = useDashboardStyles();
-  const isLightTheme = useThemeMode() === "light";
   const periodOptions = [
     { label: "Today", value: "today" },
     { label: "This week", value: "week" },
@@ -628,11 +624,11 @@ function DashboardFilters({
   const selectedBranchValue = selectedBranchId ?? "all";
 
   return (
-    <View style={[styles.filterControls, isLightTheme && styles.lightCard, compact && styles.filterControlsCompact]}>
+    <View style={[styles.filterControls, compact && styles.filterControlsCompact]}>
       {compact ? (
         <View style={styles.filterControlGroup}>
           <View style={styles.filterLabelRow}>
-            <Text style={[styles.filterLabel, isLightTheme && styles.lightTextSecondary]}>Period</Text>
+            <Text style={[styles.filterLabel]}>Period</Text>
             <InfoIcon message="Choose the date window used for dashboard metrics and reports." />
           </View>
           <View style={styles.filterTagRow}>
@@ -659,7 +655,7 @@ function DashboardFilters({
             <Dropdown label="Branch" value={selectedBranchValue} options={branchOptions} onChange={onBranchChange} />
           ) : null}
           <View style={styles.filterRangeBadge}>
-            <Text style={[styles.filterRangeLabel, isLightTheme && styles.lightTextSecondary]}>Showing</Text>
+            <Text style={[styles.filterRangeLabel]}>Showing</Text>
             <Badge label={currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading"} tone="primary" />
           </View>
         </View>
@@ -667,7 +663,7 @@ function DashboardFilters({
       {compact && canChooseBranch ? (
         <View style={styles.filterControlGroup}>
           <View style={styles.filterLabelRow}>
-            <Text style={[styles.filterLabel, isLightTheme && styles.lightTextSecondary]}>Branch</Text>
+            <Text style={[styles.filterLabel]}>Branch</Text>
             <InfoIcon message="Limit dashboard data to one branch or view the consolidated business." />
           </View>
           <View style={styles.filterTagRow}>
@@ -733,7 +729,8 @@ function IndustryDashboardPanel({
   employeesCount,
   outstandingBalance,
   upcomingOperationCount,
-  topProducts,
+  canOpenOperations,
+  canOpenCatalog,
   onOperations,
   onCatalog
 }: {
@@ -749,12 +746,12 @@ function IndustryDashboardPanel({
   employeesCount: number;
   outstandingBalance: number;
   upcomingOperationCount: number;
-  topProducts: ReportRow[];
+  canOpenOperations: boolean;
+  canOpenCatalog: boolean;
   onOperations: () => void;
   onCatalog: () => void;
 }) {
   const styles = useDashboardStyles();
-  const isLightTheme = useThemeMode() === "light";
   const currency = business?.currency ?? undefined;
   const model = config.operatingModel;
   const isFood = model === "service" && config.capabilities.kitchen;
@@ -784,20 +781,17 @@ function IndustryDashboardPanel({
         ? [
             ["Active stays", activeOperationCount.toString()],
             ["Upcoming arrivals", upcomingOperationCount.toString()],
-            ["Guest balances", formatMoney(outstandingBalance, currency)],
-            ["Available rooms", "—"]
+            ["Guest balances", formatMoney(outstandingBalance, currency)]
           ]
         : isAutomotive
           ? [
               ["Active job cards", activeOperationCount.toString()],
-              ["Vehicles in service", activeOperationCount.toString()],
               ["Completed jobs", completedOperationCount.toString()],
               ["Technicians", employeesCount.toString()]
             ]
           : isProfessional
             ? [
                 ["Active matters/projects", activeOperationCount.toString()],
-                ["Billable work", activeOperationCount.toString()],
                 ["Clients", customerCount.toString()],
                 ["Upcoming deadlines", upcomingOperationCount.toString()]
               ]
@@ -805,8 +799,7 @@ function IndustryDashboardPanel({
               ? [
                   [isPharmacy ? "Medicine sales" : "Patients", isPharmacy ? formatMoney(revenueTotal, currency) : customerCount.toString()],
                   [isPharmacy ? "Low stock" : "Appointments", isPharmacy ? lowStockCount.toString() : activeOperationCount.toString()],
-                  [isPharmacy ? "Suppliers" : "Visits", isPharmacy ? "—" : completedOperationCount.toString()],
-                  [isPharmacy ? "Expiring medicines" : "Outstanding billing", isPharmacy ? "—" : formatMoney(outstandingBalance, currency)]
+                  ...(!isPharmacy ? [["Visits", completedOperationCount.toString()] as [string, string], ["Outstanding billing", formatMoney(outstandingBalance, currency)] as [string, string]] : [])
                 ]
               : [
                 [config.workspace.activityLabel, activeOperationCount.toString()],
@@ -822,31 +815,24 @@ function IndustryDashboardPanel({
         ? `${formatMoney(outstandingBalance, currency)} remains to be billed or collected.`
         : upcomingOperationCount > 0
           ? `${upcomingOperationCount} upcoming ${config.workspace.activityLabel.toLowerCase()} scheduled.`
-          : "No operational alerts right now.";
+          : null;
 
   return (
-    <Card style={[styles.productsCard, isLightTheme && styles.lightCard]}>
+    <Card style={styles.productsCard}>
       <View style={styles.sectionHeadingRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.sectionTitle}>{title}</Text>
           <Text style={styles.sectionSubtitle}>{subtitle}</Text>
         </View>
-        <Badge label={formatMoney(revenueTotal, currency)} tone="primary" />
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {items.map(([label, value]) => <InfoPill key={label} label={label} value={value} tone="primary" />)}
       </View>
-      <View style={{ padding: 10, borderRadius: 12, backgroundColor: `${tokens.colors.warning}12` }}>
-        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>{alert}</Text>
-      </View>
-      {topProducts.length ? <View style={{ gap: 7 }}>
-        <Text style={styles.sectionSubtitle}>{config.workspace.catalogMode === "menu" ? "Popular menu items" : config.workspace.catalogMode === "services" ? "Popular services" : config.operatingModel === "work_order" ? "Top parts" : "Recent activity"}</Text>
-        {topProducts.slice(0, 3).map((item) => <View key={item.productId} style={styles.statusRow}><Text style={styles.statusLabel}>{item.productName}</Text><Text style={styles.statusValue}>{item.quantity}</Text></View>)}
+      {alert ? <Text style={styles.industryAlert}>{alert}</Text> : null}
+      {canOpenOperations || canOpenCatalog ? <View style={{ flexDirection: "row", gap: 8 }}>
+        {canOpenOperations ? <PrimaryButton title={config.workspace.primaryAction} onPress={onOperations} /> : null}
+        {canOpenCatalog ? <PrimaryButton title={config.navigation.catalogLabel} variant="secondary" onPress={onCatalog} /> : null}
       </View> : null}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <PrimaryButton title={config.workspace.primaryAction} onPress={onOperations} />
-        <PrimaryButton title={config.navigation.catalogLabel} variant="secondary" onPress={onCatalog} />
-      </View>
     </Card>
   );
 }
@@ -918,10 +904,9 @@ function InfoPill({
   tone: "primary" | "success" | "warning" | "danger";
 }) {
   const styles = useDashboardStyles();
-  const isLightTheme = useThemeMode() === "light";
   return (
     <View style={styles.infoPill}>
-      <Text style={[styles.infoPillLabel, isLightTheme && styles.lightTextSecondary]}>{label}</Text>
+      <Text style={[styles.infoPillLabel]}>{label}</Text>
       <Text style={[styles.infoPillValue, { color: toneColor(tone) }]} numberOfLines={1}>
         {value}
       </Text>
@@ -942,13 +927,12 @@ function MiniLineChart({
 }) {
   const styles = useDashboardStyles();
   const { width } = useWindowDimensions();
-  const isLightTheme = useThemeMode() === "light";
   const [selectedIndex, setSelectedIndex] = React.useState(Math.max(data.length - 1, 0));
   React.useEffect(() => setSelectedIndex(Math.max(data.length - 1, 0)), [data.length, labels.join("|")]);
   const safeSelectedIndex = Math.min(selectedIndex, Math.max(0, data.length - 1));
-  const chartWidth = Math.max(190, width - 84);
+  const chartWidth = Math.max(180, width - 72);
   const plotWidth = chartWidth - 20;
-  const plotHeight = 118;
+  const plotHeight = 94;
   const max = Math.max(1, ...data);
   const min = Math.min(0, ...data);
   const points = data.map((value, index) => {
@@ -958,13 +942,13 @@ function MiniLineChart({
     return { x: x + 10, y: y + 12, value };
   });
   const selectedLabel = labels[safeSelectedIndex] ?? "Selected period";
-  const yValues = [max, Math.round(max * 0.66), Math.round(max * 0.33), 0].map((value) => formatCompactValue(value));
+  const yValues = [max, Math.round(max * 0.5), 0].map((value) => formatCompactMoney(value, currency));
 
   return (
     <View style={[styles.chartShell, { width: chartWidth }]} accessibilityRole="summary" accessibilityLabel={`Revenue trend with ${data.length} intervals. Selected ${selectedLabel}: ${formatMoney(data[safeSelectedIndex] ?? 0, currency)}.`}>
       <View style={styles.chartYAxis}>
         {yValues.map((label, index) => (
-          <Text key={`${label}-${index}`} style={[styles.chartYAxisLabel, isLightTheme && styles.lightTextSecondary]}>
+          <Text key={`${label}-${index}`} style={[styles.chartYAxisLabel]}>
             {label}
           </Text>
         ))}
@@ -973,14 +957,11 @@ function MiniLineChart({
       <View style={styles.chartCanvas}>
         <View style={styles.chartArea}>
           <View style={styles.chartGridLine} />
-          <View style={[styles.chartGridLine, { top: "33%" }]} />
-          <View style={[styles.chartGridLine, { top: "66%" }]} />
-
           {points[safeSelectedIndex] ? (
-            <View style={[styles.chartTooltip, isLightTheme && styles.lightCard]}>
-              <Text style={[styles.chartTooltipLabel, isLightTheme && styles.lightTextSecondary]}>{formatTrendLabel(selectedLabel)}</Text>
+            <View style={[styles.chartTooltip]}>
+              <Text style={[styles.chartTooltipLabel]}>{formatTrendLabel(selectedLabel)}</Text>
               <Text style={styles.chartTooltipMetric}>Revenue</Text>
-              <Text style={styles.chartTooltipValue}>{formatMoney(data[selectedIndex] ?? 0, currency)}</Text>
+              <Text style={styles.chartTooltipValue}>{formatMoney(data[safeSelectedIndex] ?? 0, currency)}</Text>
             </View>
           ) : null}
 
@@ -1032,8 +1013,8 @@ function MiniLineChart({
         </View>
 
         <View style={styles.chartLabelsRow}>
-          {labels.map((label) => (
-            <Text key={label} style={[styles.chartLabel, isLightTheme && styles.lightTextSecondary]}>
+          {labels.map((label, index) => (
+            <Text key={`${label}-${index}`} numberOfLines={1} style={[styles.chartLabel]}>
               {formatTrendLabel(label)}
             </Text>
           ))}
@@ -1131,7 +1112,7 @@ function buildSalesTrend(sales: Sale[], range: RangeState | null) {
     const bucket = buckets[index];
     if (bucket) bucket.value += sale.grandTotal;
   }
-  return buckets.map((bucket) => ({ label: format(new Date(bucket.from), count <= 6 && duration <= 14 * 86400000 ? "MMM d" : "MMM"), value: bucket.value }));
+  return buckets.map((bucket) => ({ label: format(new Date(bucket.from), count <= 6 && duration <= 62 * 86400000 ? "MMM d" : "MMM"), value: bucket.value }));
 }
 
 function buildRecentActivity(sales: Sale[], operations: BusinessOperation[]) {
@@ -1162,8 +1143,21 @@ function formatGrowth(value: number) {
 }
 
 function formatPercent(value: number) {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
+  return `${value.toFixed(1)}%`;
+}
+
+function formatCompactMoney(value: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+      notation: "compact",
+      maximumFractionDigits: 1
+    }).format(value);
+  } catch {
+    return formatCompactValue(value);
+  }
 }
 
 function formatCompactValue(value: number) {
@@ -1205,6 +1199,7 @@ function availableQuickActions(input: {
   canManageCustomers: boolean;
   canManageInventory: boolean;
   canManageExpenses: boolean;
+  canViewReports: boolean;
   isRetail: boolean;
   canManagePurchasing: boolean;
   canManageSuppliers: boolean;
@@ -1213,10 +1208,10 @@ function availableQuickActions(input: {
   onAddCustomer: () => void;
   onInventory: () => void;
   onFinance: () => void;
+  onReports: () => void;
   onPurchasing: () => void;
   onSuppliers: () => void;
   onBranchTransfer: () => void;
-  onMore: () => void;
 }) {
   return [
     input.canCreateSales
@@ -1226,7 +1221,7 @@ function availableQuickActions(input: {
       ? { label: `Add ${input.customerLabel.slice(0, -1) || input.customerLabel}`, icon: "person-add-outline" as const, tone: "success" as const, onPress: input.onAddCustomer }
       : null,
     input.canManageInventory
-      ? { label: input.isRetail ? "Stock adjustment" : "Inventory", icon: input.isRetail ? "create-outline" as const : "cube-outline" as const, tone: "warning" as const, onPress: input.onInventory }
+      ? { label: "Inventory", icon: "cube-outline" as const, tone: "warning" as const, onPress: input.onInventory }
       : null,
     input.canManagePurchasing
       ? { label: "Purchase stock", icon: "download-outline" as const, tone: "primary" as const, onPress: input.onPurchasing }
@@ -1240,7 +1235,9 @@ function availableQuickActions(input: {
     input.canManageExpenses
       ? { label: "Finance", icon: "wallet-outline" as const, tone: "danger" as const, onPress: input.onFinance }
       : null,
-    { label: "More", icon: "apps-outline" as const, tone: "primary" as const, onPress: input.onMore }
+    input.canViewReports
+      ? { label: "Reports", icon: "bar-chart-outline" as const, tone: "primary" as const, onPress: input.onReports }
+      : null
   ].filter(Boolean) as Array<{
     label: string;
     icon: keyof typeof Ionicons.glyphMap;
@@ -1350,18 +1347,11 @@ function withAlpha(hex: string, alpha: number) {
 function createStyles(theme: ThemeTokens) {
   const tokens = theme;
   return StyleSheet.create({
-    lightCard: {
-      backgroundColor: lightTokens.colors.surface,
-      borderColor: lightTokens.colors.border
-    },
-    lightTextSecondary: {
-      color: lightTokens.colors.textSecondary
-    },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 24,
-    gap: 16
+    gap: 12
   },
   homeHeader: {
     flexDirection: "row",
@@ -1371,18 +1361,19 @@ function createStyles(theme: ThemeTokens) {
   headerActions: { flexDirection: "row", alignItems: "center", gap: 2 },
   homeGreeting: {
     flex: 1,
+    minWidth: 0,
     gap: 3
   },
   homeGreetingText: {
     color: tokens.colors.text,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     letterSpacing: -0.25
   },
   homeShopText: {
     color: tokens.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17
+    fontSize: 11,
+    lineHeight: 15
   },
   primarySales: {
     flexDirection: "row",
@@ -1448,8 +1439,8 @@ function createStyles(theme: ThemeTokens) {
     textTransform: "uppercase"
   },
   iconButton: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
@@ -1655,48 +1646,35 @@ function createStyles(theme: ThemeTokens) {
     marginTop: 2
   },
   sectionMetaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
   compactMetrics: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
+    gap: 10,
+    paddingHorizontal: 2,
+    paddingVertical: 6,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: tokens.colors.border
   },
-  metricWrap: {
-    width: "48%"
+  metricItem: {
+    width: "48%",
+    minWidth: 0,
+    paddingVertical: 3
   },
-  metricWrapWide: {
-    width: "23.5%"
+  metricItemPressed: {
+    opacity: 0.72
   },
   chartCard: {
-    gap: 9,
-    borderRadius: 14
+    gap: 8,
+    borderRadius: 14,
+    padding: 12
   },
-  chartSummaryRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 12
-  },
-  chartValue: {
-    color: tokens.colors.text,
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: -0.5
-  },
-  chartCaption: {
+  industryAlert: {
     color: tokens.colors.textSecondary,
     fontSize: 11,
-    marginTop: 2
+    lineHeight: 16,
+    fontWeight: "600"
   },
   chartFooter: {
     flexDirection: "row",
@@ -1731,13 +1709,13 @@ function createStyles(theme: ThemeTokens) {
     alignItems: "stretch"
   },
   chartYAxis: {
-    width: 42,
+    width: 54,
     justifyContent: "space-between",
     paddingVertical: 12
   },
   chartYAxisLabel: {
     color: tokens.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700"
   },
   chartCanvas: {
@@ -1745,7 +1723,7 @@ function createStyles(theme: ThemeTokens) {
     gap: 10
   },
   chartArea: {
-    height: 152,
+    height: 124,
     borderRadius: 12,
     backgroundColor: tokens.colors.surfaceAlt,
     borderWidth: 1,
@@ -1807,16 +1785,17 @@ function createStyles(theme: ThemeTokens) {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 6,
-    paddingHorizontal: 8
+    paddingHorizontal: 2
   },
   chartLabel: {
     color: tokens.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700"
+    flex: 1,
+    textAlign: "center",
+    fontSize: 9,
+    fontWeight: "600"
   },
-  quickCard: {
-    gap: 9,
-    borderRadius: 14
+  quickActionsSection: {
+    gap: 3
   },
   productsCard: {
     gap: 9,
@@ -1830,14 +1809,16 @@ function createStyles(theme: ThemeTokens) {
   actionGrid: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 15,
-    paddingVertical: 3
+    gap: 10,
+    paddingVertical: 2
   },
   actionTile: {
-    minWidth: 66,
-    maxWidth: 76,
+    minWidth: 68,
+    maxWidth: 82,
     alignItems: "center",
-    gap: 5
+    justifyContent: "center",
+    minHeight: 60,
+    gap: 4
   },
   actionTilePressed: {
     opacity: 0.9,
@@ -1891,7 +1872,23 @@ function createStyles(theme: ThemeTokens) {
     fontSize: 13,
     lineHeight: 19
   },
-  activityRow: { minHeight: 54, flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderColor: tokens.colors.border, paddingVertical: 7 },
+  activitySection: {
+    gap: 2,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: tokens.colors.border,
+    paddingTop: 8
+  },
+  activityListRow: {
+    minHeight: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: tokens.colors.border
+  },
+  activityTrailing: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 2,
+    maxWidth: 116
+  },
   activityIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.1) },
   activityTitle: { color: tokens.colors.text, fontSize: 12, fontWeight: "700" },
   activityMeta: { color: tokens.colors.textSecondary, fontSize: 10, marginTop: 2, textTransform: "capitalize" },

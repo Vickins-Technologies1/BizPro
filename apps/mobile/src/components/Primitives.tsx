@@ -18,7 +18,6 @@ import {
   View
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppStore } from "@/store/useAppStore";
@@ -92,15 +91,9 @@ function useAppearMotion(delay = 0, from = 12) {
 
 export function Screen({ children, hideFooter = true }: { children: React.ReactNode; hideFooter?: boolean }) {
   const styles = usePrimitiveStyles();
-  useAppStore((state) => state.themeMode);
   const motion = useAppearMotion();
   const content = (
     <SafeAreaView edges={["top", "left", "right", "bottom"]} style={styles.screen}>
-      <View pointerEvents="none" style={styles.screenBackdrop}>
-        <LinearGradient colors={tokens.gradients.surface} style={StyleSheet.absoluteFillObject} />
-        <LinearGradient colors={tokens.gradients.premium} style={styles.screenGlowPrimary} />
-        <View style={styles.screenGlowSecondary} />
-      </View>
       <Animated.View style={[styles.screenContent, motion as any]}>{children}</Animated.View>
       {hideFooter ? null : <AppFooter />}
     </SafeAreaView>
@@ -418,7 +411,7 @@ export function DateRangePickerModal({
   );
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: any }) {
+export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const styles = usePrimitiveStyles();
   return <View style={[styles.card, style]}>{children}</View>;
 }
@@ -754,7 +747,9 @@ export function Button({
   const isDisabled = loading || disabled;
   const resolvedLabel = label ?? title ?? "";
   const filled = variant === "primary" || variant === "danger";
-  const textColor = filled ? "#FFFFFF" : variant === "secondary" ? tokens.colors.text : tokens.colors.primaryStrong;
+  const textColor = filled
+    ? variant === "danger" ? tokens.colors.dangerActionText : tokens.colors.primaryActionText
+    : variant === "secondary" ? tokens.colors.text : tokens.colors.primaryStrong;
 
   return (
     <Pressable
@@ -767,7 +762,7 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       style={({ pressed }) => [
         styles.button,
-        buttonStyle(variant),
+        buttonStyle(variant, tokens.colors),
         fullWidth && { alignSelf: "stretch" },
         style,
         isDisabled && { opacity: 0.72 },
@@ -877,7 +872,7 @@ export const Input = React.memo(function Input({
           ) : null}
         </View>
       </View>
-      <View style={[styles.inputShell, focused ? styles.inputShellFocused : null, disabled ? styles.inputShellDisabled : null]}>
+      <View style={[styles.inputShell, focused ? styles.inputShellFocused : null, error ? styles.inputError : null, disabled ? styles.inputShellDisabled : null]}>
         {leftAccessory}
         <TextInput
           ref={inputRef}
@@ -898,6 +893,8 @@ export const Input = React.memo(function Input({
           returnKeyType={returnKeyType}
           autoFocus={autoFocus}
           editable={!disabled}
+          accessibilityLabel={label}
+          accessibilityHint={error ? `Error: ${error}` : helperText}
           accessibilityState={{ disabled }}
           onFocus={(event) => {
             focusedRef.current = true;
@@ -913,8 +910,7 @@ export const Input = React.memo(function Input({
           style={[
             styles.input,
             { flex: 1 },
-            multiline ? { minHeight: Math.max(96, (numberOfLines ?? 3) * 28) } : null,
-            error ? styles.inputError : null
+            multiline ? { minHeight: Math.max(96, (numberOfLines ?? 3) * 28) } : null
           ]}
         />
       </View>
@@ -1239,7 +1235,13 @@ export function Tag({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [fullWidth && { width: "100%" }, pressed && !disabled && { opacity: 0.92, transform: [{ scale: 0.988 }] }]}
+      accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
+      style={({ pressed }) => [
+        { minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" },
+        fullWidth && { width: "100%" },
+        pressed && !disabled && { opacity: 0.92, transform: [{ scale: 0.988 }] }
+      ]}
     >
       {content}
     </Pressable>
@@ -1672,11 +1674,11 @@ function prefetchImage(uri: string) {
   return request;
 }
 
-function buttonStyle(variant: ButtonVariant) {
-  if (variant === "secondary") return { backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border };
-  if (variant === "danger") return { backgroundColor: tokens.colors.danger };
+function buttonStyle(variant: ButtonVariant, colors: ReturnType<typeof useThemeTokens>["colors"]) {
+  if (variant === "secondary") return { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border };
+  if (variant === "danger") return { backgroundColor: colors.dangerAction };
   if (variant === "ghost") return { backgroundColor: "transparent", borderWidth: 0 };
-  return { backgroundColor: tokens.colors.primaryStrong };
+  return { backgroundColor: colors.primaryAction };
 }
 
 function usePrimitiveStyles() {
@@ -1721,29 +1723,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
   return StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: tokens.colors.background
-    },
-    screenBackdrop: {
-      ...StyleSheet.absoluteFillObject,
-      overflow: "hidden"
-    },
-    screenGlowPrimary: {
-      position: "absolute",
-      top: -120,
-      right: -90,
-      width: 220,
-      height: 220,
-      borderRadius: 999,
-      opacity: 0.035
-    },
-    screenGlowSecondary: {
-      position: "absolute",
-      bottom: -130,
-      left: -110,
-      width: 220,
-      height: 220,
-      borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.primary, 0.025)
+      backgroundColor: theme.colors.background
     },
     screenContent: {
       flex: 1
@@ -1763,18 +1743,18 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderRadius: 10,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.14),
+      backgroundColor: withAlpha(theme.colors.primaryStrong, 0.14),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.primaryStrong, 0.26)
+      borderColor: withAlpha(theme.colors.primaryStrong, 0.26)
     },
-    headerBrand: { color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
-    title: { color: tokens.colors.text, fontSize: 20, fontWeight: "700", letterSpacing: -0.3, lineHeight: 25 },
-    subtitle: { color: tokens.colors.textSecondary, marginTop: 2, fontSize: 12, lineHeight: 17 },
+    headerBrand: { color: theme.colors.primaryStrong, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
+    title: { color: theme.colors.text, fontSize: 20, fontWeight: "700", letterSpacing: -0.3, lineHeight: 25 },
+    subtitle: { color: theme.colors.textSecondary, marginTop: 2, fontSize: 12, lineHeight: 17 },
     card: {
-      backgroundColor: tokens.colors.surfaceCard,
+      backgroundColor: theme.colors.surfaceCard,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: tokens.colors.divider,
+      borderColor: theme.colors.divider,
       padding: 12,
       overflow: "hidden"
     },
@@ -1787,9 +1767,9 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       alignItems: "center",
       justifyContent: "center"
     },
-    statLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "600" },
-    statValue: { color: tokens.colors.text, fontSize: 16, fontWeight: "700", letterSpacing: -0.2, fontVariant: ["tabular-nums"] },
-    statHint: { color: tokens.colors.textSecondary, fontSize: 11 },
+    statLabel: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: "600" },
+    statValue: { color: theme.colors.text, fontSize: 16, fontWeight: "700", letterSpacing: -0.2, fontVariant: ["tabular-nums"] },
+    statHint: { color: theme.colors.textSecondary, fontSize: 11 },
     button: {
       minHeight: 44,
       borderRadius: 10,
@@ -1797,8 +1777,8 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       justifyContent: "center",
       paddingHorizontal: 14
     },
-    buttonText: { color: tokens.colors.text, fontSize: 13, fontWeight: "700", letterSpacing: 0 },
-    fieldLabel: { color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "600", letterSpacing: 0.1 },
+    buttonText: { color: theme.colors.text, fontSize: 13, fontWeight: "700", letterSpacing: 0 },
+    fieldLabel: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: "600", letterSpacing: 0.1 },
     fieldLabelRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1813,7 +1793,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       paddingHorizontal: 6
     },
     passwordToggleText: {
-      color: tokens.colors.primaryStrong,
+      color: theme.colors.primaryStrong,
       fontSize: 12,
       fontWeight: "800",
       letterSpacing: 0
@@ -1823,23 +1803,23 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       paddingVertical: 8,
       paddingHorizontal: 0,
       backgroundColor: "transparent",
-      color: tokens.colors.text,
+      color: theme.colors.text,
       fontSize: 13
     },
     inputShell: {
       minHeight: 44,
       borderRadius: 12,
-      backgroundColor: tokens.colors.input,
+      backgroundColor: theme.colors.input,
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: theme.colors.border,
       paddingHorizontal: 11,
       flexDirection: "row",
       alignItems: "center",
       gap: 8
     },
     inputShellFocused: {
-      borderColor: withAlpha(tokens.colors.primaryStrong, 0.7),
-      shadowColor: tokens.colors.primaryStrong,
+      borderColor: withAlpha(theme.colors.primaryStrong, 0.7),
+      shadowColor: theme.colors.primaryStrong,
       shadowOpacity: 0.12,
       shadowRadius: 14,
       shadowOffset: { width: 0, height: 6 },
@@ -1847,11 +1827,11 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     },
     inputShellDisabled: {
       opacity: 0.58,
-      backgroundColor: tokens.colors.surfaceAlt
+      backgroundColor: theme.colors.surfaceAlt
     },
     inputError: {
-      borderColor: tokens.colors.danger,
-      backgroundColor: withAlpha(tokens.colors.danger, 0.06)
+      borderColor: theme.colors.danger,
+      backgroundColor: withAlpha(theme.colors.danger, 0.06)
     },
     badge: {
       borderRadius: 999,
@@ -1867,40 +1847,40 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: withAlpha(tokens.colors.primary, 0.1),
+      backgroundColor: withAlpha(theme.colors.primary, 0.1),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.primary, 0.16)
+      borderColor: withAlpha(theme.colors.primary, 0.16)
     },
     emptyBadge: {
       alignSelf: "center",
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.primaryStrong, 0.08),
+      backgroundColor: withAlpha(theme.colors.primaryStrong, 0.08),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.primaryStrong, 0.16)
+      borderColor: withAlpha(theme.colors.primaryStrong, 0.16)
     },
     emptyBadgeText: {
-      color: tokens.colors.primaryStrong,
+      color: theme.colors.primaryStrong,
       fontSize: 10,
       fontWeight: "700",
       letterSpacing: 0.1
     },
-    emptyTitle: { color: tokens.colors.text, fontSize: 15, fontWeight: "900", textAlign: "center", letterSpacing: -0.1 },
-    emptySubtitle: { color: tokens.colors.textSecondary, textAlign: "center", lineHeight: 16, maxWidth: 340, fontSize: 11 },
-    helperText: { color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 },
-    helperError: { color: tokens.colors.danger, fontSize: 11, lineHeight: 16, fontWeight: "700" },
+    emptyTitle: { color: theme.colors.text, fontSize: 15, fontWeight: "900", textAlign: "center", letterSpacing: -0.1 },
+    emptySubtitle: { color: theme.colors.textSecondary, textAlign: "center", lineHeight: 16, maxWidth: 340, fontSize: 11 },
+    helperText: { color: theme.colors.textSecondary, fontSize: 11, lineHeight: 16 },
+    helperError: { color: theme.colors.danger, fontSize: 11, lineHeight: 16, fontWeight: "700" },
     successBadge: {
       alignSelf: "center",
       paddingHorizontal: 9,
       paddingVertical: 4,
       borderRadius: 999,
-      backgroundColor: withAlpha(tokens.colors.success, 0.1),
+      backgroundColor: withAlpha(theme.colors.success, 0.1),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.success, 0.16)
+      borderColor: withAlpha(theme.colors.success, 0.16)
     },
     successBadgeText: {
-      color: tokens.colors.success,
+      color: theme.colors.success,
       fontSize: 10,
       fontWeight: "700",
       letterSpacing: 0.1
@@ -1911,9 +1891,9 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: withAlpha(tokens.colors.danger, 0.1),
+      backgroundColor: withAlpha(theme.colors.danger, 0.1),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.danger, 0.18)
+      borderColor: withAlpha(theme.colors.danger, 0.18)
     },
     loaderRow: {
       flexDirection: "row",
@@ -1928,7 +1908,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       paddingVertical: 10
     },
     loadingStateText: {
-      color: tokens.colors.textSecondary,
+      color: theme.colors.textSecondary,
       fontSize: 11,
       fontWeight: "700"
     },
@@ -1943,13 +1923,13 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       width: 220,
       padding: 10,
       borderRadius: 10,
-      backgroundColor: tokens.colors.surfaceElevated,
+      backgroundColor: theme.colors.surfaceElevated,
       borderWidth: 1,
-      borderColor: tokens.colors.border,
-      ...tokens.shadow.modal
+      borderColor: theme.colors.border,
+      ...theme.shadow.modal
     },
     infoTooltipText: {
-      color: tokens.colors.textSecondary,
+      color: theme.colors.textSecondary,
       fontSize: 11,
       lineHeight: 16
     },
@@ -1970,8 +1950,8 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: tokens.colors.border,
-      backgroundColor: tokens.colors.surfaceElevated
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceElevated
     },
     paginationPage: {
       minWidth: 30,
@@ -1982,10 +1962,10 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       justifyContent: "center"
     },
     paginationPageActive: {
-      backgroundColor: tokens.colors.primaryStrong
+      backgroundColor: theme.colors.primaryStrong
     },
     paginationPageText: {
-      color: tokens.colors.textSecondary,
+      color: theme.colors.textSecondary,
       fontSize: 11,
       fontWeight: "800"
     },
@@ -1995,7 +1975,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     paginationEllipsis: {
       width: 24,
       textAlign: "center",
-      color: tokens.colors.textMuted,
+      color: theme.colors.textMuted,
       fontSize: 12
     },
     paginationDisabled: {
@@ -2006,7 +1986,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: tokens.colors.overlay,
+      backgroundColor: theme.colors.overlay,
       alignItems: "center",
       justifyContent: "center",
       padding: 12
@@ -2014,12 +1994,12 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     modalCard: {
       width: "100%",
       maxHeight: "90%",
-      backgroundColor: tokens.colors.surfaceElevated,
+      backgroundColor: theme.colors.surfaceElevated,
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: theme.colors.border,
       padding: 14,
-      ...tokens.shadow.modal
+      ...theme.shadow.modal
     },
     modalHeader: {
       flexDirection: "row",
@@ -2033,12 +2013,12 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       alignItems: "center",
       justifyContent: "center"
     },
-    modalTitle: { color: tokens.colors.text, fontSize: 14, fontWeight: "900" },
+    modalTitle: { color: theme.colors.text, fontSize: 14, fontWeight: "900" },
     calendarShell: {
-      backgroundColor: tokens.colors.surfaceAlt,
+      backgroundColor: theme.colors.surfaceAlt,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: tokens.colors.border,
+      borderColor: theme.colors.border,
       padding: 10,
       gap: 10
     },
@@ -2054,12 +2034,12 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderRadius: 11,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: tokens.colors.border
+      borderColor: theme.colors.border
     },
     calendarMonth: {
-      color: tokens.colors.text,
+      color: theme.colors.text,
       fontSize: 14,
       fontWeight: "800"
     },
@@ -2068,7 +2048,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       justifyContent: "space-between"
     },
     calendarWeekLabel: {
-      color: tokens.colors.textMuted,
+      color: theme.colors.textMuted,
       fontSize: 11,
       fontWeight: "800",
       width: 38,
@@ -2086,16 +2066,16 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: tokens.colors.surface
+      backgroundColor: theme.colors.surface
     },
     calendarDayButtonSelected: {
-      backgroundColor: tokens.colors.primary
+      backgroundColor: theme.colors.primary
     },
     calendarDayButtonMuted: {
       opacity: 0.38
     },
     calendarDayText: {
-      color: tokens.colors.text,
+      color: theme.colors.text,
       fontSize: 13,
       fontWeight: "700"
     },
@@ -2103,7 +2083,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       color: "#FFFFFF"
     },
     calendarDayTextMuted: {
-      color: tokens.colors.textMuted
+      color: theme.colors.textMuted
     },
     calendarDaySpacer: {
       width: 34,
@@ -2114,7 +2094,7 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       gap: 12
     },
     calendarSummaryValue: {
-      color: tokens.colors.text,
+      color: theme.colors.text,
       fontSize: 13,
       fontWeight: "700",
       lineHeight: 18
@@ -2126,9 +2106,9 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       paddingBottom: 16
     },
     skeleton: {
-      backgroundColor: withAlpha(tokens.colors.textMuted, 0.12),
+      backgroundColor: withAlpha(theme.colors.textMuted, 0.12),
       borderWidth: 1,
-      borderColor: withAlpha(tokens.colors.border, 0.5)
+      borderColor: withAlpha(theme.colors.border, 0.5)
     },
     footer: {
       alignItems: "center",
@@ -2140,11 +2120,11 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
     footerDivider: {
       width: "100%",
       height: StyleSheet.hairlineWidth,
-      backgroundColor: tokens.colors.border,
+      backgroundColor: theme.colors.border,
       marginBottom: 12
     },
     footerText: {
-      color: tokens.colors.textMuted,
+      color: theme.colors.textMuted,
       fontSize: 10,
       fontWeight: "700",
       letterSpacing: 0.5,

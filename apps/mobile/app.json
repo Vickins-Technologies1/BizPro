@@ -7,7 +7,7 @@
     "version": "1.0.2",
     "orientation": "default",
     "icon": "./assets/brand/dira-os-mobile-icon-safe.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.bizpro.vickins",
       "versionCode": 19,

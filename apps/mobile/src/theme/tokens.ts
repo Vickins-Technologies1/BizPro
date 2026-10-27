@@ -16,6 +16,10 @@ type ThemeColors = {
   divider: string;
   primary: string;
   primaryStrong: string;
+  primaryAction: string;
+  primaryActionText: string;
+  dangerAction: string;
+  dangerActionText: string;
   success: string;
   warning: string;
   danger: string;
@@ -112,6 +116,10 @@ const lightTheme: ThemeTokens = {
     divider: "#E1E7EF",
     primary: "#155EEF",
     primaryStrong: "#155EEF",
+    primaryAction: "#155EEF",
+    primaryActionText: "#FFFFFF",
+    dangerAction: "#B42318",
+    dangerActionText: "#FFFFFF",
     success: "#067647",
     warning: "#B54708",
     danger: "#B42318",
@@ -162,6 +170,10 @@ const darkTheme: ThemeTokens = {
     divider: "#223A57",
     primary: "#3B82F6",
     primaryStrong: "#3B82F6",
+    primaryAction: "#2563EB",
+    primaryActionText: "#FFFFFF",
+    dangerAction: "#B42318",
+    dangerActionText: "#FFFFFF",
     success: "#6CE9A6",
     warning: "#FEC84B",
     danger: "#FDA29B",

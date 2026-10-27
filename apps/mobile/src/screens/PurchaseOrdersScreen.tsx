@@ -10,6 +10,7 @@ import { formatDate } from "@/utils/date";
 import { createId } from "@/utils/id";
 import { formatMoney } from "@/utils/money";
 import { Ionicons } from "@expo/vector-icons";
+import { SearchField } from "@/components/DesignSystem";
 
 type OrderLine = {
   productId: string;
@@ -34,6 +35,7 @@ export function PurchaseOrdersScreen() {
   const canManageOrders = user?.role === 'owner' || user?.role === 'manager';
   const [orders, setOrders] = React.useState<PurchaseOrder[]>([]);
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<PurchaseOrder["status"] | "all">("all");
   const [editing, setEditing] = React.useState<PurchaseOrder | null>(null);
   const [visible, setVisible] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -64,8 +66,11 @@ export function PurchaseOrdersScreen() {
 
   const filteredOrders = React.useMemo(() => {
     const query = search.trim().toLowerCase();
-    return orders.filter((order) => [order.orderNumber, order.status, order.notes ?? "", order.supplierId ?? "", suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? ""].join(" ").toLowerCase().includes(query));
-  }, [orders, search, suppliers]);
+    return orders.filter((order) => {
+      const matchesQuery = [order.orderNumber, order.status, order.notes ?? "", order.supplierId ?? "", suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? ""].join(" ").toLowerCase().includes(query);
+      return matchesQuery && (statusFilter === "all" || order.status === statusFilter);
+    });
+  }, [orders, search, statusFilter, suppliers]);
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -241,33 +246,40 @@ export function PurchaseOrdersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
-        <Card style={{ gap: 8, padding: 12 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <View style={{ gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredOrders.length} of {orders.length} orders</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Purchase order register</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{filteredOrders.length} of {orders.length} orders · {selectedBranchId ? branches.find((branch) => branch.id === selectedBranchId)?.name ?? "Selected branch" : user?.role === "owner" ? "All branches" : "Assigned branch"}</Text>
             </View>
             {canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
           </View>
-          <InputField label="Search orders" value={search} onChangeText={setSearch} placeholder="Order number, supplier, or status" />
-        </Card>
+          <SearchField value={search} onChangeText={setSearch} placeholder="Order number, supplier, or status" accessibilityLabel="Search purchase orders" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter purchase orders by status">
+            {(["all", "draft", "ordered", "partially_received", "received", "cancelled"] as Array<PurchaseOrder["status"] | "all">).map((option) => (
+              <Tag key={option} label={option === "all" ? "All statuses" : option.replaceAll("_", " ")} tone="primary" selected={statusFilter === option} onPress={() => setStatusFilter(option)} />
+            ))}
+          </ScrollView>
+        </View>
         {filteredOrders.length ? (
-          <Card style={{ paddingVertical: 0, paddingHorizontal: 12 }}>
+          <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
           {filteredOrders.map((order, index) => {
             const supplierName = suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? "No supplier";
             return (
-              <View key={order.id} style={{ gap: 7, paddingVertical: 12, borderBottomWidth: index === filteredOrders.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
+              <View key={order.id} style={{ gap: 6, paddingVertical: 10, borderBottomWidth: index === filteredOrders.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>{order.orderNumber} <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "500" }}>· {supplierName}</Text></Text>
-                    <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(order.orderDate, "PP")} · {order.items.reduce((sum, item) => sum + Number(item.receivedQuantity ?? 0), 0)} / {order.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units received</Text>
+                    <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>{order.orderNumber}</Text>
+                    <Text numberOfLines={1} style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{supplierName} · {formatDate(order.orderDate, "PP")}{order.expectedDate ? ` · Due ${formatDate(order.expectedDate, "PP")}` : ""}</Text>
                   </View>
                   <Badge label={order.status.replaceAll("_", " ")} tone={order.status === "received" ? "success" : order.status === "cancelled" ? "danger" : "primary"} />
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(order.total, business?.currency)}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{order.items.length} line{order.items.length === 1 ? "" : "s"}</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatMoney(order.total, business?.currency)}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{order.items.reduce((sum, item) => sum + Number(item.receivedQuantity ?? 0), 0)} / {order.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units received · {order.items.length} lines</Text>
                 </View>
+                {order.items.length ? <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>{order.items.slice(0, 2).map((item) => `${item.productName} ${Number(item.receivedQuantity ?? 0)}/${item.quantity}`).join(" · ")}{order.items.length > 2 ? ` · +${order.items.length - 2} more` : ""}</Text> : null}
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   {canManageOrders && (order.status === "ordered" || order.status === "partially_received") ? (
                     <View style={{ flex: 1 }}><PrimaryButton title="Receive stock" onPress={() => openReceipt(order)} /></View>
@@ -289,12 +301,12 @@ export function PurchaseOrdersScreen() {
               </View>
             );
           })}
-          </Card>
+          </View>
         ) : (
           <EmptyState
-            title={search ? "No matching purchase orders" : "No purchase orders yet"}
-            subtitle={search ? "Try a different order number or supplier." : "Create purchase orders to plan incoming inventory."}
-            action={canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
+            title={search || statusFilter !== "all" ? "No matching purchase orders" : "No purchase orders yet"}
+            subtitle={search || statusFilter !== "all" ? "Try another search or clear the status filter." : "Create purchase orders to plan incoming inventory."}
+            action={search || statusFilter !== "all" ? <PrimaryButton title="Clear filters" variant="secondary" onPress={() => { setSearch(""); setStatusFilter("all"); }} /> : canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
             icon="cart-outline"
           />
         )}

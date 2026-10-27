@@ -1,7 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { AppScrollView, Card, Screen } from "@/components/Primitives";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useThemeTokens } from "@/theme";
@@ -43,7 +42,7 @@ export function AuthLayout({
 export function AuthCompactHeader({ eyebrow = "Workspace access" }: { eyebrow?: string }) {
   const theme = useThemeTokens();
   return (
-    <LinearGradient colors={theme.gradients.surface} style={styles.brandPanel}>
+    <View style={[styles.brandPanel, { borderColor: theme.colors.border }]}>
       <View style={[styles.logoTile, { backgroundColor: theme.colors.surfaceElevated, borderColor: theme.colors.border }]}>
         <BrandLogo style={styles.logo} />
       </View>
@@ -51,7 +50,7 @@ export function AuthCompactHeader({ eyebrow = "Workspace access" }: { eyebrow?: 
         <Text style={[styles.brandName, { color: theme.colors.text }]}>Dira OS</Text>
         <Text style={[styles.eyebrow, { color: theme.colors.primaryStrong }]}>{eyebrow}</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -87,42 +86,41 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 18
+    paddingTop: 10,
+    paddingBottom: 14
   },
   shell: {
     width: "100%",
     maxWidth: 440,
     alignSelf: "center",
-    gap: 11
+    gap: 10
   },
   brandPanel: {
-    minHeight: 62,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 50,
+    borderRadius: 13,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
     alignItems: "center",
     flexDirection: "row",
     gap: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "transparent"
+    borderBottomWidth: StyleSheet.hairlineWidth
   },
   logoTile: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1
   },
-  logo: { width: 35, height: 35 },
+  logo: { width: 30, height: 30 },
   brandCopy: { alignItems: "flex-start", gap: 2 },
   brandName: { fontSize: 15, fontWeight: "900", letterSpacing: -0.25 },
   eyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 0.65, textTransform: "uppercase" },
   heading: { gap: 5, paddingHorizontal: 2 },
-  title: { fontSize: 23, lineHeight: 28, fontWeight: "900", letterSpacing: -0.55 },
+  title: { fontSize: 22, lineHeight: 27, fontWeight: "900", letterSpacing: -0.45 },
   subtitle: { fontSize: 13, lineHeight: 18, maxWidth: 380 },
-  card: { gap: 11, padding: 14, borderRadius: 17 },
+  card: { gap: 10, padding: 12, borderRadius: 14 },
   footer: { alignItems: "center", minHeight: 24 },
   sectionLabel: { fontSize: 10, lineHeight: 15, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" },
   message: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 11, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },

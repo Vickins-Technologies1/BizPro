@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
@@ -52,7 +52,7 @@ export function LoginScreen() {
             }}
             placeholder="07… or your account name"
             error={errors.identifier?.message}
-            autoCapitalize="words"
+            autoCapitalize="none"
             returnKeyType="next"
           />
         )}
@@ -77,10 +77,8 @@ export function LoginScreen() {
         )}
       />
 
-      <View style={{ alignItems: "flex-end", marginTop: -3 }}>
-        <Pressable onPress={() => navigation.navigate("ForgotPassword")} accessibilityRole="link" hitSlop={8}>
-          <Text style={{ color: theme.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Forgot password?</Text>
-        </Pressable>
+      <View style={{ alignItems: "flex-end", marginTop: -5, marginBottom: -3 }}>
+        <AuthLink label="Forgot password?" onPress={() => navigation.navigate("ForgotPassword")} />
       </View>
 
       {submitError ? <AuthMessage tone="error">{submitError}</AuthMessage> : null}

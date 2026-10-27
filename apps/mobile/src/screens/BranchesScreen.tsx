@@ -2,12 +2,13 @@ import React from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { AppScrollView, AppVirtualizedList, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
+import { AppScrollView, AppVirtualizedList, Badge, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { hasPermission, type Branch } from "@shared";
 import { formatMoney } from "@/utils/money";
 import { activateBranch, createBranch, deactivateBranch, listBranches, updateBranch } from "@/services/apiClient";
+import { SearchField } from "@/components/DesignSystem";
 
 type BranchDraft = {
   name: string;
@@ -199,14 +200,14 @@ export function BranchesScreen() {
         data={filteredBranches}
         keyExtractor={(branch) => branch.id}
         ListHeaderComponent={
-          <View style={{ gap: 12 }}>
-            <Card style={{ gap: 8, padding: 12 }}>
+          <View style={{ gap: 9, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+            <View style={{ gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{business?.name ?? "Dira OS"}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Branch administration</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{business?.name ?? "Dira OS"}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Branch administration · {items.length} branches</Text>
                 </View>
-                <Badge label={`${items.length} branches`} tone="primary" />
+                <Badge label={`Workspace: ${resolveBranchName(branches, selectedBranchId)}`} tone="primary" />
               </View>
               {feedback ? <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{feedback}</Text> : null}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -214,50 +215,48 @@ export function BranchesScreen() {
                 <PrimaryButton title={refreshing ? "Refreshing..." : "Refresh"} variant="secondary" onPress={refreshBranches} />
                 <PrimaryButton title="Branch selector" variant="secondary" onPress={() => navigation.navigate("Launchpad")} />
               </View>
-            </Card>
-
-            <Card style={{ gap: 10 }}>
-              <InputField label="Search branches" value={search} onChangeText={setSearch} placeholder="Name, code, manager, or location" />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <Badge label={`Workspace: ${resolveBranchName(branches, selectedBranchId)}`} tone="success" />
-                <Badge label={`${branches.filter((branch) => branch.status === "active").length} active`} tone="success" />
-                <Badge label={`${branches.filter((branch) => branch.status === "inactive").length} inactive`} tone="warning" />
-              </View>
-            </Card>
+            </View>
+            <SearchField value={search} onChangeText={setSearch} placeholder="Name, code, manager, or location" accessibilityLabel="Search branches" />
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <Text style={{ color: tokens.colors.success, fontSize: 10, fontWeight: "700" }}>{items.filter((branch) => branch.status === "active").length} active</Text>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "700" }}>{items.filter((branch) => branch.status === "inactive").length} inactive</Text>
+            </View>
           </View>
         }
         renderItem={({ item: branch }) => (
-          <Card style={{ gap: 8, padding: 12 }}>
+          <View style={{ gap: 7, paddingVertical: 11, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <View style={{ flex: 1, gap: 3 }}>
-                <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{branch.name} <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "500" }}>· {branch.code}</Text></Text>
-                <Text numberOfLines={1} style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{branch.location ?? branch.managerName ?? "No location details"}</Text>
+                <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>{branch.name} <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "500" }}>· {branch.code}</Text></Text>
+                <Text numberOfLines={1} style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{branch.location ?? branch.managerName ?? "No location details"}</Text>
               </View>
               <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
                 {selectedBranchId === branch.id ? <Badge label="Current" tone="primary" /> : null}
                 <Badge label={branch.status === "active" ? "Active" : "Inactive"} tone={branch.status === "active" ? "success" : "warning"} />
               </View>
             </View>
-            <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>
               {branch.managerName ?? "Unassigned"} · {branch.staffCount ?? 0} staff · {branch.inventoryCount ?? 0} products{branch.isDefault ? " · Default" : ""}
             </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Sales <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatMoney(branch.salesTotal ?? 0, business?.currency)}</Text></Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Transactions <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{branch.salesCount ?? 0}</Text></Text>
-              <Text style={{ color: branch.lowStockCount ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 12 }}>Low stock <Text style={{ fontWeight: "700" }}>{branch.lowStockCount ?? 0}</Text></Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>Sales <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatMoney(branch.salesTotal ?? 0, business?.currency)}</Text></Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>Transactions <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{branch.salesCount ?? 0}</Text></Text>
+              <Text style={{ color: branch.lowStockCount ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 10 }}>Low stock <Text style={{ fontWeight: "700" }}>{branch.lowStockCount ?? 0}</Text></Text>
             </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <PrimaryButton title={selectedBranchId === branch.id ? "Active workspace" : "Switch workspace"} variant={selectedBranchId === branch.id ? "secondary" : "primary"} onPress={() => void focusBranch(branch)} />
-              <PrimaryButton title="Edit" variant="secondary" onPress={() => openEdit(branch)} />
-              <PrimaryButton title="Reports" variant="secondary" onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Reports"); }} />
-              <PrimaryButton title="Staff" variant="secondary" onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Employees"); }} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Pressable onPress={() => void focusBranch(branch)} accessibilityRole="button" accessibilityLabel={selectedBranchId === branch.id ? `Open ${branch.name} workspace` : `Switch workspace to ${branch.name}`} style={{ minHeight: 38, flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 10, borderRadius: 10, backgroundColor: selectedBranchId === branch.id ? tokens.colors.surfaceAlt : tokens.colors.primaryAction }}>
+                <Text style={{ color: selectedBranchId === branch.id ? tokens.colors.text : tokens.colors.primaryActionText, fontSize: 11, fontWeight: "800" }}>{selectedBranchId === branch.id ? "Current workspace" : "Switch workspace"}</Text>
+              </Pressable>
+              <Pressable onPress={() => openEdit(branch)} accessibilityRole="button" accessibilityLabel={`Edit ${branch.name}`} hitSlop={6} style={{ minWidth: 38, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}><Ionicons name="create-outline" size={17} color={tokens.colors.primaryStrong} /></Pressable>
+              <Pressable onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Reports"); }} accessibilityRole="button" accessibilityLabel={`View ${branch.name} reports`} hitSlop={6} style={{ minWidth: 38, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}><Ionicons name="bar-chart-outline" size={17} color={tokens.colors.textSecondary} /></Pressable>
+              <Pressable onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Employees"); }} accessibilityRole="button" accessibilityLabel={`View ${branch.name} staff`} hitSlop={6} style={{ minWidth: 38, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}><Ionicons name="people-outline" size={17} color={tokens.colors.textSecondary} /></Pressable>
               {branch.status === "active" ? (
-                <PrimaryButton title="Deactivate" variant="danger" onPress={() => void handleDeactivate(branch)} />
+                <Pressable onPress={() => void handleDeactivate(branch)} accessibilityRole="button" accessibilityLabel={`Deactivate ${branch.name}`} hitSlop={6} style={{ minWidth: 38, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}><Ionicons name="power-outline" size={17} color={tokens.colors.danger} /></Pressable>
               ) : (
-                <PrimaryButton title="Reactivate" variant="primary" onPress={() => void handleActivate(branch)} />
+                <Pressable onPress={() => void handleActivate(branch)} accessibilityRole="button" accessibilityLabel={`Reactivate ${branch.name}`} hitSlop={6} style={{ minWidth: 38, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}><Ionicons name="refresh-outline" size={17} color={tokens.colors.success} /></Pressable>
               )}
             </View>
-          </Card>
+          </View>
         )}
         ListEmptyComponent={
           loading ? (

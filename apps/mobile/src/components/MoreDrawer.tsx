@@ -66,10 +66,17 @@ export function MoreDrawer({ visible, currentRoute, overflowRoutes = [], onClose
   const theme = useThemeTokens();
   const user = useAppStore((state) => state.user);
   const business = useAppStore((state) => state.business);
+  const branches = useAppStore((state) => state.branches);
+  const selectedBranchId = useAppStore((state) => state.selectedBranchId);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const drawerWidth = Math.min(360, Math.max(292, width - 24));
+  const activeBranchName = selectedBranchId
+    ? branches.find((branch) => branch.id === selectedBranchId)?.name ?? "Selected branch"
+    : user?.role === "owner"
+      ? "All branches"
+      : branches.find((branch) => branch.id === user?.branchId)?.name ?? "Assigned branch";
   const translateX = React.useRef(new Animated.Value(-drawerWidth)).current;
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const [rendered, setRendered] = React.useState(visible);
@@ -125,7 +132,7 @@ export function MoreDrawer({ visible, currentRoute, overflowRoutes = [], onClose
           </View>
           <View style={styles.headerCopy}>
             <Text style={styles.title}>More</Text>
-            <Text style={styles.subtitle}>Business tools and access</Text>
+            <Text style={styles.subtitle} numberOfLines={1}>{business?.name ?? "Workspace"} · {activeBranchName}</Text>
           </View>
           <Pressable onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close more menu">
             <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
@@ -242,11 +249,11 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
   closeButton: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.surfaceAlt },
   rule: { height: 1, backgroundColor: theme.colors.border, marginVertical: 14 },
   scroll: { flex: 1 },
-  groups: { gap: 11, paddingBottom: 8 },
+  groups: { gap: 9, paddingBottom: 8 },
   group: { gap: 5 },
   groupTitle: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 0.9, textTransform: "uppercase" },
   groupItems: { gap: 3 },
-  item: { minHeight: 40, borderRadius: 10, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 10 },
+  item: { minHeight: 44, borderRadius: 10, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 10 },
   itemActive: { backgroundColor: `${theme.colors.primary}18`, borderWidth: 1, borderColor: `${theme.colors.primaryStrong}55` },
   itemPressed: { opacity: 0.78 },
   itemLabel: { flex: 1, color: theme.colors.textSecondary, fontSize: 13, fontWeight: "700" },

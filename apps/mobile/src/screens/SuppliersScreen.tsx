@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { addDays, format, startOfDay } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
@@ -544,7 +544,7 @@ export function SuppliersScreen() {
             <PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />
           </View>
           <SearchField value={search} onChangeText={setSearch} placeholder="Name, code, or contact" accessibilityLabel="Search suppliers" />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter suppliers by category">
             <Tag label="All categories" tone="primary" selected={categoryFilterId === "all"} onPress={() => setCategoryFilterId("all")} />
             {categories.map((category) => (
               <Tag
@@ -555,7 +555,7 @@ export function SuppliersScreen() {
                 onPress={() => setCategoryFilterId(category.id)}
               />
             ))}
-          </View>
+          </ScrollView>
           <Pressable onPress={() => openCategoryEditor(null)} accessibilityRole="button" style={{ alignSelf: "flex-start", paddingVertical: 3 }}>
             <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "700" }}>+ Add supplier category</Text>
           </Pressable>
@@ -575,7 +575,7 @@ export function SuppliersScreen() {
                     <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }} numberOfLines={1}>{[supplier.code, supplier.contactName, supplier.phone ?? supplier.email, category?.name].filter(Boolean).join(" · ") || "No contact details"}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end", gap: 3 }}>
-                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{isSelected ? `${supplierOrders.length} POs` : "View details"}</Text>
+                    <Text style={{ color: isSelected ? tokens.colors.primaryStrong : supplier.isActive ? tokens.colors.success : tokens.colors.textMuted, fontSize: 10, fontWeight: "700" }}>{isSelected ? `${supplierOrders.length} POs` : supplier.isActive ? "Active" : "Archived"}</Text>
                     {isSelected ? <Text style={{ color: tokens.colors.warning, fontSize: 10, fontWeight: "700" }}>{formatMoney(supplierOutstanding, business?.currency ?? "KES")}</Text> : null}
                   </View>
                 </Pressable>
@@ -597,9 +597,9 @@ export function SuppliersScreen() {
           })
         ) : (
           <EmptyState
-            title={search ? "No matching suppliers" : "No suppliers yet"}
-            subtitle={search ? "Try a different supplier name or clear the filters." : "Create suppliers so purchasing and replenishment stay organized."}
-            action={<PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />}
+            title={search || categoryFilterId !== "all" ? "No matching suppliers" : "No suppliers yet"}
+            subtitle={search || categoryFilterId !== "all" ? "Try another search or clear the active filters." : "Create suppliers so purchasing and replenishment stay organized."}
+            action={search || categoryFilterId !== "all" ? <PrimaryButton title="Clear filters" variant="secondary" onPress={() => { setSearch(""); setCategoryFilterId("all"); }} /> : <PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />}
             icon="business-outline"
           />
         )}
@@ -613,7 +613,10 @@ export function SuppliersScreen() {
                   <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>{selectedSupplier.name}</Text>
                   <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>{selectedSupplier.contactName ?? "No primary contact"}</Text>
                 </View>
-                <Badge label={selectedCategoryLabel} tone="success" />
+                  <View style={{ alignItems: "flex-end", gap: 6 }}>
+                    <Badge label={selectedCategoryLabel} tone="primary" />
+                    <Text style={{ color: selectedSupplier.isActive ? tokens.colors.success : tokens.colors.textMuted, fontSize: 10, fontWeight: "700" }}>{selectedSupplier.isActive ? "Active" : "Archived"}</Text>
+                  </View>
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 <Badge label={`Outstanding ${formatMoney(supplierOutstanding, business?.currency ?? "KES")}`} tone="warning" />

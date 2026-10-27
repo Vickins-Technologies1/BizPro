@@ -1,5 +1,5 @@
 import React from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
@@ -89,11 +89,12 @@ export function AnalyticsScreen() {
   const rangeLabel = analytics?.range.label ?? (currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading");
   const summary = analytics?.summary;
   const hasContent = Boolean(analytics) && Boolean(
-    (summary?.revenueTotal ?? 0) > 0 ||
+    (summary?.revenueTotal ?? 0) !== 0 ||
+      (summary?.profitTotal ?? 0) !== 0 ||
       (summary?.salesCount ?? 0) > 0 ||
       (summary?.productCount ?? 0) > 0 ||
       (summary?.customerCount ?? 0) > 0 ||
-      (analytics?.revenueTrend.length ?? 0) > 0
+      (analytics?.revenueTrend.some((point) => point.revenue !== 0 || point.salesCount > 0 || point.expenses !== 0 || point.profit !== 0) ?? false)
   );
 
   if (!canViewAnalytics) {
@@ -124,28 +125,31 @@ export function AnalyticsScreen() {
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={handleRefresh}>
-        <Card style={{ gap: 12 }}>
-          <View style={{ gap: 4 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Date range</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              Switch the window to refresh all charts, summaries, and forecast output together.
-            </Text>
+      <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <View style={{ gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.7, textTransform: "uppercase" }}>Reporting period</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{rangeLabel}</Text>
+            </View>
+            <Pressable onPress={openCustomRange} accessibilityRole="button" accessibilityLabel="Choose custom reporting dates" style={{ minHeight: 38, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 9, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border }}>
+              <Ionicons name="calendar-outline" size={15} color={tokens.colors.icon} />
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, fontWeight: "700" }}>Custom</Text>
+            </Pressable>
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 7 }} accessibilityLabel="Analytics reporting periods">
             {([
               ["today", "Today"],
-              ["week", "This Week"],
-              ["month", "This Month"],
-              ["year", "This Year"]
+              ["week", "7 days"],
+              ["month", "This month"],
+              ["year", "Year to date"]
             ] as Array<[Exclude<Filter, "custom">, string]>).map(([filter, label]) => (
               <Tag key={filter} label={label} tone="primary" selected={activeFilter === filter} onPress={() => setActiveFilter(filter)} />
             ))}
-            <Tag label="Custom Range" tone="warning" selected={activeFilter === "custom"} onPress={openCustomRange} />
-          </View>
-          <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Showing {rangeLabel}.</Text>
+            {activeFilter === "custom" ? <Tag label="Custom range" tone="primary" selected onPress={openCustomRange} /> : null}
+          </ScrollView>
           {error ? <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>{error}</Text> : null}
-        </Card>
+        </View>
 
         {loading && !analytics ? (
           <View style={{ gap: 16 }}>
@@ -198,7 +202,7 @@ export function AnalyticsScreen() {
             <AnimatedSection index={0}>
               <TrendCard
                 title="Revenue"
-                subtitle="Monthly revenue trend"
+                subtitle="Monthly buckets within the selected dates"
                 accent="primary"
                 points={analytics?.revenueTrend.map((point) => ({ label: point.period, value: point.revenue, note: `${point.salesCount} sales` })) ?? []}
                 valueFormatter={(value) => formatMoney(value, business?.currency)}
@@ -207,7 +211,7 @@ export function AnalyticsScreen() {
             <AnimatedSection index={1}>
               <TrendCard
                 title="Sales"
-                subtitle="Orders processed over time"
+                subtitle="Monthly order totals within the selected dates"
                 accent="success"
                 points={analytics?.salesTrend.map((point) => ({ label: point.label, value: point.value, note: formatMoney(point.secondaryValue ?? 0, business?.currency) })) ?? []}
                 valueFormatter={(value) => formatCount(value)}
@@ -233,7 +237,7 @@ export function AnalyticsScreen() {
             <AnimatedSection index={3}>
               <RankedChart
                 title="Customers"
-                subtitle="Top customer revenue and balance"
+                subtitle="Revenue in range · current outstanding balance"
                 accent="warning"
                 rows={analytics?.customerPerformance ?? []}
                 valueFormatter={(value) => formatMoney(value, business?.currency)}
@@ -276,7 +280,7 @@ export function AnalyticsScreen() {
             <AnimatedSection index={7}>
               <TrendCard
                 title="Profit Trends"
-                subtitle="Profit after estimated costs and expenses"
+                subtitle="Estimated monthly profit within the selected dates"
                 accent="warning"
                 points={analytics?.profitTrends.map((point) => ({ label: point.period, value: point.profit, note: formatMoney(point.expenses, business?.currency) })) ?? []}
                 valueFormatter={(value) => formatMoney(value, business?.currency)}
@@ -285,9 +289,9 @@ export function AnalyticsScreen() {
             <AnimatedSection index={8}>
               <MonthlyGrowthCard growth={analytics?.monthlyGrowth ?? []} currency={business?.currency ?? "KES"} />
             </AnimatedSection>
-            <AnimatedSection index={9}>
+            {(analytics?.revenueTrend.length ?? 0) > 1 && analytics?.revenueTrend.some((point) => point.revenue !== 0) ? <AnimatedSection index={9}>
               <ForecastCard forecast={analytics?.forecast ?? []} currency={business?.currency ?? "KES"} />
-            </AnimatedSection>
+            </AnimatedSection> : null}
           </>
         )}
       </AppScrollView>
@@ -351,15 +355,28 @@ function TrendCard({
   const values = React.useMemo(() => points.map((point) => Number(point.value ?? 0)), [points]);
   const maxMagnitude = React.useMemo(() => Math.max(1, ...values.map((value) => Math.abs(value))), [values]);
   const hasNegative = values.some((value) => value < 0);
-  const zeroY = hasNegative ? 69 : 116;
+  const [chartWidth, setChartWidth] = React.useState(0);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   React.useEffect(() => setSelectedIndex(Math.max(0, points.length - 1)), [points]);
   const selectedPoint = points[selectedIndex];
+  const plotHeight = 112;
+  const inset = 7;
+  const plotInsetY = 8;
+  const plotWidth = Math.max(0, chartWidth - inset * 2);
+  const zeroY = hasNegative ? plotHeight / 2 : plotHeight - plotInsetY;
+  const coordinates = React.useMemo(() => points.map((point, index) => {
+    const value = Number(point.value ?? 0);
+    const x = inset + (points.length <= 1 ? plotWidth / 2 : (index / (points.length - 1)) * plotWidth);
+    const y = hasNegative
+      ? plotHeight / 2 - (value / maxMagnitude) * (plotHeight / 2 - plotInsetY)
+      : plotHeight - plotInsetY - (value / maxMagnitude) * (plotHeight - plotInsetY * 2);
+    return { x, y };
+  }), [hasNegative, maxMagnitude, plotHeight, plotInsetY, plotWidth, points]);
 
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{title}</Text>
+        <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{title}</Text>
         <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{subtitle}</Text>
       </View>
       {points.length ? (
@@ -369,23 +386,37 @@ function TrendCard({
             <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{valueFormatter(selectedPoint.value)}</Text>
             {selectedPoint.note ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{selectedPoint.note}</Text> : null}
           </View> : null}
-          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 7, height: 152 }}>
-          {points.map((point, index) => {
-            const magnitude = Math.abs(Number(point.value ?? 0));
-            const available = point.value < 0 ? 34 : hasNegative ? 58 : 110;
-            const barHeight = magnitude === 0 ? 0 : Math.max(2, available * (magnitude / maxMagnitude));
-            const isSelected = selectedIndex === index;
-            const barColor = point.value < 0 ? tokens.colors.danger : toneColor(accent, 1);
-            return (
-              <Pressable key={`${title}-${point.label}-${index}`} onPress={() => setSelectedIndex(index)} accessibilityRole="button" accessibilityState={{ selected: isSelected }} accessibilityLabel={`${point.label}: ${valueFormatter(point.value)}${point.note ? `, ${point.note}` : ""}`} style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
-                <View style={{ height: 122, width: "100%", position: "relative", borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
-                  {hasNegative ? <View style={{ position: "absolute", top: zeroY, left: 0, right: 0, borderTopWidth: 1, borderStyle: "dashed", borderColor: tokens.colors.textMuted }} /> : null}
-                  {barHeight > 0 ? <View style={{ position: "absolute", top: point.value < 0 ? zeroY : zeroY - barHeight, left: "22%", right: "22%", height: barHeight, borderTopLeftRadius: 4, borderTopRightRadius: 4, borderBottomLeftRadius: point.value < 0 ? 4 : 0, borderBottomRightRadius: point.value < 0 ? 4 : 0, backgroundColor: barColor, opacity: isSelected ? 1 : 0.56 }} /> : null}
-                </View>
-                <Text style={{ color: isSelected ? tokens.colors.text : tokens.colors.textSecondary, fontSize: 9, fontWeight: isSelected ? "700" : "500", marginTop: 5 }} numberOfLines={1}>{point.label}</Text>
-              </Pressable>
-            );
-          })}
+          <View
+            onLayout={(event) => setChartWidth(event.nativeEvent.layout.width)}
+            style={{ height: plotHeight, position: "relative", borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}
+          >
+            {hasNegative ? <View style={{ position: "absolute", top: zeroY, left: 0, right: 0, borderTopWidth: 1, borderStyle: "dashed", borderColor: tokens.colors.textMuted }} /> : null}
+            {chartWidth > 0 ? points.slice(0, -1).map((point, index) => {
+              const from = coordinates[index];
+              const to = coordinates[index + 1];
+              if (!from || !to) return null;
+              const dx = to.x - from.x;
+              const dy = to.y - from.y;
+              const length = Math.sqrt(dx * dx + dy * dy);
+              const angle = `${Math.atan2(dy, dx)}rad`;
+              return <View key={`segment-${point.label}-${index}`} style={{ position: "absolute", left: (from.x + to.x - length) / 2, top: (from.y + to.y) / 2 - 1, width: length, height: 2, borderRadius: 2, backgroundColor: toneColor(accent, 1), transform: [{ rotate: angle }] }} />;
+            }) : null}
+            {chartWidth > 0 ? points.map((point, index) => {
+              const coordinate = coordinates[index];
+              if (!coordinate) return null;
+              const isSelected = selectedIndex === index;
+              const pointColor = point.value < 0 ? tokens.colors.danger : toneColor(accent, 1);
+              const size = isSelected ? 10 : 7;
+              return <View key={`point-${point.label}-${index}`} style={{ position: "absolute", left: coordinate.x - size / 2, top: coordinate.y - size / 2, width: size, height: size, borderRadius: size / 2, backgroundColor: pointColor, borderWidth: isSelected ? 2 : 0, borderColor: tokens.colors.surface }} />;
+            }) : null}
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "stretch" }}>
+            {points.map((point, index) => {
+              const isSelected = selectedIndex === index;
+              return <Pressable key={`${title}-${point.label}-${index}`} onPress={() => setSelectedIndex(index)} accessibilityRole="button" accessibilityState={{ selected: isSelected }} accessibilityLabel={`${point.label}: ${valueFormatter(point.value)}${point.note ? `, ${point.note}` : ""}`} style={{ flex: 1, minWidth: 0, minHeight: 38, alignItems: "center", justifyContent: "center", paddingHorizontal: 1 }}>
+                <Text style={{ color: isSelected ? tokens.colors.text : tokens.colors.textSecondary, fontSize: 9, fontWeight: isSelected ? "700" : "500" }} numberOfLines={1}>{point.label}</Text>
+              </Pressable>;
+            })}
           </View>
         </View>
       ) : (
@@ -412,12 +443,13 @@ function RankedChart<T extends { label: string; value: number; secondaryValue?: 
   secondaryFormatter?: (row: T) => string;
   tertiaryFormatter?: (row: T) => string;
 }) {
-  const max = React.useMemo(() => Math.max(1, ...rows.map((row) => Number(row.value ?? 0))), [rows]);
+  const max = React.useMemo(() => Math.max(1, ...rows.map((row) => Math.abs(Number(row.value ?? 0)))), [rows]);
+  const hasNegative = rows.some((row) => Number(row.value ?? 0) < 0);
 
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{title}</Text>
+        <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{title}</Text>
         <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{subtitle}</Text>
       </View>
       {rows.length ? (
@@ -429,6 +461,7 @@ function RankedChart<T extends { label: string; value: number; secondaryValue?: 
               value={row.value}
               max={max}
               accent={accent}
+              signedScale={hasNegative}
               valueText={valueFormatter(row.value)}
               secondaryText={secondaryFormatter ? secondaryFormatter(row) : undefined}
               tertiaryText={tertiaryFormatter ? tertiaryFormatter(row) : undefined}
@@ -447,6 +480,7 @@ const RankedBarRow = React.memo(function RankedBarRow({
   value,
   max,
   accent,
+  signedScale,
   valueText,
   secondaryText,
   tertiaryText
@@ -455,11 +489,13 @@ const RankedBarRow = React.memo(function RankedBarRow({
   value: number;
   max: number;
   accent: "primary" | "success" | "warning" | "danger";
+  signedScale: boolean;
   valueText: string;
   secondaryText?: string | undefined;
   tertiaryText?: string | undefined;
 }) {
-  const percentage = Math.max(0.08, Math.min(1, Number(value ?? 0) / Math.max(1, max)));
+  const magnitude = Math.abs(Number(value ?? 0));
+  const percentage = magnitude === 0 ? 0 : Math.max(0.02, Math.min(1, magnitude / Math.max(1, max)));
   return (
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
@@ -475,7 +511,12 @@ const RankedBarRow = React.memo(function RankedBarRow({
         <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{valueText}</Text>
       </View>
       <View style={{ height: 10, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
-        <View style={{ width: `${percentage * 100}%`, height: "100%", borderRadius: 999, backgroundColor: toneColor(accent, 1) }} />
+        {signedScale ? (
+          <>
+            <View style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: tokens.colors.border }} />
+            {percentage > 0 ? <View style={{ position: "absolute", top: 0, bottom: 0, left: value < 0 ? undefined : "50%", right: value < 0 ? "50%" : undefined, width: `${percentage * 50}%`, backgroundColor: value < 0 ? tokens.colors.danger : toneColor(accent, 1) }} /> : null}
+          </>
+        ) : percentage > 0 ? <View style={{ width: `${percentage * 100}%`, height: "100%", borderRadius: 999, backgroundColor: toneColor(accent, 1) }} /> : null}
       </View>
     </View>
   );
@@ -483,22 +524,25 @@ const RankedBarRow = React.memo(function RankedBarRow({
 
 function MonthlyGrowthCard({ growth, currency }: { growth: Array<{ month: string; revenue: number; growthPercent: number }>; currency: string }) {
   return (
-    <Card style={{ gap: 12 }}>
+    <Card style={{ gap: 8 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Monthly Growth</Text>
-        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>Month-over-month revenue movement.</Text>
+        <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Month-bucket revenue change</Text>
+        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>Adjacent buckets in the selected dates; partial months are not normalized.</Text>
       </View>
       {growth.length ? (
-        <View style={{ gap: 10 }}>
-          {growth.map((point) => {
+        <View>
+          {growth.map((point, index) => {
+            const hasPreviousPeriod = index > 0 && (growth[index - 1]?.revenue ?? 0) > 0;
             const positive = point.growthPercent >= 0;
             return (
-              <View key={point.month} style={{ padding: 12, borderRadius: 16, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, gap: 6 }}>
+              <View key={point.month} style={{ minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 7, borderTopWidth: 1, borderColor: tokens.colors.border }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{point.month}</Text>
-                  <Text style={{ color: positive ? tokens.colors.success : tokens.colors.danger, fontWeight: "800" }}>{formatPercent(point.growthPercent)}</Text>
                 </View>
-                <Text style={{ color: tokens.colors.textSecondary }}>{formatMoney(point.revenue, currency)}</Text>
+                <View style={{ alignItems: "flex-end", gap: 2 }}>
+                  <Text style={{ color: hasPreviousPeriod ? positive ? tokens.colors.success : tokens.colors.danger : tokens.colors.textMuted, fontSize: 11, fontWeight: "800" }}>{hasPreviousPeriod ? formatPercent(point.growthPercent) : "No baseline"}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{formatMoney(point.revenue, currency)}</Text>
+                </View>
               </View>
             );
           })}
@@ -515,8 +559,8 @@ function ForecastCard({ forecast, currency }: { forecast: Array<{ month: string;
   return (
     <Card style={{ gap: 12 }}>
       <View style={{ gap: 4 }}>
-        <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Forecasting</Text>
-        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>A simple trend projection based on the current period.</Text>
+        <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Trend projection</Text>
+        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>A simple linear projection from the selected months; it is not a target or guaranteed result.</Text>
       </View>
       {forecast.length ? (
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, minHeight: 160 }}>

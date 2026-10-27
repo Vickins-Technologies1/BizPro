@@ -144,25 +144,25 @@ export function OnboardingScreen() {
 
   return (
     <Screen hideFooter>
-      <AppScrollView contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 20 }}>
+      <AppScrollView contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 }}>
         <AuthCompactHeader eyebrow="Setup" />
         <View style={{ gap: 8, paddingHorizontal: 2 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 21, lineHeight: 26, fontWeight: "900", letterSpacing: -0.5 }}>{activeStep.title}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 20, lineHeight: 25, fontWeight: "900", letterSpacing: -0.4 }}>{activeStep.title}</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{activeStep.subtitle}</Text>
             </View>
             <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>STEP {stepIndex + 1} / {steps.length}</Text>
           </View>
           <View accessibilityRole="progressbar" accessibilityLabel={`Setup progress, step ${stepIndex + 1} of ${steps.length}: ${activeStep.title}`} accessibilityValue={{ min: 1, max: steps.length, now: stepIndex + 1 }} style={{ flexDirection: "row", gap: 4 }}>
             {steps.map((step, index) => (
-              <View key={step.key} style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.primaryStrong : tokens.colors.border }} />
+              <View key={step.key} style={{ flex: 1, height: 3, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.primaryStrong : tokens.colors.border }} />
             ))}
           </View>
         </View>
 
         {stepIndex === 0 ? (
-          <Card style={{ gap: 11, padding: 13, borderRadius: 16 }}>
+          <Card style={{ gap: 9, padding: 11, borderRadius: 14 }}>
             <Controller
               control={control}
               name="ownerName"
@@ -170,8 +170,8 @@ export function OnboardingScreen() {
                 <InputField
                   label="Owner name"
                   value={value}
-                  onChangeText={onChange}
-                  placeholder="John Mwangi"
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
+                  placeholder="Your full name"
                   error={errors.ownerName?.message}
                 />
               )}
@@ -212,7 +212,7 @@ export function OnboardingScreen() {
                 <InputField
                   label="Business name"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
                   placeholder="Your business name"
                   error={errors.businessName?.message}
                   helperText="Shown on receipts"
@@ -226,7 +226,7 @@ export function OnboardingScreen() {
                 <InputField
                   label="Branch"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
                   placeholder="Main shop"
                   error={errors.branchName?.message}
                   helperText="Add more later"
@@ -240,7 +240,7 @@ export function OnboardingScreen() {
                 <InputField
                   label="Currency"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
                   placeholder="KES"
                   error={errors.currency?.message}
                   helperText="3-letter currency code"
@@ -261,6 +261,9 @@ export function OnboardingScreen() {
                 return (
                   <Pressable
                     key={module.key}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${module.label}${selected ? ", selected" : ""}`}
                     onPress={() => {
                       setValue("industryKey", module.key, { shouldDirty: true, shouldTouch: true });
                       setValue("businessType", module.businessTypes[0]!.value, { shouldDirty: true, shouldTouch: true });
@@ -316,6 +319,9 @@ export function OnboardingScreen() {
                 return (
                   <Pressable
                     key={option.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${option.label}${selected ? ", selected" : ""}`}
                     onPress={() => setValue("businessType", option.value, { shouldDirty: true, shouldTouch: true })}
                     style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
                   >
@@ -362,6 +368,9 @@ export function OnboardingScreen() {
                 return (
                   <Pressable
                     key={plan}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${PLAN_NAMES[plan]}, ${PLAN_PRICING[plan].toLocaleString()} per month${selected ? ", selected" : ""}`}
                     onPress={() => setValue("planTier", plan, { shouldDirty: true, shouldTouch: true })}
                     style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
                   >
@@ -403,7 +412,7 @@ export function OnboardingScreen() {
                 <InputField
                   label="Password"
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
                   placeholder="Secure password"
                   secureTextEntry
                   error={errors.password?.message}
@@ -418,7 +427,7 @@ export function OnboardingScreen() {
                 <InputField
                   label="Optional cashier PIN"
                   value={value ?? ""}
-                  onChangeText={onChange}
+                  onChangeText={(next) => { setSetupError(null); onChange(next); }}
                   placeholder="1234"
                   keyboardType="number-pad"
                   secureTextEntry

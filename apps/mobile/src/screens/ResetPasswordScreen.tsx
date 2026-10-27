@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { z } from "zod";
 import { InputField, PrimaryButton } from "@/components/Primitives";
-import { AuthLink, AuthLayout, AuthMessage } from "@/components/AuthComponents";
+import { AuthLink, AuthLayout, AuthMessage, AuthSectionLabel } from "@/components/AuthComponents";
 import { resetPassword } from "@/services/apiClient";
 
 const resetSchema = z
@@ -53,11 +53,12 @@ export function ResetPasswordScreen() {
       subtitle="Use the one-time code you received, then choose a password you’ll remember."
       footer={<AuthLink label="Back to sign in" icon="arrow-back-outline" onPress={() => navigation.navigate("Login")} />}
     >
+      <AuthSectionLabel>Account verification</AuthSectionLabel>
       <Controller
         control={control}
         name="identifier"
         render={({ field: { value, onChange } }) => (
-          <InputField label="Phone or account name" value={value} onChangeText={onChange} placeholder="07… or your account name" error={errors.identifier?.message} autoCapitalize="words" />
+          <InputField label="Phone or account name" value={value} onChangeText={(next) => { setError(null); onChange(next); }} placeholder="07… or your account name" error={errors.identifier?.message} autoCapitalize="none" />
         )}
       />
       <Controller
@@ -67,7 +68,7 @@ export function ResetPasswordScreen() {
           <InputField
             label="6-digit reset code"
             value={value}
-            onChangeText={(next) => onChange(next.replace(/\D/g, "").slice(0, 6))}
+            onChangeText={(next) => { setError(null); onChange(next.replace(/\D/g, "").slice(0, 6)); }}
             placeholder="000000"
             keyboardType="number-pad"
             error={errors.code?.message}
@@ -75,18 +76,19 @@ export function ResetPasswordScreen() {
           />
         )}
       />
+      <AuthSectionLabel>New credentials</AuthSectionLabel>
       <Controller
         control={control}
         name="password"
         render={({ field: { value, onChange } }) => (
-          <InputField label="New password" value={value} onChangeText={onChange} placeholder="At least 6 characters" secureTextEntry error={errors.password?.message} />
+          <InputField label="New password" value={value} onChangeText={(next) => { setError(null); onChange(next); }} placeholder="At least 6 characters" secureTextEntry error={errors.password?.message} />
         )}
       />
       <Controller
         control={control}
         name="confirmPassword"
         render={({ field: { value, onChange } }) => (
-          <InputField label="Confirm new password" value={value} onChangeText={onChange} placeholder="Repeat your new password" secureTextEntry error={errors.confirmPassword?.message} />
+          <InputField label="Confirm new password" value={value} onChangeText={(next) => { setError(null); onChange(next); }} placeholder="Repeat your new password" secureTextEntry error={errors.confirmPassword?.message} />
         )}
       />
       {error ? <AuthMessage tone="error">{error}</AuthMessage> : null}

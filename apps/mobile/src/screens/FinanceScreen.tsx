@@ -326,7 +326,7 @@ export function FinanceScreen() {
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
               <View style={{ flexDirection: "row", gap: 14 }}>
-                <FinanceMetric label="Income" value={formatMoney(overview?.incomeTotal ?? 0, business?.currency)} />
+                <FinanceMetric label="Sales revenue" value={formatMoney(overview?.incomeTotal ?? 0, business?.currency)} />
                 <FinanceMetric label="Expenses" value={formatMoney(overview?.expensesTotal ?? 0, business?.currency)} tone="warning" />
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />

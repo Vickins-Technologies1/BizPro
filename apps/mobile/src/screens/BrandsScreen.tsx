@@ -1,8 +1,8 @@
 import React from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Brand } from "@shared";
 import { useNavigation } from "@react-navigation/native";
-import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
+import { AppScrollView, Badge, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { archiveBrand, updateBrand } from "@/services/apiClient";
@@ -13,6 +13,7 @@ export function BrandsScreen() {
   const navigation = useNavigation<any>();
   const business = useAppStore((state) => state.business);
   const brands = useAppStore((state) => state.brands);
+  const products = useAppStore((state) => state.products);
   const addBrand = useAppStore((state) => state.addBrand);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [search, setSearch] = React.useState("");
@@ -22,15 +23,29 @@ export function BrandsScreen() {
   const [name, setName] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [refreshing, setRefreshing] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "archived">("all");
 
   React.useEffect(() => {
     loadCatalog().catch(() => undefined);
   }, [loadCatalog]);
 
+  const productCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      if (product.brandId) counts.set(product.brandId, (counts.get(product.brandId) ?? 0) + 1);
+    }
+    return counts;
+  }, [products]);
+
   const filtered = React.useMemo(() => {
     const query = search.trim().toLowerCase();
-    return brands.filter((brand) => [brand.name, brand.description ?? ""].join(" ").toLowerCase().includes(query));
-  }, [brands, search]);
+    return brands.filter((brand) => {
+      const productNames = products.filter((product) => product.brandId === brand.id).map((product) => product.name).join(" ");
+      const matchesQuery = [brand.name, brand.description ?? "", productNames].join(" ").toLowerCase().includes(query);
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? brand.isActive : !brand.isActive);
+      return matchesQuery && matchesStatus;
+    });
+  }, [brands, products, search, statusFilter]);
 
   function openEditor(brand?: Brand | null) {
     setEditing(brand ?? null);
@@ -60,16 +75,19 @@ export function BrandsScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refresh} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <View style={{ gap: 9, paddingBottom: 4 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refresh} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <View style={{ gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Brand directory</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filtered.length} of {brands.length} brands</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filtered.length} of {brands.length} brands · {[...productCounts.values()].reduce((sum, count) => sum + count, 0)} linked products in loaded catalog</Text>
             </View>
             <PrimaryButton title="Add brand" onPress={() => openEditor(null)} />
           </View>
-          <SearchField value={search} onChangeText={setSearch} placeholder="Search name or description" accessibilityLabel="Search brands" />
+          <SearchField value={search} onChangeText={setSearch} placeholder="Search brands, descriptions, or products" accessibilityLabel="Search brands and linked products" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter brands by status">
+            {(["all", "active", "archived"] as const).map((option) => <Tag key={option} label={option === "all" ? "All brands" : option === "active" ? "Active" : "Archived"} selected={statusFilter === option} onPress={() => setStatusFilter(option)} />)}
+          </ScrollView>
         </View>
         {filtered.length ? (
           <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
@@ -81,6 +99,7 @@ export function BrandsScreen() {
                     {!brand.isActive ? <Badge label="Archived" tone="warning" /> : null}
                   </View>
                   {brand.description ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{brand.description}</Text> : null}
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>{productCounts.get(brand.id) ?? 0} linked product{productCounts.get(brand.id) === 1 ? "" : "s"}</Text>
                 </View>
                 <Pressable onPress={() => openEditor(brand)} accessibilityRole="button" accessibilityLabel={`Edit ${brand.name}`} hitSlop={7} style={{ padding: 8 }}>
                   <Ionicons name="create-outline" size={18} color={tokens.colors.primaryStrong} />
@@ -104,9 +123,9 @@ export function BrandsScreen() {
           </View>
         ) : (
           <EmptyState
-            title={search ? "No matching brands" : "No brands yet"}
-            subtitle={search ? "Try a different brand name or clear the search." : "Create a brand to organize inventory by supplier line."}
-            action={<PrimaryButton title="Add brand" onPress={() => openEditor(null)} />}
+            title={search || statusFilter !== "all" ? "No matching brands" : "No brands yet"}
+            subtitle={search || statusFilter !== "all" ? "Try another search or clear the active filters." : "Create a brand to organize inventory by supplier line."}
+            action={search || statusFilter !== "all" ? <PrimaryButton title="Clear filters" variant="secondary" onPress={() => { setSearch(""); setStatusFilter("all"); }} /> : <PrimaryButton title="Add brand" onPress={() => openEditor(null)} />}
             icon="pricetag-outline"
           />
         )}

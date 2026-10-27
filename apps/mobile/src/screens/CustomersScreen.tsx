@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -432,18 +432,21 @@ export function CustomersScreen() {
 
             <View style={{ gap: 8 }}>
               <SearchField value={search} onChangeText={setSearch} placeholder="Name, phone, email, notes, or group" accessibilityLabel="Search customers" />
-              <View style={{ gap: 8 }}>
-                <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Status</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ gap: 6 }}>
+                <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 10, fontWeight: "700" }}>Status</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter customers by balance status">
                   <Tag label="All" selected={statusFilter === "all"} onPress={() => setStatusFilter("all")} />
                   <Tag label="Owing" selected={statusFilter === "owing"} onPress={() => setStatusFilter("owing")} />
                   <Tag label="Clear" selected={statusFilter === "clear"} onPress={() => setStatusFilter("clear")} />
                   <Tag label="Over credit" selected={statusFilter === "over_limit"} onPress={() => setStatusFilter("over_limit")} />
-                </View>
+                </ScrollView>
               </View>
-              <View style={{ gap: 8 }}>
-                <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Groups</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 10, fontWeight: "700" }}>Groups</Text>
+                  {search || selectedGroupId !== "all" || statusFilter !== "all" ? <Pressable onPress={() => { setSearch(""); setSelectedGroupId("all"); setStatusFilter("all"); }} accessibilityRole="button" accessibilityLabel="Clear customer search and filters"><Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "700" }}>Clear</Text></Pressable> : null}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter customers by group">
                   <Tag label="All groups" selected={selectedGroupId === "all"} onPress={() => setSelectedGroupId("all")} />
                   <Tag label="Ungrouped" selected={selectedGroupId === "ungrouped"} onPress={() => setSelectedGroupId("ungrouped")} />
                   {customerGroups.map((group) => (
@@ -454,7 +457,7 @@ export function CustomersScreen() {
                       onPress={() => setSelectedGroupId(group.id)}
                     />
                   ))}
-                </View>
+                </ScrollView>
               </View>
             </View>
           </View>

@@ -10,6 +10,7 @@ import { formatDate } from "@/utils/date";
 import { formatMoney } from "@/utils/money";
 import { createId } from "@/utils/id";
 import { Ionicons } from "@expo/vector-icons";
+import { SearchField } from "@/components/DesignSystem";
 
 type TransferLine = {
   productId: string;
@@ -29,6 +30,7 @@ export function StockTransfersScreen() {
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const [transfers, setTransfers] = React.useState<StockTransfer[]>([]);
   const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StockTransfer["status"] | "all">("all");
   const [editing, setEditing] = React.useState<StockTransfer | null>(null);
   const [visible, setVisible] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -56,8 +58,11 @@ export function StockTransfersScreen() {
 
   const filteredTransfers = React.useMemo(() => {
     const query = search.trim().toLowerCase();
-    return transfers.filter((transfer) => [transfer.transferNumber, transfer.status, transfer.fromBranchId ?? "", transfer.toBranchId ?? "", transfer.note ?? "", branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "", branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? ""].join(" ").toLowerCase().includes(query));
-  }, [search, transfers, branches]);
+    return transfers.filter((transfer) => {
+      const matchesQuery = [transfer.transferNumber, transfer.status, transfer.fromBranchId ?? "", transfer.toBranchId ?? "", transfer.note ?? "", branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "", branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? ""].join(" ").toLowerCase().includes(query);
+      return matchesQuery && (statusFilter === "all" || transfer.status === statusFilter);
+    });
+  }, [search, statusFilter, transfers, branches]);
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -182,6 +187,8 @@ export function StockTransfersScreen() {
 
   async function runTransferAction(transfer: StockTransfer, action: "dispatch" | "receive") {
     if (user?.role !== "owner" && user?.role !== "manager") return;
+    const confirmed = await confirmTransferAction(transfer, action, branches);
+    if (!confirmed) return;
     try {
       const updated = action === "dispatch" ? await dispatchStockTransfer(transfer.id) : await receiveStockTransfer(transfer.id);
       setTransfers((current) => current.map((item) => item.id === transfer.id ? updated : item));
@@ -203,33 +210,39 @@ export function StockTransfersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
-        <Card style={{ gap: 8, padding: 12 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <View style={{ gap: 8, paddingBottom: 10, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredTransfers.length} of {transfers.length} transfers</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Transfer register</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filteredTransfers.length} of {transfers.length} transfers · branches shown per transfer</Text>
             </View>
             {user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : null}
           </View>
-          <InputField label="Search transfers" value={search} onChangeText={setSearch} placeholder="Transfer number, branch, or status" />
-        </Card>
+          <SearchField value={search} onChangeText={setSearch} placeholder="Transfer number, branch, or status" accessibilityLabel="Search stock transfers" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} accessibilityLabel="Filter stock transfers by status">
+            {(["all", "draft", "in_transit", "received", "cancelled"] as Array<StockTransfer["status"] | "all">).map((option) => (
+              <Tag key={option} label={option === "all" ? "All statuses" : option.replaceAll("_", " ")} tone="primary" selected={statusFilter === option} onPress={() => setStatusFilter(option)} />
+            ))}
+          </ScrollView>
+        </View>
         {filteredTransfers.length ? (
-          <Card style={{ paddingVertical: 0, paddingHorizontal: 12 }}>
+          <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
           {filteredTransfers.map((transfer, index) => (
-            <View key={transfer.id} style={{ gap: 7, paddingVertical: 12, borderBottomWidth: index === filteredTransfers.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
+            <View key={transfer.id} style={{ gap: 6, paddingVertical: 10, borderBottomWidth: index === filteredTransfers.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{transfer.transferNumber}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                    {branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "Source branch"} → {branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? "Destination branch"}
-                  </Text>
-                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(transfer.transferDate, "PP")} · {transfer.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units · {transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
-                </View>
+                <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800", flex: 1 }} numberOfLines={1}>{transfer.transferNumber} · {formatDate(transfer.transferDate, "PP")}</Text>
                 <Badge label={transfer.status.replaceAll("_", " ")} tone={transfer.status === "received" ? "success" : transfer.status === "cancelled" ? "danger" : "primary"} />
               </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                <Text style={{ flex: 1, color: tokens.colors.text, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>{branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "Source branch"}</Text>
+                <Ionicons name="arrow-forward" size={14} color={tokens.colors.textMuted} />
+                <Text style={{ flex: 1, color: tokens.colors.text, fontSize: 12, fontWeight: "700", textAlign: "right" }} numberOfLines={1}>{branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? "Destination branch"}</Text>
+              </View>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }} numberOfLines={1}>{transfer.items.slice(0, 2).map((item, itemIndex) => `${products.find((product) => product.externalId === item.productId || product.id === item.productId)?.name ?? `Item ${itemIndex + 1}`} × ${item.quantity}`).join(" · ")}{transfer.items.length > 2 ? ` · +${transfer.items.length - 2} lines` : ""}</Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: tokens.colors.primaryStrong, fontSize: 15, fontWeight: "900" }}>{formatMoney(transfer.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0), business?.currency)}</Text>
-                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 12, fontWeight: "800" }}>{formatMoney(transfer.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0), business?.currency)}</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{transfer.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units · {transfer.items.length} lines</Text>
               </View>
               {user?.role === "owner" || user?.role === "manager" ? <View style={{ flexDirection: "row", gap: 10 }}>
                 {transfer.status === "draft" && (user?.role === "owner" || user?.branchId === transfer.fromBranchId) ? <View style={{ flex: 1 }}><PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(transfer)} /></View> : null}
@@ -244,12 +257,12 @@ export function StockTransfersScreen() {
               </View> : null}
             </View>
           ))}
-          </Card>
+          </View>
         ) : (
           <EmptyState
-            title={search ? "No matching transfers" : "No stock transfers yet"}
-            subtitle={search ? "Try a different transfer number or branch." : "Create transfers to document stock movement between branches."}
-            action={user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : undefined}
+            title={search || statusFilter !== "all" ? "No matching transfers" : "No stock transfers yet"}
+            subtitle={search || statusFilter !== "all" ? "Try another search or clear the status filter." : "Create transfers to document stock movement between branches."}
+            action={search || statusFilter !== "all" ? <PrimaryButton title="Clear filters" variant="secondary" onPress={() => { setSearch(""); setStatusFilter("all"); }} /> : user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : undefined}
             icon="swap-horizontal-outline"
           />
         )}
@@ -327,5 +340,23 @@ function confirmMobile(message: string) {
       { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
       { text: "Archive", style: "destructive", onPress: () => resolve(true) }
     ]);
+  });
+}
+
+function confirmTransferAction(transfer: StockTransfer, action: "dispatch" | "receive", branches: Array<{ id: string; name: string }>) {
+  const fromBranch = branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "the source branch";
+  const toBranch = branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? "the destination branch";
+  const isDispatch = action === "dispatch";
+  return new Promise<boolean>((resolve) => {
+    Alert.alert(
+      isDispatch ? "Dispatch this transfer?" : "Receive this transfer?",
+      isDispatch
+        ? `${transfer.transferNumber}: stock will be deducted from ${fromBranch}. ${toBranch} stock changes after the destination confirms receipt.`
+        : `${transfer.transferNumber}: the listed quantities will be added to ${toBranch} stock.`,
+      [
+        { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+        { text: isDispatch ? "Dispatch" : "Receive stock", style: "destructive", onPress: () => resolve(true) }
+      ]
+    );
   });
 }

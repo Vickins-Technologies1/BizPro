@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { z } from "zod";
 import { InputField, PrimaryButton } from "@/components/Primitives";
-import { AuthLink, AuthLayout, AuthMessage } from "@/components/AuthComponents";
+import { AuthLink, AuthLayout, AuthMessage, AuthSectionLabel } from "@/components/AuthComponents";
 import { requestPasswordReset } from "@/services/apiClient";
 import { useThemeTokens } from "@/theme";
 
@@ -50,6 +50,7 @@ export function ForgotPasswordScreen() {
       subtitle="Enter the phone number or account name you use to sign in."
       footer={<AuthLink label="Back to sign in" icon="arrow-back-outline" onPress={() => navigation.navigate("Login")} />}
     >
+      <AuthSectionLabel>Account recovery</AuthSectionLabel>
       <Controller
         control={control}
         name="identifier"

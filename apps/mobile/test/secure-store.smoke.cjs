@@ -66,6 +66,10 @@ async function main() {
   assert.equal(values.size, 0, "logout removes the token and associated session metadata");
   assert.equal(calls.filter((call) => call[0] === "delete").every((call) => call.length === 2), true, "deleteItemAsync receives only key");
 
+  await secureStore.setThemeMode("dark");
+  assert.equal(await secureStore.getThemeMode(), "dark", "theme preference persists across store reads");
+  assert.equal(values.get("vbo.themeMode"), "dark", "theme preference uses its dedicated secure-storage key");
+
   failure = new Error("native failure containing vbo.session and secret-token");
   await assert.rejects(secureStore.setSession("secret-token"), (error) => {
     assert.equal(error.message.startsWith("Secure storage is unavailable."), true);

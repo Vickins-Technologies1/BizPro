@@ -6,15 +6,14 @@ import {
   AppScrollView,
   AppVirtualizedList,
   Badge,
-  Card,
   EmptyState,
   GradientHeader,
   InputField,
   PrimaryButton,
   Screen,
   SimpleModal,
-  StatCard
 } from "@/components/Primitives";
+import { SearchField } from "@/components/DesignSystem";
 import { useAppStore } from "@/store/useAppStore";
 import { tokens } from "@/theme/tokens";
 import {
@@ -62,6 +61,7 @@ export function EmployeesScreen() {
   const business = useAppStore((state) => state.business);
   const user = useAppStore((state) => state.user);
   const selectedBranchId = useAppStore((state) => state.selectedBranchId);
+  const branches = useAppStore((state) => state.branches);
   const canManageEmployees = hasPermission(user, "manageEmployees");
   const permissions = getEffectivePermissions(user);
 
@@ -334,64 +334,26 @@ export function EmployeesScreen() {
         data={filteredEmployees}
         keyExtractor={(employee) => employee.id}
         ListHeaderComponent={
-          <View style={{ gap: 12 }}>
-            <Card style={{ gap: 8 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Owned by the business owner account</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-                Use this workspace to add team members, assign preset roles, fine-tune permissions, and review access history.
-              </Text>
-              {error ? (
-                <Text style={{ color: tokens.colors.danger, lineHeight: 18 }}>
-                  We couldn&apos;t load the employee workspace. {error}
+          <View style={{ gap: 10, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Team directory</Text>
+                <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                  {selectedBranchId ? branches.find((branch) => branch.id === selectedBranchId)?.name ?? "Selected branch" : "All authorized branches"} · Owner: {effectiveOwnerName}
                 </Text>
-              ) : null}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <Badge label={`Owner: ${effectiveOwnerName}`} tone="success" />
-                <Badge label={`${permissions.length} permissions`} tone="primary" />
               </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <PrimaryButton title="Add employee" onPress={openCreate} />
-                <PrimaryButton title={refreshing ? "Refreshing..." : "Refresh"} variant="secondary" onPress={refreshWorkspace} />
-              </View>
-              {feedback ? (
-                <Text
-                  style={{
-                    color:
-                      feedback.tone === "danger"
-                        ? tokens.colors.danger
-                        : feedback.tone === "warning"
-                          ? tokens.colors.warning
-                          : tokens.colors.success,
-                    fontSize: 13,
-                    lineHeight: 18
-                  }}
-                >
-                  {feedback.message}
-                </Text>
-              ) : null}
-            </Card>
-
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Employees" value={`${employees.length}`} icon="people-outline" tone="primary" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Active" value={`${metrics.active}`} icon="checkmark-circle-outline" tone="success" />
-              </View>
+              <PrimaryButton title="Add employee" onPress={openCreate} />
             </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Suspended" value={`${metrics.suspended}`} icon="pause-circle-outline" tone="warning" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Custom rules" value={`${metrics.custom}`} icon="options-outline" tone="primary" />
-              </View>
+            {error ? <Text style={{ color: tokens.colors.danger, fontSize: 12 }}>{error}</Text> : null}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+              {[["Employees", employees.length, tokens.colors.text], ["Active", metrics.active, tokens.colors.success], ["Suspended", metrics.suspended, tokens.colors.warning], ["Custom", metrics.custom, tokens.colors.primaryStrong]].map(([label, value, color]) => (
+                <Text key={String(label)} style={{ color: color as string, fontSize: 11, fontWeight: "700" }}>{label} <Text style={{ fontVariant: ["tabular-nums"], fontWeight: "900" }}>{value}</Text></Text>
+              ))}
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>{permissions.length} permissions on your account</Text>
             </View>
-
-            <Card style={{ gap: 12 }}>
-              <InputField label="Search employees" value={search} onChangeText={setSearch} placeholder="Name, phone, branch, or role" />
-              {loading ? <Text style={{ color: tokens.colors.textSecondary }}>Loading employee workspace...</Text> : null}
-            </Card>
+            <SearchField value={search} onChangeText={setSearch} placeholder="Name, phone, branch, or role" accessibilityLabel="Search employees" />
+            {loading ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Loading employee workspace…</Text> : null}
+            {feedback ? <Text style={{ color: feedback.tone === "danger" ? tokens.colors.danger : feedback.tone === "warning" ? tokens.colors.warning : tokens.colors.success, fontSize: 12 }}>{feedback.message}</Text> : null}
           </View>
         }
         renderItem={({ item: employee }) => {
@@ -403,25 +365,18 @@ export function EmployeesScreen() {
                 setSelectedEmployeeId(employee.id);
                 openEdit(employee);
               }}
-              style={{
-                padding: 14,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: isCurrent ? tokens.colors.primaryStrong : tokens.colors.border,
-                backgroundColor: isCurrent ? "rgba(37,99,235,0.08)" : tokens.colors.surfaceAlt,
-                gap: 10
-              }}
+              style={{ paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: 1, borderColor: tokens.colors.border, backgroundColor: isCurrent ? tokens.colors.surfaceAlt : "transparent", gap: 7 }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{employee.fullName}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 13 }}>
-                    {employee.roleLabel ?? formatPresetLabel(employee.role)} • {employee.phone ?? "No phone"} • {employee.branchId ?? "Main branch"}
+                  <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }} numberOfLines={1}>{employee.fullName}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                    {employee.roleLabel ?? formatPresetLabel(employee.role)} · {employee.phone ?? "No phone"} · {branches.find((branch) => branch.id === employee.branchId)?.name ?? employee.branchId ?? "Main branch"}
                   </Text>
                 </View>
                 <Badge label={employee.isActive ? "active" : "suspended"} tone={employee.isActive ? "success" : "warning"} />
               </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 <Badge label={`${summaryPermissions.length} permissions`} tone="primary" />
                 <Badge label={employee.ownerId ? "Owner linked" : "No owner link"} tone="success" />
                 <Badge label={isPreset(employee.role, summaryPermissions) ? "preset" : "custom"} tone="warning" />
@@ -437,11 +392,11 @@ export function EmployeesScreen() {
           />
         }
         ListFooterComponent={
-          <Card style={{ gap: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Audit log viewer</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              Track access changes, credential resets, and employee lifecycle events from the owner app.
-            </Text>
+          <View style={{ gap: 10, marginTop: 12, paddingHorizontal: 16, paddingTop: 14, borderTopWidth: 1, borderColor: tokens.colors.border }}>
+            <View>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Access history</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, marginTop: 3 }}>Access changes, credential resets, and employee status events.</Text>
+            </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {([
                 ["access", "Access"],
@@ -454,20 +409,10 @@ export function EmployeesScreen() {
                 </Pressable>
               ))}
             </View>
-            <InputField label="Search audit logs" value={auditSearch} onChangeText={setAuditSearch} placeholder="employee, action, or actor" />
+            <SearchField value={auditSearch} onChangeText={setAuditSearch} placeholder="Employee, action, or actor" accessibilityLabel="Search access history" />
             {filteredAuditLogs.length ? (
               filteredAuditLogs.map((log) => (
-                <View
-                  key={log.id}
-                  style={{
-                    padding: 14,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: tokens.colors.border,
-                    backgroundColor: tokens.colors.surfaceAlt,
-                    gap: 6
-                  }}
-                >
+                <View key={log.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: tokens.colors.border, gap: 5 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                     <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{formatAuditTitle(log)}</Text>
                     <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{log.action}</Text>
@@ -479,9 +424,9 @@ export function EmployeesScreen() {
             ) : (
               <Text style={{ color: tokens.colors.textSecondary }}>No audit events match the current filters.</Text>
             )}
-          </Card>
+          </View>
         }
-        contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
+        contentContainerStyle={{ gap: 0, paddingBottom: 24 }}
       />
 
       <SimpleModal
@@ -518,6 +463,9 @@ export function EmployeesScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Pressable
               onPress={() => setDraft((current) => ({ ...current, isActive: !current.isActive }))}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: draft.isActive }}
+              accessibilityLabel="Employee access status"
               style={{
                 paddingVertical: 10,
                 paddingHorizontal: 14,
@@ -531,6 +479,12 @@ export function EmployeesScreen() {
             </Pressable>
             <Text style={{ color: tokens.colors.textSecondary, flex: 1 }}>Toggle employee access without removing the profile.</Text>
           </View>
+          <View style={{ gap: 3, paddingTop: 4 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "800" }}>Permissions</Text>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>
+              {draft.role === "owner" ? "Owner permissions are fixed and cannot be edited here." : "Selected permissions are saved with this employee’s access profile."}
+            </Text>
+          </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {permissionCatalog.map((permission) => {
               const checked = draft.role === "owner" || draft.permissions.includes(permission);
@@ -542,6 +496,9 @@ export function EmployeesScreen() {
                     if (disabled) return;
                     setDraft((current) => ({ ...current, permissions: togglePermission(current.permissions, permission) }));
                   }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked, disabled }}
+                  accessibilityLabel={formatPermissionLabel(permission)}
                   style={{ opacity: disabled ? 0.7 : 1 }}
                 >
                   <Badge label={formatPermissionLabel(permission)} tone={checked ? "success" : "primary"} />

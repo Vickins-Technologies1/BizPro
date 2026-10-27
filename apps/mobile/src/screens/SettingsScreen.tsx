@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, Pressable, Text, View } from "react-native";
-import { AppScrollView, Badge, Card, GradientHeader, Screen, Tag } from "@/components/Primitives";
+import { AppScrollView, Badge, GradientHeader, Screen, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import type { ThemePreference } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
@@ -72,15 +72,15 @@ export function SettingsScreen() {
           </Pressable>
         }
       />
-      <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 8, padding: 12 }}>
+      <AppScrollView contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
+        <View style={{ gap: 7, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ width: 50, height: 50, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primaryStrong }}>
               <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>{(business?.name ?? "B").slice(0, 1).toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11, fontWeight: "800" }}>Business snapshot</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{business?.name}</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{business?.name}</Text>
             </View>
             <Badge label={roleLabel} tone="primary" />
           </View>
@@ -90,14 +90,14 @@ export function SettingsScreen() {
             <Badge label={business?.currency ?? "Currency unavailable"} tone="success" />
             <Badge label={pendingSync ? `${pendingSync} pending sync` : "Synced"} tone={pendingSync ? "warning" : "success"} />
           </View>
-        </Card>
-        <Card style={{ gap: 8, padding: 12 }}>
+        </View>
+        <View style={{ gap: 8, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="contrast-outline" size={20} color={tokens.colors.primaryStrong} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Appearance</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Appearance</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Use system, light, or dark appearance.</Text>
             </View>
           </View>
@@ -113,9 +113,9 @@ export function SettingsScreen() {
               />
             ))}
           </View>
-        </Card>
-        <Card style={{ gap: 8, padding: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Workspace</Text>
+        </View>
+        <View style={{ gap: 8, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Workspace</Text>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Active branch data scope</Text>
           {user?.role === "owner" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -135,15 +135,15 @@ export function SettingsScreen() {
           ) : (
             <Badge label={branches.find((branch) => branch.id === selectedBranchId)?.name ?? activeBranches[0]?.name ?? branches[0]?.name ?? "Assigned branch"} tone="primary" />
           )}
-        </Card>
+        </View>
         {canManageBranches ? (
-          <Card style={{ gap: 6, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Branch administration</Text>
+          <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Branch administration</Text>
             <SettingsNavRow label="Manage branches" icon="business-outline" onPress={() => navigation.navigate("Branches")} />
-          </Card>
+          </View>
         ) : null}
-        <Card style={{ gap: 9, padding: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Account access</Text>
+        <View style={{ gap: 8, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Account access · {roleLabel}</Text>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
             {user?.role === "owner"
               ? "Owner accounts have full business control."
@@ -159,12 +159,12 @@ export function SettingsScreen() {
           {canManageEmployees ? (
             <SettingsNavRow label="Manage employees" icon="people-outline" onPress={() => navigation.navigate("Employees")} />
           ) : null}
-        </Card>
-        {inventoryLinks.length ? <Card style={{ gap: 6, padding: 12 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Business management</Text>
+        </View>
+        {inventoryLinks.length ? <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Business management</Text>
           {inventoryLinks.map((link, index) => <SettingsNavRow key={link.route} label={link.label} icon={link.icon} last={index === inventoryLinks.length - 1} onPress={() => navigation.navigate(link.route)} />)}
-        </Card> : null}
-        <Card style={{ gap: 10, padding: 14 }}>
+        </View> : null}
+        <View style={{ gap: 10, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Queued offline actions</Text>
@@ -176,11 +176,9 @@ export function SettingsScreen() {
             <View
               style={{
                 gap: 8,
-                padding: 12,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: tokens.colors.border,
-                backgroundColor: tokens.colors.surfaceAlt
+                  paddingVertical: 8,
+                  borderBottomWidth: 1,
+                  borderColor: tokens.colors.border
               }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
@@ -238,8 +236,8 @@ export function SettingsScreen() {
               Nothing is waiting to sync right now.
             </Text>
           )}
-        </Card>
-        <Card style={{ gap: 8, padding: 12 }}>
+        </View>
+        <View style={{ gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 38, height: 38, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="shield-checkmark-outline" size={20} color={tokens.colors.primaryStrong} />
@@ -274,7 +272,7 @@ export function SettingsScreen() {
               }}
             />
           </View>
-        </Card>
+        </View>
       </AppScrollView>
     </Screen>
   );

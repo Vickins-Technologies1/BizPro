@@ -122,7 +122,7 @@ export function ReportsScreen() {
   }
 
   const rangeLabel = currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading";
-  const hasContent = Boolean(summary) && (summary!.salesTotal > 0 || summary!.expensesTotal > 0 || summary!.debtTotal > 0 || topProducts.length > 0 || paymentBreakdown.length > 0 || operations.length > 0);
+  const hasContent = Boolean(summary) && (summary!.salesTotal !== 0 || summary!.expensesTotal !== 0 || summary!.debtTotal !== 0 || (summary!.transactionsCount ?? 0) > 0 || topProducts.length > 0 || paymentBreakdown.length > 0 || operations.length > 0);
 
   if (!canViewReports) {
     return (
@@ -152,7 +152,7 @@ export function ReportsScreen() {
         }
       />
 
-      <AppScrollView refreshing={refreshing} onRefresh={handleRefresh}>
+      <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 24 }}>
         <View style={{ gap: 8 }}>
           <Pressable onPress={() => setRangeSheetVisible(true)} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface }}>
             <View style={{ flex: 1, gap: 3 }}>
@@ -219,26 +219,27 @@ export function ReportsScreen() {
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <ReportMetric label="Expenses" value={formatMoney(summary?.expensesTotal ?? 0, business?.currency)} tone="warning" />
-                <ReportMetric label="Est. net margin" value={`${summary?.salesTotal ? Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100) : 0}%`} tone="success" />
+                <ReportMetric label="Est. net margin" value={summary?.salesTotal ? `${Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100)}%` : "—"} tone={summary?.salesTotal && (summary.estimatedProfit ?? 0) / summary.salesTotal < 0 ? "danger" : "success"} />
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
-              <ReportMetric label="Outstanding balance (API figure)" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
+              <ReportMetric label="Outstanding balance · mixed date scope" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
               <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>The existing debt calculation mixes period sales with all-date invoices and standalone payments.</Text>
             </Card>
 
             <IndustryReportFocus config={businessConfig} summary={summary} topProducts={topProducts} operations={operations} currency={business?.currency ?? "KES"} />
 
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Payment mix</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Sales by payment method</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }}>Sale totals grouped by each transaction’s recorded method; this is not the payments ledger.</Text>
               {paymentBreakdown.length ? (
                 paymentBreakdown.map((row) => <PaymentBar key={row._id} row={row} currency={business?.currency ?? "KES"} max={maxPayment(paymentBreakdown)} />)
               ) : (
-                <Text style={{ color: tokens.colors.textSecondary }}>No payments were recorded in this period.</Text>
+                <Text style={{ color: tokens.colors.textSecondary }}>No sales were recorded in this period.</Text>
               )}
             </Card>
 
             {businessConfig.capabilities.products ? <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{businessConfig.terminology.catalogItem} performance</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{businessConfig.terminology.catalogItem} performance</Text>
               {topProducts.length ? (
                 topProducts.map((row) => <ProductBar key={row.productId} row={row} max={maxQuantity(topProducts)} />)
               ) : (
@@ -246,7 +247,7 @@ export function ReportsScreen() {
               )}
             </Card> : (
               <Card style={{ gap: 10 }}>
-                <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>{businessConfig.workspace.activityLabel} performance</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{businessConfig.workspace.activityLabel} performance</Text>
                 <Text style={{ color: tokens.colors.textSecondary }}>Use the {businessConfig.workspace.activityLabel.toLowerCase()} workflow to track {businessConfig.workflow.steps.join(", ").toLowerCase()}.</Text>
                 <PrimaryButton title={`Open ${businessConfig.workspace.activityLabel.toLowerCase()}`} variant="secondary" onPress={() => navigation.navigate("Operations")} />
               </Card>
@@ -358,9 +359,9 @@ function IndustryReportFocus({ config, summary, topProducts, operations, currenc
 function ReportMetric({ label, value, tone = "primary" }: { label: string; value: string; tone?: "primary" | "success" | "warning" | "danger" }) {
   const color = tone === "success" ? tokens.colors.success : tone === "warning" ? tokens.colors.warning : tone === "danger" ? tokens.colors.danger : tokens.colors.text;
   return (
-    <View style={{ flex: 1, gap: 4 }}>
+    <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
       <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "700" }}>{label}</Text>
-      <Text style={{ color, fontSize: 17, fontWeight: "700" }} numberOfLines={1}>{value}</Text>
+      <Text style={{ color, fontSize: 17, fontWeight: "700", fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{value}</Text>
     </View>
   );
 }

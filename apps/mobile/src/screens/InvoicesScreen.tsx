@@ -772,7 +772,7 @@ export function InvoicesScreen() {
 
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "900" }}>Line items</Text>
+                <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Line items</Text>
                 <PrimaryButton title="Add item" variant="secondary" onPress={() => setEditor((state) => (state ? { ...state, lineItems: [...state.lineItems, createLineEditor(null)] } : state))} />
               </View>
               {editor.lineItems.map((line, index) => {
@@ -780,7 +780,7 @@ export function InvoicesScreen() {
                 return (
                   <Card key={line.id} style={{ gap: 10, padding: 12, backgroundColor: tokens.colors.surfaceAlt }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                      <Text style={{ color: "#fff", fontWeight: "800" }}>Item {index + 1}</Text>
+                      <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>Item {index + 1}</Text>
                       <Pressable onPress={() => setEditor((state) => (state ? { ...state, lineItems: state.lineItems.filter((candidate) => candidate.id !== line.id) } : state))}>
                         <Ionicons name="close-circle-outline" size={20} color={tokens.colors.textMuted} />
                       </Pressable>
@@ -852,8 +852,8 @@ export function InvoicesScreen() {
                       </View>
                     </View>
                     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ color: "#cbd5e1", fontSize: 12 }}>Subtotal {formatMoney(preview.subtotal, editor.currency)}</Text>
-                      <Text style={{ color: "#cbd5e1", fontSize: 12 }}>Total {formatMoney(preview.total, editor.currency)}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Subtotal {formatMoney(preview.subtotal, editor.currency)}</Text>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Total {formatMoney(preview.total, editor.currency)}</Text>
                     </View>
                   </Card>
                 );

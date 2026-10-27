@@ -2,7 +2,8 @@ import React from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { AppScrollView, Badge, Card, EmptyState, ErrorState, GradientHeader, InputField, LoadingState, Pagination, PrimaryButton, Screen } from "@/components/Primitives";
+import { AppScrollView, Badge, EmptyState, ErrorState, GradientHeader, LoadingState, Pagination, PrimaryButton, Screen } from "@/components/Primitives";
+import { SearchField } from "@/components/DesignSystem";
 import { markAllNotificationsRead, listNotificationsPage, markNotificationRead } from "@/services/apiClient";
 import type { AppInboxNotification } from "@/services/notifications";
 import { tokens } from "@/theme/tokens";
@@ -76,48 +77,45 @@ export function NotificationsScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={() => void loadInbox(page, "refresh")} contentContainerStyle={{ gap: 12, paddingBottom: 28 }}>
-        <Card style={{ gap: 10, padding: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
-              <Ionicons name="notifications-outline" size={22} color={tokens.colors.primaryStrong} />
-            </View>
+      <AppScrollView refreshing={refreshing} onRefresh={() => void loadInbox(page, "refresh")} contentContainerStyle={{ gap: 0, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 28 }}>
+        <View style={{ gap: 9, paddingBottom: 12, borderBottomWidth: 1, borderColor: tokens.colors.border }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Business inbox</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Workspace updates and alerts.</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Business inbox</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Workspace updates and alerts</Text>
             </View>
             <Badge label={`${unreadCount} unread`} tone={unreadCount ? "warning" : "success"} />
           </View>
-          <InputField label="Search" value={search} onChangeText={setSearch} placeholder="Search notifications" />
-          {unreadCount ? <PrimaryButton title="Mark all as read" variant="secondary" onPress={() => void markAllAsRead()} /> : null}
-        </Card>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flex: 1 }}><SearchField value={search} onChangeText={setSearch} placeholder="Search notifications" accessibilityLabel="Search notifications" /></View>
+            {unreadCount ? <PrimaryButton title="Mark all read" variant="secondary" onPress={() => void markAllAsRead()} /> : null}
+          </View>
+        </View>
 
         {loading ? (
           <LoadingState label="Loading notifications" />
         ) : error ? (
           <ErrorState title="Notifications unavailable" subtitle={error} action={<PrimaryButton title="Try again" onPress={() => void loadInbox(page)} />} />
         ) : notifications.length ? (
-          <View style={{ gap: 10 }}>
+          <View style={{ borderTopWidth: 1, borderColor: tokens.colors.border }}>
             {notifications.map((notification) => {
               const isUnread = !notification.readAt;
               return (
-                <Pressable key={notification.id} onPress={() => void openNotification(notification)}>
-                  <Card style={{ gap: 6, padding: 11, borderColor: isUnread ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: isUnread ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                      <View style={{ width: 34, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: isUnread ? tokens.colors.primary + "18" : tokens.colors.surfaceAlt }}>
-                        <Ionicons name={isUnread ? "mail-unread-outline" : "mail-open-outline"} size={17} color={isUnread ? tokens.colors.primaryStrong : tokens.colors.textMuted} />
-                      </View>
+                <Pressable key={notification.id} onPress={() => void openNotification(notification)} accessibilityRole="button" accessibilityLabel={`${isUnread ? "Unread notification" : "Notification"}: ${notification.title}`} style={{ paddingVertical: 11, borderBottomWidth: 1, borderColor: tokens.colors.border, backgroundColor: isUnread ? tokens.colors.surfaceAlt : "transparent" }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 9 }}>
+                      <View style={{ width: 7, height: 7, marginTop: 6, borderRadius: 4, backgroundColor: isUnread ? tokens.colors.primaryStrong : "transparent" }} />
                       <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }} numberOfLines={1}>{notification.title}</Text>
-                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>{notification.body}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Text style={{ flex: 1, color: tokens.colors.text, fontSize: 13, fontWeight: isUnread ? "800" : "700" }} numberOfLines={1}>{notification.title}</Text>
+                          <Badge label={notification.priority} tone={notification.priority === "critical" ? "danger" : isUnread ? "warning" : "primary"} />
+                        </View>
+                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 11, lineHeight: 16 }} numberOfLines={2}>{notification.body}</Text>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                          <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>{formatNotificationTime(notification.sentAt)}</Text>
+                          {notification.routeName ? <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "800" }}>Open details</Text> : null}
+                        </View>
                       </View>
-                      <Badge label={notification.priority} tone={notification.priority === "critical" ? "danger" : isUnread ? "warning" : "primary"} />
                     </View>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                      <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatNotificationTime(notification.sentAt)}</Text>
-                      {notification.routeName ? <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "800" }}>Open details</Text> : null}
-                    </View>
-                  </Card>
                 </Pressable>
               );
             })}

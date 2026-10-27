@@ -56,8 +56,8 @@ export function StockTransfersScreen() {
 
   const filteredTransfers = React.useMemo(() => {
     const query = search.trim().toLowerCase();
-    return transfers.filter((transfer) => [transfer.transferNumber, transfer.status, transfer.fromBranchId ?? "", transfer.toBranchId ?? "", transfer.note ?? ""].join(" ").toLowerCase().includes(query));
-  }, [search, transfers]);
+    return transfers.filter((transfer) => [transfer.transferNumber, transfer.status, transfer.fromBranchId ?? "", transfer.toBranchId ?? "", transfer.note ?? "", branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "", branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? ""].join(" ").toLowerCase().includes(query));
+  }, [search, transfers, branches]);
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -203,27 +203,27 @@ export function StockTransfersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 10, padding: 14 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Movement ledger</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredTransfers.length} visible of {transfers.length} transfers</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredTransfers.length} of {transfers.length} transfers</Text>
             </View>
             {user?.role === "owner" || user?.role === "manager" ? <PrimaryButton title="Create transfer" onPress={() => openEditor(null)} /> : null}
           </View>
           <InputField label="Search transfers" value={search} onChangeText={setSearch} placeholder="Transfer number, branch, or status" />
         </Card>
         {filteredTransfers.length ? (
-          filteredTransfers.map((transfer) => (
-            <Card key={transfer.id} style={{ gap: 6, padding: 12 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+          <Card style={{ paddingVertical: 0, paddingHorizontal: 12 }}>
+          {filteredTransfers.map((transfer, index) => (
+            <View key={transfer.id} style={{ gap: 7, paddingVertical: 12, borderBottomWidth: index === filteredTransfers.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{transfer.transferNumber}</Text>
                   <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>
-                    {transfer.fromBranchId ?? "From branch"} → {transfer.toBranchId ?? "To branch"}
+                    {branches.find((branch) => branch.id === transfer.fromBranchId)?.name ?? "Source branch"} → {branches.find((branch) => branch.id === transfer.toBranchId)?.name ?? "Destination branch"}
                   </Text>
-                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(transfer.transferDate, "PPP")}</Text>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(transfer.transferDate, "PP")} · {transfer.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units · {transfer.items.length} line{transfer.items.length === 1 ? "" : "s"}</Text>
                 </View>
                 <Badge label={transfer.status.replaceAll("_", " ")} tone={transfer.status === "received" ? "success" : transfer.status === "cancelled" ? "danger" : "primary"} />
               </View>
@@ -242,8 +242,9 @@ export function StockTransfersScreen() {
                   catch (error) { Alert.alert("Archive failed", error instanceof Error ? error.message : "Failed to archive transfer"); }
                 }} /></View> : null}
               </View> : null}
-            </Card>
-          ))
+            </View>
+          ))}
+          </Card>
         ) : (
           <EmptyState
             title={search ? "No matching transfers" : "No stock transfers yet"}

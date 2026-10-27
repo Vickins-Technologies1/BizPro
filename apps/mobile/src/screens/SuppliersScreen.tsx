@@ -5,6 +5,7 @@ import { addDays, format, startOfDay } from "date-fns";
 import { useNavigation } from "@react-navigation/native";
 import { PAYMENT_METHODS, type PurchaseOrder, type Supplier, type SupplierCategory, type SupplierContact, type SupplierDocument, type SupplierPayment, type SupplierPerformanceReport, type SupplierStatement } from "@shared";
 import { AppScrollView, Badge, Card, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal, Tag } from "@/components/Primitives";
+import { SearchField } from "@/components/DesignSystem";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
@@ -235,7 +236,6 @@ export function SuppliersScreen() {
     return map;
   }, [purchaseOrders]);
   const selectedCategoryLabel = selectedSupplier?.categoryId ? categoryMap.get(selectedSupplier.categoryId)?.name ?? "Uncategorized" : "Uncategorized";
-  const totalSupplierBalance = React.useMemo(() => payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0), [payments]);
   const supplierOutstanding = statement?.outstandingBalance ?? performance?.outstandingBalance ?? 0;
   const supplierOrdersCount = selectedSupplierOrders(purchaseOrders, selectedSupplierId).length;
   const supplierPaymentsCount = payments.length;
@@ -535,15 +535,15 @@ export function SuppliersScreen() {
       />
 
       <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 9, padding: 14 }}>
+        <View style={{ gap: 9, paddingBottom: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Supplier directory</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredSuppliers.length} visible of {suppliers.length} records</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Supplier directory</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filteredSuppliers.length} of {suppliers.length} suppliers</Text>
             </View>
             <PrimaryButton title="Add supplier" onPress={() => openSupplierEditor(null)} />
           </View>
-          <InputField label="Search suppliers" value={search} onChangeText={setSearch} placeholder="Supplier name, code, or contact" />
+          <SearchField value={search} onChangeText={setSearch} placeholder="Name, code, or contact" accessibilityLabel="Search suppliers" />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Tag label="All categories" tone="primary" selected={categoryFilterId === "all"} onPress={() => setCategoryFilterId("all")} />
             {categories.map((category) => (
@@ -556,74 +556,43 @@ export function SuppliersScreen() {
               />
             ))}
           </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Add category" variant="secondary" onPress={() => openCategoryEditor(null)} />
-            </View>
-          </View>
-        </Card>
-
-        <Card style={{ gap: 9, padding: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>Supplier categories</Text>
-          {categories.length ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {categories.map((category) => (
-                <Tag key={category.id} label={category.name} tone="success" selected={categoryFilterId === category.id} onPress={() => setCategoryFilterId(category.id)} />
-              ))}
-            </View>
-          ) : (
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>Create categories to organize suppliers by type or vendor group.</Text>
-          )}
-        </Card>
+          <Pressable onPress={() => openCategoryEditor(null)} accessibilityRole="button" style={{ alignSelf: "flex-start", paddingVertical: 3 }}>
+            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 12, fontWeight: "700" }}>+ Add supplier category</Text>
+          </Pressable>
+        </View>
 
         {filteredSuppliers.length ? (
           filteredSuppliers.map((supplier) => {
             const category = supplier.categoryId ? categoryMap.get(supplier.categoryId) ?? null : null;
             const isSelected = supplier.id === selectedSupplierId;
             const supplierOrders = purchaseOrdersBySupplier.get(supplier.id) ?? [];
-            const supplierPaymentTotal = selectedSupplierId === supplier.id ? totalSupplierBalance : 0;
-            const supplierBalance = selectedSupplierId === supplier.id ? supplierOutstanding : Math.max(0, supplierOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0) - 0);
             return (
-              <Card key={supplier.id} style={{ gap: 8, padding: 12, borderColor: isSelected ? tokens.colors.primaryStrong : tokens.colors.border, borderWidth: 1 }}>
-                <Pressable onPress={() => setSelectedSupplierId(supplier.id)} style={{ gap: 6 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{supplier.name}</Text>
-                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }} numberOfLines={1}>
-                        {supplier.code ?? "No code"} • {supplier.contactName ?? "No contact"} • {supplier.phone ?? "No phone"}
-                      </Text>
-                      <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }} numberOfLines={1}>{supplier.email ?? "No email"}</Text>
-                    </View>
-                    <Badge label={supplier.isActive ? "Active" : "Archived"} tone={supplier.isActive ? "success" : "warning"} />
+              <View key={supplier.id} style={{ minHeight: 64, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: tokens.colors.border, borderTopWidth: isSelected ? 1 : 0, borderTopColor: tokens.colors.primaryStrong }}>
+                <Pressable onPress={() => setSelectedSupplierId(supplier.id)} accessibilityRole="button" accessibilityState={{ selected: isSelected }} accessibilityLabel={`View ${supplier.name} supplier details`} style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.surfaceAlt }}><Ionicons name="business-outline" size={17} color={tokens.colors.primaryStrong} /></View>
+                  <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1}>{supplier.name}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }} numberOfLines={1}>{[supplier.code, supplier.contactName, supplier.phone ?? supplier.email, category?.name].filter(Boolean).join(" · ") || "No contact details"}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    <Badge label={category?.name ?? "Uncategorized"} tone="primary" />
-                    <Badge label={`${supplierOrders.length} POs`} tone="success" />
-                    <Badge label={formatMoney(selectedSupplierId === supplier.id ? supplierOutstanding : supplierBalance, business?.currency ?? "KES")} tone="warning" />
-                    <Badge label={selectedSupplierId === supplier.id ? `${supplierPaymentsCount} payments` : "Open to view details"} tone="primary" />
+                  <View style={{ alignItems: "flex-end", gap: 3 }}>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{isSelected ? `${supplierOrders.length} POs` : "View details"}</Text>
+                    {isSelected ? <Text style={{ color: tokens.colors.warning, fontSize: 10, fontWeight: "700" }}>{formatMoney(supplierOutstanding, business?.currency ?? "KES")}</Text> : null}
                   </View>
                 </Pressable>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton title="Select" variant="secondary" onPress={() => setSelectedSupplierId(supplier.id)} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton title="Edit" variant="secondary" onPress={() => openSupplierEditor(supplier)} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <PrimaryButton
-                      title="Archive"
-                      variant="danger"
-                      onPress={async () => {
-                        const confirmed = await confirmMobile(`Archive ${supplier.name}?`);
-                        if (!confirmed) return;
-                        await archiveSupplier(supplier.id);
-                        await refreshAll();
-                      }}
-                    />
-                  </View>
-                </View>
-              </Card>
+                <Pressable onPress={() => openSupplierEditor(supplier)} accessibilityRole="button" accessibilityLabel={`Edit ${supplier.name}`} hitSlop={6} style={{ padding: 7 }}><Ionicons name="create-outline" size={18} color={tokens.colors.primaryStrong} /></Pressable>
+                {supplier.isActive ? <Pressable
+                  onPress={async () => {
+                    const confirmed = await confirmMobile(`Archive ${supplier.name}?`);
+                    if (!confirmed) return;
+                    await archiveSupplier(supplier.id);
+                    await refreshAll();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Archive ${supplier.name}`}
+                  hitSlop={6}
+                  style={{ padding: 7 }}
+                ><Ionicons name="archive-outline" size={18} color={tokens.colors.textSecondary} /></Pressable> : null}
+              </View>
             );
           })
         ) : (
@@ -637,7 +606,7 @@ export function SuppliersScreen() {
 
         {selectedSupplier ? (
           <>
-            <Card style={{ gap: 12 }}>
+            <Card style={{ gap: 10, padding: 12 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Selected supplier</Text>
@@ -797,17 +766,7 @@ export function SuppliersScreen() {
               <SectionHeading title="Statement Preview" subtitle="Recent debits and credits" />
               {statement?.entries.length ? (
                 statement.entries.slice(-6).map((entry) => (
-                  <View
-                    key={`${entry.reference}-${entry.date}`}
-                    style={{
-                      padding: 12,
-                      borderRadius: 14,
-                      borderWidth: 1,
-                      borderColor: tokens.colors.border,
-                      backgroundColor: tokens.colors.surfaceAlt,
-                      gap: 6
-                    }}
-                  >
+                  <View key={`${entry.reference}-${entry.date}`} style={{ paddingVertical: 9, borderTopWidth: 1, borderTopColor: tokens.colors.border, gap: 6 }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                       <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{entry.reference}</Text>
                       <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(entry.date)}</Text>
@@ -943,10 +902,10 @@ export function SuppliersScreen() {
 
 function SummaryRow({ title, subtitle, children }: { title: string; subtitle?: string | undefined; children: React.ReactNode }) {
   return (
-    <Card style={{ gap: 12 }}>
+    <View style={{ gap: 9, paddingTop: 12, borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
       <SectionHeading title={title} subtitle={subtitle} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>{children}</View>
-    </Card>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
+    </View>
   );
 }
 
@@ -964,9 +923,9 @@ function SectionHeading({ title, subtitle, action }: { title: string; subtitle?:
 
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flex: 1, minWidth: "47%", padding: 12, borderRadius: 16, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border, gap: 4 }}>
-      <Text style={{ color: tokens.colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</Text>
-      <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{value}</Text>
+    <View style={{ flex: 1, minWidth: "46%", gap: 3 }}>
+      <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>{label}</Text>
+      <Text style={{ color: tokens.colors.text, fontSize: 12, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>{value}</Text>
     </View>
   );
 }
@@ -985,15 +944,15 @@ function RowCard({
   action?: React.ReactNode;
 }) {
   return (
-    <View style={{ padding: 12, borderRadius: 14, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border, gap: 8 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{title}</Text>
-          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{subtitle}</Text>
+    <View style={{ minHeight: 54, flexDirection: "row", alignItems: "center", paddingVertical: 8, borderTopWidth: 1, borderTopColor: tokens.colors.border, gap: 10 }}>
+      <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>{title}</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }} numberOfLines={1}>{subtitle}</Text>
         </View>
         <Badge label={amount} tone={tone} />
       </View>
-      {action ? <View style={{ alignSelf: "flex-end" }}>{action}</View> : null}
+      {action ? <View>{action}</View> : null}
     </View>
   );
 }

@@ -10,6 +10,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { z } from "zod";
 import { useNavigation } from "@react-navigation/native";
 import { hasPermission } from "@shared";
+import { SearchField } from "@/components/DesignSystem";
+import { formatMoney } from "@/utils/money";
 
 type FormValues = z.infer<typeof expenseCreateSchema>;
 
@@ -92,29 +94,27 @@ export function ExpensesScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refreshExpenses} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 10, padding: 14 }}>
+        <View style={{ gap: 9, paddingBottom: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Spend ledger</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filtered.length} visible expense records</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Expense register</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filtered.length} of {expenses.length} records</Text>
             </View>
-            <Badge label={`${expenses.length} total`} tone="warning" />
           </View>
-          <InputField label="Search expenses" value={search} onChangeText={setSearch} placeholder="Filter notes" />
-        </Card>
+          <SearchField value={search} onChangeText={setSearch} placeholder="Search expense descriptions" accessibilityLabel="Search expenses" />
+        </View>
         {filtered.length ? (
-          filtered.map((expense) => (
-            <Card key={expense.id} style={{ gap: 6, padding: 12 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900", flex: 1 }} numberOfLines={1}>{expense.note}</Text>
-                <Badge label="expense" tone="warning" />
+          <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
+            {filtered.map((expense) => (
+              <View key={expense.id} style={{ minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>{expense.note}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }}>{formatExpenseDate(expense.expenseDate)}</Text>
+                </View>
+                <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit>{formatMoney(expense.amount, business?.currency ?? "KES")}</Text>
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "900" }}>{expense.amount.toLocaleString("en-KE", { style: "currency", currency: business?.currency ?? "KES" })}</Text>
-                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{expense.expenseDate}</Text>
-              </View>
-            </Card>
-          ))
+            ))}
+          </View>
         ) : (
           <EmptyState
             title={search ? "No matching expenses" : "No expenses yet"}
@@ -124,7 +124,7 @@ export function ExpensesScreen() {
         )}
       </AppScrollView>
       <SimpleModal visible={visible} title="Add expense" onClose={() => setVisible(false)}>
-        <AppScrollView contentContainerStyle={{ gap: 12 }}>
+        <AppScrollView contentContainerStyle={{ gap: 9 }}>
           <Controller
             control={control}
             name="amount"
@@ -166,7 +166,7 @@ export function ExpensesScreen() {
             )}
           />
           <PrimaryButton
-            title="Save expense"
+            title={savingExpense ? "Saving…" : "Save expense"}
             onPress={handleSubmit(async (values) => {
               setSavingExpense(true);
               try {
@@ -193,4 +193,9 @@ export function ExpensesScreen() {
       </SimpleModal>
     </Screen>
   );
+}
+
+function formatExpenseDate(value: string) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }

@@ -420,12 +420,7 @@ export function DateRangePickerModal({
 
 export function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   const styles = usePrimitiveStyles();
-  const motion = useAppearMotion(0, 10);
-  return (
-    <Animated.View style={[styles.card, motion, style]}>
-      {children}
-    </Animated.View>
-  );
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
 export function StatCard({
@@ -872,6 +867,8 @@ export const Input = React.memo(function Input({
               onPress={() => setPasswordVisible((current) => !current)}
               accessibilityRole="button"
               accessibilityLabel={passwordVisible ? `Hide ${label}` : `Show ${label}`}
+              accessibilityState={{ selected: passwordVisible }}
+              hitSlop={12}
               style={styles.passwordToggle}
             >
               <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={16} color={tokens.colors.primaryStrong} />
@@ -952,7 +949,7 @@ export function Dialog({
           <Text style={styles.modalTitle}>{title}</Text>
           {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
         </View>
-        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog">
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close dialog" hitSlop={6} style={styles.modalCloseButton}>
           <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
         </Pressable>
       </View>
@@ -972,7 +969,7 @@ export function Dialog({
   );
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View accessibilityViewIsModal style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
         {Platform.OS === "ios" ? <KeyboardAvoidingView style={{ width: "100%", maxHeight: "100%" }} behavior="padding">{modalContent}</KeyboardAvoidingView> : modalContent}
       </View>
     </Modal>
@@ -1019,7 +1016,7 @@ export function BottomSheet({
           <Text style={styles.modalTitle}>{title}</Text>
           {subtitle ? <Text style={styles.helperText}>{subtitle}</Text> : null}
         </View>
-        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet">
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close sheet" hitSlop={6} style={styles.modalCloseButton}>
           <Ionicons name="close" size={24} color={tokens.colors.textSecondary} />
         </Pressable>
       </View>
@@ -1037,7 +1034,7 @@ export function BottomSheet({
   );
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View accessibilityViewIsModal style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss sheet" />
         {Platform.OS === "ios" ? <KeyboardAvoidingView style={{ width: "100%", marginTop: "auto" }} behavior="padding">{sheetContent}</KeyboardAvoidingView> : sheetContent}
       </View>
@@ -2029,6 +2026,12 @@ function createStyles(theme: ReturnType<typeof useThemeTokens>) {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: 12
+    },
+    modalCloseButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center"
     },
     modalTitle: { color: tokens.colors.text, fontSize: 14, fontWeight: "900" },
     calendarShell: {

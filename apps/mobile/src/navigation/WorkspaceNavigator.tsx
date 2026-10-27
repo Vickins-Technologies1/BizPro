@@ -4,7 +4,7 @@ import { createBottomTabNavigator, type BottomTabBarProps } from "@react-navigat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { getFocusedRouteNameFromRoute, useNavigation } from "@react-navigation/native";
 import { Badge, Card } from "@/components/Primitives";
 import { MoreDrawer } from "@/components/MoreDrawer";
 import { MoreDrawerProvider } from "@/navigation/moreDrawerContext";
@@ -12,6 +12,7 @@ import { tokens } from "@/theme/tokens";
 import { useThemeTokens } from "@/theme";
 import { useAppStore } from "@/store/useAppStore";
 import { getEffectivePermissions, resolveBusinessTypeConfig, type WorkspaceRoute } from "@shared";
+import { getAvailableWorkspaceRoutes, isWorkspaceTabRoute, layoutMobileWorkspaceRoutes } from "@/navigation/workspaceRoutes";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PosScreen } from "@/screens/PosScreen";
 import { ProductsScreen } from "@/screens/ProductsScreen";
@@ -36,16 +37,23 @@ type WorkspaceTabParamList = {
   Settings: undefined;
   Operations: undefined;
 };
-
 const WorkspaceTabs = createBottomTabNavigator<WorkspaceTabParamList>();
 type WorkspaceNavItem = WorkspaceRoute;
 
-export function AdaptiveWorkspaceNavigator() {
+export function AdaptiveWorkspaceNavigator({ route }: { route: any }) {
   useThemeTokens();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const navigation = useNavigation<any>();
-  const currentRoute = useNavigationState((state) => state.routes[state.index]?.name);
+  const currentRoute = getFocusedRouteNameFromRoute(route) ?? "Dashboard";
+  const business = useAppStore((state) => state.business);
+  const user = useAppStore((state) => state.user);
+  const workspaceConfig = React.useMemo(
+    () => resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey }),
+    [business?.businessType, business?.industryKey]
+  );
+  const mobileRoutes = layoutMobileWorkspaceRoutes(getAvailableWorkspaceRoutes(workspaceConfig.navigation.primaryRoutes, workspaceConfig, user));
+  const overflowRoutes = isDesktop ? [] : mobileRoutes.overflowRoutes;
   const [moreOpen, setMoreOpen] = React.useState(false);
 
   return (
@@ -156,8 +164,15 @@ export function AdaptiveWorkspaceNavigator() {
       <MoreDrawer
         visible={moreOpen}
         currentRoute={currentRoute}
+        overflowRoutes={overflowRoutes}
         onClose={() => setMoreOpen(false)}
-        onNavigate={(routeName) => navigation.navigate(routeName)}
+        onNavigate={(routeName) => {
+          if (isWorkspaceTabRoute(routeName)) {
+            navigation.navigate("Main", { screen: routeName });
+          } else {
+            navigation.navigate(routeName);
+          }
+        }}
       />
       </>
     </MoreDrawerProvider>
@@ -177,14 +192,8 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
     [business?.businessType, business?.industryKey]
   );
   const configuredRoutes = isDesktop ? businessConfig.navigation.sidebarRoutes : businessConfig.navigation.primaryRoutes;
-  const visibleRoutes = configuredRoutes.filter((routeName) => {
-    if (routeName === "Catalog") return businessConfig.capabilities.catalog;
-    if (routeName === "POS") return businessConfig.capabilities.pos;
-    if (routeName === "Customers") return businessConfig.capabilities.customers;
-    if (routeName === "Operations") return businessConfig.capabilities.orders || businessConfig.capabilities.appointments || businessConfig.capabilities.workOrders || businessConfig.capabilities.projects || businessConfig.capabilities.tasks;
-    if (routeName === "Finance") return businessConfig.capabilities.payments;
-    return true;
-  });
+  const eligibleRoutes = getAvailableWorkspaceRoutes(configuredRoutes, businessConfig, user);
+  const visibleRoutes = isDesktop ? eligibleRoutes : layoutMobileWorkspaceRoutes(eligibleRoutes).tabRoutes;
 
   return (
     <View
@@ -211,10 +220,10 @@ function AdaptiveTabBar({ state, descriptors, navigation, isDesktop, onMorePress
               alignItems: "center",
               justifyContent: "space-between",
               gap: 3,
-              minHeight: 64,
-              paddingTop: 6,
-              paddingBottom: Math.max(insets.bottom, 5),
-              paddingHorizontal: 0,
+              minHeight: 56 + insets.bottom,
+              paddingTop: 4,
+              paddingBottom: insets.bottom,
+              paddingHorizontal: 4,
               backgroundColor: tokens.colors.surface,
               borderTopWidth: 1,
               borderTopColor: tokens.colors.border
@@ -366,6 +375,7 @@ function renderWorkspaceItem({
     <Pressable
       key={routeName}
       accessibilityRole="button"
+      accessibilityLabel={routeName === "More" ? "More navigation" : label}
       accessibilityState={focused ? { selected: true } : {}}
       onPress={() => {
         if (routeName === "More") {
@@ -392,14 +402,13 @@ function renderWorkspaceItem({
             }
           : {
               flex: 1,
-              minHeight: 42,
+              minHeight: 48,
+              minWidth: 48,
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: 0,
-              borderTopWidth: focused ? 2 : 0,
-              borderTopColor: tokens.colors.primaryStrong,
-              paddingTop: focused ? 4 : 6,
-              backgroundColor: "transparent"
+              borderRadius: 12,
+              paddingTop: 4,
+              backgroundColor: focused ? `${tokens.colors.primary}12` : "transparent"
             },
         pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] }
       ]}
@@ -411,7 +420,7 @@ function renderWorkspaceItem({
           <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>{routeDescription(routeName, businessConfig)}</Text>
         </View>
         ) : (
-        <Text style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted, fontSize: 10, fontWeight: focused ? "800" : "600", letterSpacing: 0.1, marginTop: 3 }}>{label}</Text>
+        <Text numberOfLines={1} style={{ color: focused ? tokens.colors.primaryStrong : tokens.colors.textMuted, fontSize: 10, fontWeight: focused ? "800" : "600", letterSpacing: 0, marginTop: 2 }}>{label}</Text>
       )}
     </Pressable>
   );

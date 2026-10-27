@@ -1,13 +1,13 @@
 import React from "react";
-import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
-import { AppScrollView, Badge, Card, GradientHeader, PrimaryButton, Screen, Tag } from "@/components/Primitives";
+import { Alert, Pressable, Text, View } from "react-native";
+import { AppScrollView, Badge, Card, GradientHeader, Screen, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import type { ThemePreference } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { listQueuedActions, type OfflineQueueEntry } from "@/services/offlineQueue";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { formatPermissionLabel, formatRoleLabel, getEffectivePermissions, hasPermission, resolveIndustryModule } from "@shared";
+import { formatPermissionLabel, formatRoleLabel, getEffectivePermissions, hasPermission, resolveBusinessTypeConfig, resolveIndustryModule } from "@shared";
 
 export function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -31,6 +31,17 @@ export function SettingsScreen() {
   const industry = resolveIndustryModule({ industryKey: business?.industryKey, businessType: business?.businessType });
   const activeBranches = branches.filter((branch) => branch.status !== "inactive");
   const canManageBranches = hasPermission(user, "manageBranches");
+  const canManageInventory = hasPermission(user, "manageInventory");
+  const canManageSuppliers = hasPermission(user, "manageSuppliers");
+  const businessConfig = resolveBusinessTypeConfig({ industryKey: business?.industryKey, businessType: business?.businessType });
+  const inventoryLinks = [
+    ...(canManageInventory && businessConfig.capabilities.inventory ? [{ label: "Brands", icon: "color-palette-outline" as const, route: "Brands" }] : []),
+    ...(canManageSuppliers && businessConfig.capabilities.suppliers ? [{ label: "Suppliers", icon: "briefcase-outline" as const, route: "Suppliers" }] : []),
+    ...(canManageInventory && (businessConfig.capabilities.inventory || businessConfig.capabilities.purchasing) ? [
+      { label: "Purchase orders", icon: "document-text-outline" as const, route: "PurchaseOrders" },
+      { label: "Stock transfers", icon: "swap-horizontal-outline" as const, route: "StockTransfers" }
+    ] : [])
+  ];
 
   React.useEffect(() => {
     let cancelled = false;
@@ -62,7 +73,7 @@ export function SettingsScreen() {
         }
       />
       <AppScrollView contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 8, padding: 14 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ width: 50, height: 50, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primaryStrong }}>
               <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900" }}>{(business?.name ?? "B").slice(0, 1).toUpperCase()}</Text>
@@ -74,22 +85,20 @@ export function SettingsScreen() {
             <Badge label={roleLabel} tone="primary" />
           </View>
           <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{industry.label} · Signed in as {user?.fullName ?? "Unknown"}</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            <Badge label={industry.label} tone="success" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             <Badge label={`Plan ${business?.planTier?.toUpperCase()}`} tone="primary" />
-            <Badge label={`Currency ${business?.currency}`} tone="success" />
-            <Badge label={`Sync ${pendingSync}`} tone={pendingSync ? "warning" : "success"} />
-            <Badge label={roleLabel} tone="primary" />
+            <Badge label={business?.currency ?? "Currency unavailable"} tone="success" />
+            <Badge label={pendingSync ? `${pendingSync} pending sync` : "Synced"} tone={pendingSync ? "warning" : "success"} />
           </View>
         </Card>
-        <Card style={{ gap: 10, padding: 14 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="contrast-outline" size={20} color={tokens.colors.primaryStrong} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Appearance</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Choose how Dira OS looks on this device.</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Use system, light, or dark appearance.</Text>
             </View>
           </View>
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -105,9 +114,9 @@ export function SettingsScreen() {
             ))}
           </View>
         </Card>
-        <Card style={{ gap: 9, padding: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Branch scope</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Choose the workspace data scope.</Text>
+        <Card style={{ gap: 8, padding: 12 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Workspace</Text>
+          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Active branch data scope</Text>
           {user?.role === "owner" ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {activeBranches.length > 1 ? (
@@ -128,12 +137,9 @@ export function SettingsScreen() {
           )}
         </Card>
         {canManageBranches ? (
-          <Card style={{ gap: 10, padding: 14 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Branch administration</Text>
-            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
-              Create new branches, adjust branch settings, and control active locations.
-            </Text>
-            <PrimaryButton title="Open branch management" variant="secondary" onPress={() => navigation.navigate("Branches")} />
+          <Card style={{ gap: 6, padding: 12 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Branch administration</Text>
+            <SettingsNavRow label="Manage branches" icon="business-outline" onPress={() => navigation.navigate("Branches")} />
           </Card>
         ) : null}
         <Card style={{ gap: 9, padding: 14 }}>
@@ -146,32 +152,18 @@ export function SettingsScreen() {
                 : "Employee accounts are trimmed down to operational work only."}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {permissions.slice(0, 6).map((permission) => (
+            {permissions.slice(0, 5).map((permission) => (
               <Badge key={permission} label={formatPermissionLabel(permission)} tone="primary" />
             ))}
           </View>
           {canManageEmployees ? (
-            <PrimaryButton title="Open employee workspace" variant="secondary" onPress={() => navigation.navigate("Employees")} />
+            <SettingsNavRow label="Manage employees" icon="people-outline" onPress={() => navigation.navigate("Employees")} />
           ) : null}
         </Card>
-        <Card style={{ gap: 10, padding: 14 }}>
-          <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Inventory administration</Text>
-          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Manage records and logistics.</Text>
-          <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            <View style={{ flex: 1, minWidth: "45%" }}>
-              <PrimaryButton title="Brands" variant="secondary" onPress={() => navigation.navigate("Brands")} />
-            </View>
-            <View style={{ flex: 1, minWidth: "45%" }}>
-              <PrimaryButton title="Suppliers" variant="secondary" onPress={() => navigation.navigate("Suppliers")} />
-            </View>
-            <View style={{ flex: 1, minWidth: "45%" }}>
-              <PrimaryButton title="Purchase orders" variant="secondary" onPress={() => navigation.navigate("PurchaseOrders")} />
-            </View>
-            <View style={{ flex: 1, minWidth: "45%" }}>
-              <PrimaryButton title="Stock transfers" variant="secondary" onPress={() => navigation.navigate("StockTransfers")} />
-            </View>
-          </View>
-        </Card>
+        {inventoryLinks.length ? <Card style={{ gap: 6, padding: 12 }}>
+          <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Business management</Text>
+          {inventoryLinks.map((link, index) => <SettingsNavRow key={link.route} label={link.label} icon={link.icon} last={index === inventoryLinks.length - 1} onPress={() => navigation.navigate(link.route)} />)}
+        </Card> : null}
         <Card style={{ gap: 10, padding: 14 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1 }}>
@@ -247,20 +239,21 @@ export function SettingsScreen() {
             </Text>
           )}
         </Card>
-        <Card style={{ gap: 12, borderColor: tokens.colors.primary + "30" }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ width: 38, height: 38, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.primary + "18" }}>
               <Ionicons name="shield-checkmark-outline" size={20} color={tokens.colors.primaryStrong} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Device actions</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Keep this workspace current and secure.</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Device & account</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Synchronization and session controls</Text>
             </View>
           </View>
-          <View style={{ gap: 10 }}>
-            <PrimaryButton
-              title={syncing ? "Syncing..." : "Sync now"}
-              loading={syncing}
+          <View style={{ gap: 6 }}>
+            <SettingsNavRow
+              label={syncing ? "Syncing…" : "Sync now"}
+              icon="sync-outline"
+              disabled={syncing}
               onPress={() => {
                 setSyncing(true);
                 syncNow()
@@ -268,10 +261,11 @@ export function SettingsScreen() {
                   .finally(() => setSyncing(false));
               }}
             />
-            <PrimaryButton
-              title={loggingOut ? "Signing out..." : "Logout"}
-              variant="danger"
-              loading={loggingOut}
+            <SettingsNavRow
+              label={loggingOut ? "Signing out…" : "Sign out"}
+              icon="log-out-outline"
+              tone="danger"
+              disabled={loggingOut}
               onPress={() => {
                 setLoggingOut(true);
                 logout()
@@ -283,6 +277,45 @@ export function SettingsScreen() {
         </Card>
       </AppScrollView>
     </Screen>
+  );
+}
+
+function SettingsNavRow({
+  label,
+  icon,
+  onPress,
+  disabled = false,
+  last = false,
+  tone = "default"
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  disabled?: boolean;
+  last?: boolean;
+  tone?: "default" | "danger";
+}) {
+  const color = tone === "danger" ? tokens.colors.danger : tokens.colors.textSecondary;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        opacity: disabled ? 0.55 : pressed ? 0.72 : 1,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: tokens.colors.border
+      })}
+    >
+      <Ionicons name={icon} size={18} color={color} />
+      <Text style={{ flex: 1, color: tone === "danger" ? tokens.colors.danger : tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color={tokens.colors.textMuted} />
+    </Pressable>
   );
 }
 

@@ -1,13 +1,11 @@
 import React from "react";
-import { Text, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { z } from "zod";
 import { InputField, PrimaryButton } from "@/components/Primitives";
-import { AuthLink, AuthLayout, AuthMessage, AuthSectionLabel } from "@/components/AuthComponents";
+import { AuthLink, AuthLayout, AuthMessage } from "@/components/AuthComponents";
 import { resetPassword } from "@/services/apiClient";
-import { useThemeTokens } from "@/theme";
 
 const resetSchema = z
   .object({
@@ -26,7 +24,6 @@ type FormValues = z.infer<typeof resetSchema>;
 export function ResetPasswordScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const theme = useThemeTokens();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [complete, setComplete] = React.useState(false);
@@ -56,7 +53,6 @@ export function ResetPasswordScreen() {
       subtitle="Use the one-time code you received, then choose a password you’ll remember."
       footer={<AuthLink label="Back to sign in" icon="arrow-back-outline" onPress={() => navigation.navigate("Login")} />}
     >
-      <AuthSectionLabel>Secure password reset</AuthSectionLabel>
       <Controller
         control={control}
         name="identifier"
@@ -75,7 +71,6 @@ export function ResetPasswordScreen() {
             placeholder="000000"
             keyboardType="number-pad"
             error={errors.code?.message}
-            helperText="The code expires soon and works only once."
             autoCapitalize="none"
           />
         )}
@@ -96,11 +91,6 @@ export function ResetPasswordScreen() {
       />
       {error ? <AuthMessage tone="error">{error}</AuthMessage> : null}
       <PrimaryButton title="Reset password" iconRight="checkmark-outline" fullWidth loading={loading} onPress={handleSubmit(submit)} />
-      <View style={{ alignItems: "center" }}>
-        <Text style={{ color: theme.colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center" }}>
-          Passwords are encrypted before they are stored and are never shown in the app.
-        </Text>
-      </View>
     </AuthLayout>
   );
 

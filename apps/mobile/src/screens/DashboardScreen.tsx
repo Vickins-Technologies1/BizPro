@@ -1013,7 +1013,9 @@ function MiniLineChart({
               key={`point-${index}`}
               accessibilityRole="button"
               accessibilityLabel={`${formatTrendLabel(labels[index] ?? "selected period")}, revenue ${formatMoney(point.value, currency)}`}
+              accessibilityHint="Select this interval to view its revenue value."
               accessibilityState={{ selected: safeSelectedIndex === index }}
+              hitSlop={16}
               onPress={() => setSelectedIndex(index)}
               style={[
                 styles.chartPoint,

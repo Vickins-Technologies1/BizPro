@@ -7,6 +7,7 @@ import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { archiveBrand, updateBrand } from "@/services/apiClient";
 import { Ionicons } from "@expo/vector-icons";
+import { SearchField } from "@/components/DesignSystem";
 
 export function BrandsScreen() {
   const navigation = useNavigation<any>();
@@ -60,45 +61,47 @@ export function BrandsScreen() {
         }
       />
       <AppScrollView refreshing={refreshing} onRefresh={refresh} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 10, padding: 14 }}>
+        <View style={{ gap: 9, paddingBottom: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Brand directory</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filtered.length} visible of {brands.length} records</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Brand directory</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{filtered.length} of {brands.length} brands</Text>
             </View>
             <PrimaryButton title="Add brand" onPress={() => openEditor(null)} />
           </View>
-          <InputField label="Search brands" value={search} onChangeText={setSearch} placeholder="Brand name or note" />
-        </Card>
+          <SearchField value={search} onChangeText={setSearch} placeholder="Search name or description" accessibilityLabel="Search brands" />
+        </View>
         {filtered.length ? (
-          filtered.map((brand) => (
-            <Card key={brand.id} style={{ gap: 8, padding: 12 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "900" }}>{brand.name}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }} numberOfLines={1}>{brand.description ?? "No description"}</Text>
+          <View style={{ borderTopWidth: 1, borderTopColor: tokens.colors.border }}>
+            {filtered.map((brand) => (
+              <View key={brand.id} style={{ minHeight: 58, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700", flexShrink: 1 }} numberOfLines={1}>{brand.name}</Text>
+                    {!brand.isActive ? <Badge label="Archived" tone="warning" /> : null}
+                  </View>
+                  {brand.description ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{brand.description}</Text> : null}
                 </View>
-                <Badge label={brand.isActive ? "Active" : "Archived"} tone={brand.isActive ? "success" : "warning"} />
+                <Pressable onPress={() => openEditor(brand)} accessibilityRole="button" accessibilityLabel={`Edit ${brand.name}`} hitSlop={7} style={{ padding: 8 }}>
+                  <Ionicons name="create-outline" size={18} color={tokens.colors.primaryStrong} />
+                </Pressable>
+                {brand.isActive ? <Pressable
+                  onPress={async () => {
+                    const confirmed = await confirmMobile(`Archive ${brand.name}?`);
+                    if (!confirmed) return;
+                    await archiveBrand(brand.id);
+                    await loadCatalog();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Archive ${brand.name}`}
+                  hitSlop={7}
+                  style={{ padding: 8 }}
+                >
+                  <Ionicons name="archive-outline" size={18} color={tokens.colors.textSecondary} />
+                </Pressable> : null}
               </View>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton title="Edit" variant="secondary" onPress={() => openEditor(brand)} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <PrimaryButton
-                    title="Archive"
-                    variant="danger"
-                    onPress={async () => {
-                      const confirmed = await confirmMobile(`Archive ${brand.name}?`);
-                      if (!confirmed) return;
-                      await archiveBrand(brand.id);
-                      await loadCatalog();
-                    }}
-                  />
-                </View>
-              </View>
-            </Card>
-          ))
+            ))}
+          </View>
         ) : (
           <EmptyState
             title={search ? "No matching brands" : "No brands yet"}
@@ -110,7 +113,7 @@ export function BrandsScreen() {
       </AppScrollView>
 
       <SimpleModal visible={visible} title={editing ? "Edit brand" : "Add brand"} onClose={() => setVisible(false)}>
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: 9 }}>
           <InputField label="Brand name" value={name} onChangeText={setName} placeholder="Acme" />
           <InputField label="Description" value={description} onChangeText={setDescription} multiline numberOfLines={3} />
           <PrimaryButton

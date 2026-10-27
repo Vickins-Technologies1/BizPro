@@ -86,42 +86,43 @@ export function AuthSectionLabel({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 22
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18
   },
   shell: {
     width: "100%",
     maxWidth: 440,
     alignSelf: "center",
-    gap: 14
+    gap: 11
   },
   brandPanel: {
-    minHeight: 106,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    minHeight: 62,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     alignItems: "center",
-    gap: 7,
+    flexDirection: "row",
+    gap: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "transparent"
   },
   logoTile: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1
   },
-  logo: { width: 38, height: 38 },
-  brandCopy: { alignItems: "center", gap: 2 },
+  logo: { width: 35, height: 35 },
+  brandCopy: { alignItems: "flex-start", gap: 2 },
   brandName: { fontSize: 15, fontWeight: "900", letterSpacing: -0.25 },
   eyebrow: { fontSize: 10, fontWeight: "800", letterSpacing: 0.65, textTransform: "uppercase" },
   heading: { gap: 5, paddingHorizontal: 2 },
-  title: { fontSize: 25, lineHeight: 30, fontWeight: "900", letterSpacing: -0.7 },
-  subtitle: { fontSize: 13, lineHeight: 19, maxWidth: 380 },
-  card: { gap: 13, padding: 16, borderRadius: 20 },
+  title: { fontSize: 23, lineHeight: 28, fontWeight: "900", letterSpacing: -0.55 },
+  subtitle: { fontSize: 13, lineHeight: 18, maxWidth: 380 },
+  card: { gap: 11, padding: 14, borderRadius: 17 },
   footer: { alignItems: "center", minHeight: 24 },
   sectionLabel: { fontSize: 10, lineHeight: 15, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" },
   message: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 11, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },

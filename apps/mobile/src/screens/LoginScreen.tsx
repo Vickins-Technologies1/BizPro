@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { loginSchema } from "@shared";
 import { InputField, PrimaryButton } from "@/components/Primitives";
-import { AuthLink, AuthLayout, AuthMessage, AuthSectionLabel } from "@/components/AuthComponents";
+import { AuthLink, AuthLayout, AuthMessage } from "@/components/AuthComponents";
 import { useThemeTokens } from "@/theme";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
@@ -39,7 +39,6 @@ export function LoginScreen() {
         </View>
       }
     >
-      <AuthSectionLabel>Secure workspace sign in</AuthSectionLabel>
       <Controller
         control={control}
         name="identifier"
@@ -53,7 +52,6 @@ export function LoginScreen() {
             }}
             placeholder="07… or your account name"
             error={errors.identifier?.message}
-            helperText="Use the same phone number or name you used during setup."
             autoCapitalize="words"
             returnKeyType="next"
           />
@@ -73,7 +71,6 @@ export function LoginScreen() {
             placeholder="Enter your password"
             secureTextEntry
             error={errors.passwordOrPin?.message}
-            helperText="Your password stays private on this device."
             returnKeyType="done"
             onSubmitEditing={() => void handleSubmit(submit)()}
           />

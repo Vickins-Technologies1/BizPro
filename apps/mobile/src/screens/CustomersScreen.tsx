@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Ionicons } from "@expo/vector-icons";
 import type { Customer, CustomerAnalytics, CustomerAttachment, CustomerGroup, Payment } from "@shared";
 import { AppScrollView, AppVirtualizedList, Avatar, Badge, Card, Dropdown, EmptyState, GradientHeader, InputField, Loader, PrimaryButton, Screen, SimpleModal, Tag } from "@/components/Primitives";
+import { SearchField } from "@/components/DesignSystem";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { formatMoney } from "@/utils/money";
@@ -408,55 +409,29 @@ export function CustomersScreen() {
         data={filteredCustomers}
         keyExtractor={(customer) => customer.id}
         ListHeaderComponent={
-          <View style={{ gap: 10 }}>
-            <Card style={{ gap: 10, padding: 14 }}>
-              <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Customer analytics</Text>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Track value, not just debt</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 17, fontSize: 12 }} numberOfLines={2}>
-                Search customers, balances, groups, and loyalty in one workspace.
-              </Text>
-              {analyticsLoading ? <Loader label="Refreshing analytics..." /> : null}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
-                  <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Customers</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{activeAnalytics.totalCustomers}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Total records</Text>
-                </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
-                  <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Outstanding</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{activeAnalytics.owingCustomers} owing</Text>
-                </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
-                  <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Credit limit</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Assigned credit</Text>
-                </Card>
-                <Card style={{ flexBasis: "48%", flexGrow: 1, gap: 5, padding: 10 }}>
-                  <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.6, fontSize: 11 }}>Loyalty</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{activeAnalytics.totalLoyaltyPoints}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>Reward points</Text>
-                </Card>
+          <View style={{ gap: 8 }}>
+            <Card style={{ gap: 9, padding: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>Customer overview</Text>
+                {analyticsLoading ? <Loader label="Updating" /> : null}
+              </View>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <CompactCustomerMetric label="Customers" value={String(activeAnalytics.totalCustomers)} />
+                <CompactCustomerMetric label="Outstanding" value={formatMoney(activeAnalytics.totalOutstanding, business?.currency ?? "KES")} detail={`${activeAnalytics.owingCustomers} owing`} />
+              </View>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <CompactCustomerMetric label="Credit assigned" value={formatMoney(activeAnalytics.totalCreditLimit, business?.currency ?? "KES")} />
+                <CompactCustomerMetric label="Loyalty points" value={String(activeAnalytics.totalLoyaltyPoints)} />
               </View>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <Badge label={`${customerGroups.length} groups`} tone="primary" />
-                <Badge label={`${activeAnalytics.grouped.length} grouped segments`} tone="success" />
-                <Badge label={`${filteredCustomers.length} visible`} tone="warning" />
-              </View>
-              <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-                <PrimaryButton title="Add customer" onPress={openCreateCustomer} />
-                <PrimaryButton title="Manage groups" variant="secondary" onPress={() => setGroupManagerVisible(true)} />
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>{customerGroups.length} groups</Text>
+                <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>· {filteredCustomers.length} shown</Text>
+                <Pressable onPress={() => setGroupManagerVisible(true)} accessibilityRole="button"><Text style={{ color: tokens.colors.primaryStrong, fontSize: 10, fontWeight: "700" }}>Manage groups</Text></Pressable>
               </View>
             </Card>
 
-            <Card style={{ gap: 9, padding: 14 }}>
-              <InputField
-                label="Search customers"
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Search name, phone, email, notes"
-                helperText="Search across contact details, notes, and group names."
-              />
+            <View style={{ gap: 8 }}>
+              <SearchField value={search} onChangeText={setSearch} placeholder="Name, phone, email, notes, or group" accessibilityLabel="Search customers" />
               <View style={{ gap: 8 }}>
                 <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.7, fontSize: 11 }}>Status</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -481,7 +456,7 @@ export function CustomersScreen() {
                   ))}
                 </View>
               </View>
-            </Card>
+            </View>
           </View>
         }
         renderItem={({ item: customer }) => {
@@ -489,42 +464,30 @@ export function CustomersScreen() {
           const isOverCredit = customer.creditLimit > 0 && customer.balance > customer.creditLimit;
           const contactLine = customer.phone ?? customer.email ?? "No contact details";
           return (
-            <Pressable key={customer.id} onPress={() => setSelectedCustomerId(customer.id)}>
-              <Card style={{ gap: 8, padding: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                  <Avatar name={customer.name} size={46} tone={isOverCredit ? "warning" : customer.balance > 0 ? "danger" : "primary"} />
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                      <View style={{ flex: 1, gap: 3 }}>
-                        <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{customer.name}</Text>
-                        <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{contactLine}</Text>
-                      </View>
-                      <Pressable
-                        onPress={(event) => {
-                          event.stopPropagation?.();
-                          setSelectedCustomerId(null);
-                          openEditCustomer(customer);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${customer.name}`}
-                        style={{ padding: 4 }}
-                      >
-                        <Ionicons name="create-outline" size={20} color={tokens.colors.primaryStrong} />
-                      </Pressable>
-                    </View>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                      <Badge label={group?.name ?? "Ungrouped"} tone={group ? "primary" : "warning"} />
-                      <Badge label={customer.balance > 0 ? "Owing" : "Clear"} tone={customer.balance > 0 ? "danger" : "success"} />
-                      {customer.creditLimit > 0 ? <Badge label={`Limit ${formatMoney(customer.creditLimit, business?.currency ?? "KES")}`} tone={isOverCredit ? "warning" : "primary"} /> : null}
-                      {customer.loyaltyPoints > 0 ? <Badge label={`${customer.loyaltyPoints} points`} tone="success" /> : null}
-                    </View>
+            <View key={customer.id}>
+              <View style={{ minHeight: 66, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
+                <Pressable onPress={() => setSelectedCustomerId(customer.id)} accessibilityRole="button" accessibilityLabel={`View ${customer.name}, balance ${formatMoney(customer.balance, business?.currency ?? "KES")}`} style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Avatar name={customer.name} size={36} tone={isOverCredit ? "warning" : customer.balance > 0 ? "danger" : "primary"} />
+                  <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                    <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1}>{customer.name}</Text>
+                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{contactLine}{group ? ` · ${group.name}` : ""}</Text>
                   </View>
-                </View>
-                <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>
-                  Balance: {formatMoney(customer.balance, business?.currency ?? "KES")}
-                </Text>
-              </Card>
-            </Pressable>
+                  <View style={{ alignItems: "flex-end", gap: 3 }}>
+                    <Text style={{ color: customer.balance > 0 ? tokens.colors.warning : tokens.colors.text, fontSize: 12, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit>{formatMoney(customer.balance, business?.currency ?? "KES")}</Text>
+                    <Text style={{ color: isOverCredit ? tokens.colors.danger : customer.balance > 0 ? tokens.colors.warning : tokens.colors.success, fontSize: 10 }}>{isOverCredit ? "Over limit" : customer.balance > 0 ? "Owing" : "Clear"}</Text>
+                  </View>
+                </Pressable>
+                <Pressable
+                  onPress={() => openEditCustomer(customer)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${customer.name}`}
+                  hitSlop={8}
+                  style={{ padding: 8 }}
+                >
+                  <Ionicons name="create-outline" size={18} color={tokens.colors.primaryStrong} />
+                </Pressable>
+              </View>
+            </View>
           );
         }}
         ListEmptyComponent={
@@ -535,7 +498,7 @@ export function CustomersScreen() {
             icon="people-outline"
           />
         }
-        contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ gap: 0, paddingBottom: 24 }}
       />
 
       <SimpleModal
@@ -857,6 +820,14 @@ export function CustomersScreen() {
       </SimpleModal>
     </Screen>
   );
+}
+
+function CompactCustomerMetric({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+    <Text style={{ color: tokens.colors.textMuted, fontSize: 9 }} numberOfLines={1}>{label}</Text>
+    <Text style={{ color: tokens.colors.text, fontSize: 11, fontWeight: "700" }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>{value}</Text>
+    {detail ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 9 }} numberOfLines={1}>{detail}</Text> : null}
+  </View>;
 }
 
 function formatPaymentMethodLabel(method: string) {

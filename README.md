@@ -92,7 +92,7 @@ The product is organized into industry modules so the dashboard, reports, and wo
 
 ## Tech Stack
 
-- Mobile: React Native, Expo, TypeScript, SQLite, Zustand
+- Mobile: React Native, Expo, TypeScript, Zustand, Expo SecureStore, Expo FileSystem
 - API: NestJS, MongoDB, JWT auth, webhooks
 - Admin: Next.js
 - Shared layer: TypeScript, Zod, common business constants and industry definitions
@@ -210,7 +210,7 @@ eas build -p android --profile production
 ## Product Notes
 
 - The mobile app opens onboarding when no business exists locally.
-- Core actions are written to SQLite first, then queued for sync.
+- Sessions, queued offline actions, POS drafts, and related local state are persisted through Expo SecureStore. A startup data snapshot is stored as a JSON file through Expo FileSystem. The mobile app does not currently use SQLite.
 - The API includes sync push/pull endpoints, reports, devices, subscriptions, analytics, finance, audit, employees, suppliers, and webhook reconciliation support.
 - Receipt actions support copy, share, and optional Bluetooth printing when the native printer module is installed.
 - Dira OS uses KES by default and includes plan tiers for lite, standard, and pro.

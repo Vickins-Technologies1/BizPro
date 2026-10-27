@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigation } from "@react-navigation/native";
 import { PLAN_EMPLOYEE_LIMITS, PLAN_NAMES, PLAN_PRICING, PLAN_TIERS, businessSetupSchema, listIndustryModules, resolveBusinessTypeConfig, resolveIndustryModule } from "@shared";
 import { AppScrollView, Badge, Card, InputField, PrimaryButton, Screen } from "@/components/Primitives";
-import { AuthCompactHeader } from "@/components/AuthComponents";
+import { AuthCompactHeader, AuthMessage } from "@/components/AuthComponents";
 import { tokens } from "@/theme/tokens";
 import { useAppStore } from "@/store/useAppStore";
 import { z } from "zod";
@@ -53,12 +53,15 @@ export function OnboardingScreen() {
   const [countryPickerVisible, setCountryPickerVisible] = React.useState(false);
   const [countrySearch, setCountrySearch] = React.useState("");
   const [country, setCountry] = React.useState<CountryOption>(defaultCountry);
+  const [setupError, setSetupError] = React.useState<string | null>(null);
   const {
     control,
     handleSubmit,
     trigger,
     watch,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormValues>({
     mode: "onTouched",
@@ -103,13 +106,14 @@ export function OnboardingScreen() {
     const fields = stepFieldMap[activeStep.key as Exclude<SetupStepKey, "finish">];
     const valid = await trigger(fields, { shouldFocus: true });
     if (!valid) return;
+    setSetupError(null);
     setStepIndex((current) => Math.min(current + 1, steps.length - 1));
   }
 
   async function submit(values: FormValues) {
     const parsedPhone = parsePhoneNumberFromString(values.phone, country.code);
     if (!parsedPhone || !isValidPhoneNumber(values.phone, country.code)) {
-      Alert.alert("Check your phone number", "Enter a valid phone number for the selected country.");
+      setError("phone", { type: "validate", message: `Enter a valid phone number for ${country.name}.` });
       setStepIndex(0);
       return;
     }
@@ -127,47 +131,38 @@ export function OnboardingScreen() {
         },
       ]);
     } catch (error) {
-      Alert.alert("Setup failed", error instanceof Error ? error.message : "Failed to complete setup");
+      setSetupError(error instanceof Error ? error.message : "Failed to complete setup. Try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  function onInvalid() {
-    const firstError = Object.values(errors)[0];
-    Alert.alert("Check your details", firstError?.message ?? "Please complete all required fields before continuing.");
+  function onInvalid(validationErrors: typeof errors) {
+    const firstError = Object.values(validationErrors)[0];
+    setSetupError(firstError?.message ?? "Please complete all required fields before continuing.");
   }
-
-  const progress = ((stepIndex + 1) / steps.length) * 100;
 
   return (
     <Screen hideFooter>
-      <AppScrollView contentContainerStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 28 }}>
+      <AppScrollView contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 20 }}>
         <AuthCompactHeader eyebrow="Setup" />
-        <View style={{ gap: 10, paddingHorizontal: 2 }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ gap: 8, paddingHorizontal: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900", letterSpacing: -0.6 }}>Set up your business</Text>
+              <Text style={{ color: tokens.colors.text, fontSize: 21, lineHeight: 26, fontWeight: "900", letterSpacing: -0.5 }}>{activeStep.title}</Text>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{activeStep.subtitle}</Text>
             </View>
-            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "900", letterSpacing: 0.7 }}>STEP {stepIndex + 1} OF {steps.length}</Text>
+            <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>STEP {stepIndex + 1} / {steps.length}</Text>
           </View>
-          <View accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: stepIndex + 1 }} style={{ height: 4, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
-            <View style={{ width: `${progress}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.primaryStrong }} />
-          </View>
-          <View style={{ flexDirection: "row", gap: 5 }}>
+          <View accessibilityRole="progressbar" accessibilityLabel={`Setup progress, step ${stepIndex + 1} of ${steps.length}: ${activeStep.title}`} accessibilityValue={{ min: 1, max: steps.length, now: stepIndex + 1 }} style={{ flexDirection: "row", gap: 4 }}>
             {steps.map((step, index) => (
-              <View key={step.key} style={{ flex: 1, height: 2, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.primaryStrong : tokens.colors.border }} />
+              <View key={step.key} style={{ flex: 1, height: 4, borderRadius: 999, backgroundColor: index <= stepIndex ? tokens.colors.primaryStrong : tokens.colors.border }} />
             ))}
           </View>
         </View>
 
         {stepIndex === 0 ? (
-          <Card style={{ gap: 14, padding: 16, borderRadius: 18 }}>
-            <View style={{ gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>Business information</Text>
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>Owner & business details</Text>
-            </View>
+          <Card style={{ gap: 11, padding: 13, borderRadius: 16 }}>
             <Controller
               control={control}
               name="ownerName"
@@ -200,7 +195,7 @@ export function OnboardingScreen() {
                       <InputField
                         label=""
                         value={value}
-                        onChangeText={(next) => onChange(next.replace(/[^\d\s()-]/g, ""))}
+                        onChangeText={(next) => { clearErrors("phone"); setSetupError(null); onChange(next.replace(/[^\d\s()-]/g, "")); }}
                         placeholder="712 345 678"
                         keyboardType="phone-pad"
                         error={errors.phone?.message}
@@ -256,9 +251,8 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 1 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Industry</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Card style={{ gap: 8, padding: 11 }}>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
               Choose the industry that best matches the business. The rest of the setup will adapt to that selection.
             </Text>
             <View style={{ gap: 10 }}>
@@ -273,9 +267,11 @@ export function OnboardingScreen() {
                     }}
                     style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
                   >
-                    <Card
+                  <Card
                       style={{
-                        gap: 10,
+                        gap: 7,
+                        padding: 10,
+                        borderRadius: 13,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.success : tokens.colors.border,
                         backgroundColor: selected ? `${tokens.colors.success}18` : tokens.colors.surfaceAlt,
@@ -284,7 +280,7 @@ export function OnboardingScreen() {
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
                         <View style={{ flex: 1, gap: 4 }}>
                           <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{module.label}</Text>
-                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{module.description}</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{module.description}</Text>
                         </View>
                         <Badge label={selected ? "Selected" : `${module.businessTypes.length} types`} tone={selected ? "success" : "primary"} />
                       </View>
@@ -302,12 +298,11 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 2 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Business type</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Card style={{ gap: 8, padding: 11 }}>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
               We&apos;ll tailor the workspace to the selected industry. Pick the type that best describes how the business operates.
             </Text>
-            <View style={{ padding: 12, borderRadius: 16, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border, gap: 4 }}>
+            <View style={{ padding: 9, borderRadius: 12, backgroundColor: tokens.colors.surfaceAlt, borderWidth: 1, borderColor: tokens.colors.border, gap: 3 }}>
               <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 11 }}>Selected industry</Text>
               <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>{selectedIndustry.label}</Text>
               <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{selectedIndustry.dashboard.summary}</Text>
@@ -326,7 +321,9 @@ export function OnboardingScreen() {
                   >
                     <Card
                       style={{
-                        gap: 8,
+                        gap: 6,
+                        padding: 10,
+                        borderRadius: 13,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.primaryStrong : tokens.colors.border,
                         backgroundColor: selected ? `${tokens.colors.primary}18` : tokens.colors.surfaceAlt,
@@ -335,7 +332,7 @@ export function OnboardingScreen() {
                       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                         <View style={{ flex: 1, gap: 4 }}>
                           <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{option.label}</Text>
-                          <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{option.description}</Text>
+                          <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{option.description}</Text>
                         </View>
                         <Badge label={selected ? "Chosen" : "Pick"} tone={selected ? "success" : "primary"} />
                       </View>
@@ -345,7 +342,7 @@ export function OnboardingScreen() {
               })}
             </View>
             {selectedTypeOption ? (
-              <Card style={{ gap: 8, backgroundColor: `${tokens.colors.success}12` }}>
+              <Card style={{ gap: 6, padding: 10, borderRadius: 13, backgroundColor: `${tokens.colors.success}12` }}>
                 <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{selectedTypeOption.label} workflow</Text>
                 <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>{selectedBusinessConfig.workflow.steps.join("  >  ")}</Text>
               </Card>
@@ -354,11 +351,10 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 3 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Subscription plan</Text>
-            <View style={{ padding: 12, borderRadius: 16, backgroundColor: `${tokens.colors.success}18`, borderWidth: 1, borderColor: tokens.colors.success, gap: 4 }}>
-              <Text style={{ color: tokens.colors.success, fontSize: 12, fontWeight: "900", letterSpacing: 1 }}>30 DAYS FREE - NO CARD REQUIRED</Text>
-              <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>Use Dira OS normally during your trial. Your selected plan only starts billing after the trial ends.</Text>
+          <Card style={{ gap: 8, padding: 11 }}>
+            <View style={{ padding: 9, borderRadius: 12, backgroundColor: `${tokens.colors.success}18`, borderWidth: 1, borderColor: tokens.colors.success, gap: 3 }}>
+              <Text style={{ color: tokens.colors.success, fontSize: 11, fontWeight: "900", letterSpacing: 0.6 }}>30 DAYS FREE · NO CARD REQUIRED</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>Your selected plan starts after the trial.</Text>
             </View>
             <View style={{ gap: 10 }}>
               {planOptions.map((plan) => {
@@ -371,7 +367,9 @@ export function OnboardingScreen() {
                   >
                     <Card
                       style={{
-                        gap: 8,
+                        gap: 6,
+                        padding: 10,
+                        borderRadius: 13,
                         borderWidth: 1,
                         borderColor: selected ? tokens.colors.success : tokens.colors.border,
                         backgroundColor: selected ? `${tokens.colors.success}18` : tokens.colors.surfaceAlt,
@@ -394,9 +392,8 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 4 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Security</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
+          <Card style={{ gap: 9, padding: 11 }}>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
               Add the login password now. You can also set an optional cashier PIN for quick sign-in later.
             </Text>
             <Controller
@@ -424,6 +421,7 @@ export function OnboardingScreen() {
                   onChangeText={onChange}
                   placeholder="1234"
                   keyboardType="number-pad"
+                  secureTextEntry
                   error={errors.cashierPin?.message}
                   helperText="Leave blank if you do not need a cashier PIN yet."
                 />
@@ -433,10 +431,9 @@ export function OnboardingScreen() {
         ) : null}
 
         {stepIndex === 5 ? (
-          <Card style={{ gap: 10, padding: 12 }}>
-            <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Finish</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-              Review the setup below. Everything from the current flow is still included, only reorganized into a guided experience.
+          <Card style={{ gap: 8, padding: 11 }}>
+            <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 17 }}>
+              Review your business details and security setup before continuing.
             </Text>
             <View style={{ gap: 10 }}>
               <SummaryBlock label="Owner" value={watch("ownerName") || "Not set"} helper={watch("phone") || "No phone added"} />
@@ -457,7 +454,8 @@ export function OnboardingScreen() {
           </Card>
         ) : null}
 
-        <Card style={{ gap: 10, padding: 12, borderRadius: 18 }}>
+        {setupError ? <AuthMessage tone="error">{setupError}</AuthMessage> : null}
+        <Card style={{ gap: 8, padding: 10, borderRadius: 15 }}>
           {stepIndex > 0 ? (
             <Pressable onPress={() => setStepIndex((current) => Math.max(0, current - 1))} hitSlop={8} style={{ alignSelf: "center", paddingVertical: 2 }}>
               <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "800" }}>Back</Text>
@@ -475,7 +473,7 @@ export function OnboardingScreen() {
       </AppScrollView>
       <Modal visible={countryPickerVisible} transparent animationType="slide" onRequestClose={() => setCountryPickerVisible(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: tokens.colors.overlay }}>
-          <View style={{ maxHeight: "82%", backgroundColor: tokens.colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 18, gap: 12 }}>
+          <View style={{ maxHeight: "82%", backgroundColor: tokens.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 15, gap: 10 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ color: tokens.colors.text, fontSize: 19, fontWeight: "900" }}>Choose your country</Text>
               <Pressable onPress={() => setCountryPickerVisible(false)}><Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>Close</Text></Pressable>
@@ -485,7 +483,7 @@ export function OnboardingScreen() {
               {countryOptions
                 .filter((option) => `${option.name} ${option.callingCode}`.toLowerCase().includes(countrySearch.toLowerCase()))
                 .map((option) => (
-                  <Pressable key={option.code} onPress={() => { setCountry(option); setCountryPickerVisible(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 13, borderRadius: 16, borderWidth: 1, borderColor: option.code === country.code ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: option.code === country.code ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
+                  <Pressable key={option.code} onPress={() => { setCountry(option); clearErrors("phone"); setCountryPickerVisible(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 13, borderRadius: 16, borderWidth: 1, borderColor: option.code === country.code ? tokens.colors.primaryStrong : tokens.colors.border, backgroundColor: option.code === country.code ? tokens.colors.surfaceAlt : tokens.colors.surface }}>
                     <Text style={{ fontSize: 19 }}>{option.flag}</Text>
                     <Text style={{ flex: 1, color: tokens.colors.text, fontWeight: "800" }}>{option.name}</Text>
                     <Text style={{ color: tokens.colors.textSecondary }}>{option.callingCode}</Text>

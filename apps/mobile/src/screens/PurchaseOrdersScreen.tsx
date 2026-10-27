@@ -64,8 +64,8 @@ export function PurchaseOrdersScreen() {
 
   const filteredOrders = React.useMemo(() => {
     const query = search.trim().toLowerCase();
-    return orders.filter((order) => [order.orderNumber, order.status, order.notes ?? "", order.supplierId ?? ""].join(" ").toLowerCase().includes(query));
-  }, [orders, search]);
+    return orders.filter((order) => [order.orderNumber, order.status, order.notes ?? "", order.supplierId ?? "", suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? ""].join(" ").toLowerCase().includes(query));
+  }, [orders, search, suppliers]);
 
   const filteredProducts = React.useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -241,27 +241,26 @@ export function PurchaseOrdersScreen() {
           </Pressable>
         }
       />
-      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 10, padding: 14 }}>
+      <AppScrollView refreshing={refreshing} onRefresh={refreshAll} contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
+        <Card style={{ gap: 8, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>Inbound planning</Text>
-              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredOrders.length} visible of {orders.length} orders</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{filteredOrders.length} of {orders.length} orders</Text>
             </View>
             {canManageOrders ? <PrimaryButton title="Create order" onPress={() => openEditor(null)} /> : null}
           </View>
           <InputField label="Search orders" value={search} onChangeText={setSearch} placeholder="Order number, supplier, or status" />
         </Card>
         {filteredOrders.length ? (
-          filteredOrders.map((order) => {
+          <Card style={{ paddingVertical: 0, paddingHorizontal: 12 }}>
+          {filteredOrders.map((order, index) => {
             const supplierName = suppliers.find((supplier) => supplier.id === order.supplierId)?.name ?? "No supplier";
             return (
-              <Card key={order.id} style={{ gap: 6, padding: 12 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+              <View key={order.id} style={{ gap: 7, paddingVertical: 12, borderBottomWidth: index === filteredOrders.length - 1 ? 0 : 1, borderBottomColor: tokens.colors.border }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "900" }}>{order.orderNumber}</Text>
-                    <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{supplierName}</Text>
-                    <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(order.orderDate, "PPP")}</Text>
+                    <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 14, fontWeight: "800" }}>{order.orderNumber} <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "500" }}>· {supplierName}</Text></Text>
+                    <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>{formatDate(order.orderDate, "PP")} · {order.items.reduce((sum, item) => sum + Number(item.receivedQuantity ?? 0), 0)} / {order.items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)} units received</Text>
                   </View>
                   <Badge label={order.status.replaceAll("_", " ")} tone={order.status === "received" ? "success" : order.status === "cancelled" ? "danger" : "primary"} />
                 </View>
@@ -287,9 +286,10 @@ export function PurchaseOrdersScreen() {
                     </View>
                   ) : null}
                 </View>
-              </Card>
+              </View>
             );
-          })
+          })}
+          </Card>
         ) : (
           <EmptyState
             title={search ? "No matching purchase orders" : "No purchase orders yet"}

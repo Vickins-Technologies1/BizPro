@@ -7,6 +7,9 @@ build
 .env
 .env.*
 !.env.example
+# Android release signing material is provisioned locally or by protected CI.
+apps/mobile/credentials.json
+apps/mobile/credentials/
 coverage
 apps/mobile/.expo
 apps/mobile/.expo-shared

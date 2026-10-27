@@ -200,13 +200,11 @@ export function BranchesScreen() {
         keyExtractor={(branch) => branch.id}
         ListHeaderComponent={
           <View style={{ gap: 12 }}>
-            <Card style={{ gap: 10 }}>
+            <Card style={{ gap: 8, padding: 12 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "900" }}>{business?.name ?? "Dira OS"} branches</Text>
-                  <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18 }}>
-                    Keep branch identity, status, and operational scope cleanly separated.
-                  </Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "900" }}>{business?.name ?? "Dira OS"}</Text>
+                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Branch administration</Text>
                 </View>
                 <Badge label={`${items.length} branches`} tone="primary" />
               </View>
@@ -221,8 +219,7 @@ export function BranchesScreen() {
             <Card style={{ gap: 10 }}>
               <InputField label="Search branches" value={search} onChangeText={setSearch} placeholder="Name, code, manager, or location" />
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <Badge label={`Current: ${resolveBranchName(branches, selectedBranchId)}`} tone="primary" />
-                <Badge label={`Selected: ${selectedBranchId ? selectedBranchId : "All branches"}`} tone="success" />
+                <Badge label={`Workspace: ${resolveBranchName(branches, selectedBranchId)}`} tone="success" />
                 <Badge label={`${branches.filter((branch) => branch.status === "active").length} active`} tone="success" />
                 <Badge label={`${branches.filter((branch) => branch.status === "inactive").length} inactive`} tone="warning" />
               </View>
@@ -230,29 +227,27 @@ export function BranchesScreen() {
           </View>
         }
         renderItem={({ item: branch }) => (
-          <Card style={{ gap: 12 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: tokens.colors.text, fontSize: 17, fontWeight: "900" }}>{branch.name}</Text>
-                <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-                  Code {branch.code} · {branch.location ?? "No location"}
-                </Text>
+          <Card style={{ gap: 8, padding: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{branch.name} <Text style={{ color: tokens.colors.textSecondary, fontSize: 12, fontWeight: "500" }}>· {branch.code}</Text></Text>
+                <Text numberOfLines={1} style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>{branch.location ?? branch.managerName ?? "No location details"}</Text>
               </View>
-              <Badge label={branch.status === "active" ? "Active" : "Inactive"} tone={branch.status === "active" ? "success" : "warning"} />
+              <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                {selectedBranchId === branch.id ? <Badge label="Current" tone="primary" /> : null}
+                <Badge label={branch.status === "active" ? "Active" : "Inactive"} tone={branch.status === "active" ? "success" : "warning"} />
+              </View>
             </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              <Badge label={branch.managerName ?? "Unassigned manager"} tone="primary" />
-              {branch.isDefault ? <Badge label="Default" tone="success" /> : null}
-              <Badge label={`${branch.staffCount ?? 0} staff`} tone="primary" />
-              <Badge label={`${branch.inventoryCount ?? 0} products`} tone="primary" />
+            <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>
+              {branch.managerName ?? "Unassigned"} · {branch.staffCount ?? 0} staff · {branch.inventoryCount ?? 0} products{branch.isDefault ? " · Default" : ""}
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Sales <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{formatMoney(branch.salesTotal ?? 0, business?.currency)}</Text></Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Transactions <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>{branch.salesCount ?? 0}</Text></Text>
+              <Text style={{ color: branch.lowStockCount ? tokens.colors.warning : tokens.colors.textSecondary, fontSize: 12 }}>Low stock <Text style={{ fontWeight: "700" }}>{branch.lowStockCount ?? 0}</Text></Text>
             </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              <StatPill label="Revenue" value={formatMoney(branch.salesTotal ?? 0, business?.currency)} />
-              <StatPill label="Sales" value={`${branch.salesCount ?? 0}`} />
-              <StatPill label="Low stock" value={`${branch.lowStockCount ?? 0}`} tone={branch.lowStockCount ? "warning" : "success"} />
-            </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              <PrimaryButton title="View" variant="secondary" onPress={() => void focusBranch(branch)} />
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <PrimaryButton title={selectedBranchId === branch.id ? "Active workspace" : "Switch workspace"} variant={selectedBranchId === branch.id ? "secondary" : "primary"} onPress={() => void focusBranch(branch)} />
               <PrimaryButton title="Edit" variant="secondary" onPress={() => openEdit(branch)} />
               <PrimaryButton title="Reports" variant="secondary" onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Reports"); }} />
               <PrimaryButton title="Staff" variant="secondary" onPress={async () => { await setSelectedBranchId(branch.id); navigation.navigate("Employees"); }} />
@@ -276,7 +271,7 @@ export function BranchesScreen() {
             />
           )
         }
-        contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
+        contentContainerStyle={{ gap: 8, paddingBottom: 24 }}
       />
 
       <SimpleModal visible={modalVisible} title={mode === "edit" ? "Edit branch" : "Add branch"} onClose={() => setModalVisible(false)}>
@@ -341,15 +336,6 @@ function normalizeMaybeString(value: string) {
 function resolveBranchName(branches: Branch[], selectedBranchId: string | null) {
   if (!selectedBranchId) return "All branches";
   return branches.find((branch) => branch.id === selectedBranchId)?.name ?? "Assigned branch";
-}
-
-function StatPill({ label, value, tone = "primary" }: { label: string; value: string; tone?: "primary" | "success" | "warning" }) {
-  return (
-    <View style={{ flexGrow: 1, minWidth: "30%", padding: 10, borderRadius: 14, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surfaceAlt, gap: 3 }}>
-      <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.6 }}>{label}</Text>
-      <Text style={{ color: tone === "warning" ? tokens.colors.warning : tone === "success" ? tokens.colors.success : tokens.colors.text, fontSize: 13, fontWeight: "900" }}>{value}</Text>
-    </View>
-  );
 }
 
 function confirmAction(message: string) {

@@ -19,7 +19,6 @@ import {
   Screen,
   SimpleModal,
   SkeletonBlock,
-  StatCard,
   Tag
 } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
@@ -209,6 +208,13 @@ export function FinanceScreen() {
   }
 
   const rangeLabel = currentRange ? formatRangeLabel(currentRange.from, currentRange.to) : "Loading";
+  const periodExpenses = React.useMemo(() => {
+    if (!currentRange) return expenses;
+    return expenses.filter((expense) => {
+      const day = String(expense.expenseDate ?? "").slice(0, 10);
+      return day >= currentRange.from && day <= currentRange.to;
+    });
+  }, [currentRange?.from, currentRange?.to, expenses]);
 
   const hasContent =
     Boolean(overview) &&
@@ -242,13 +248,13 @@ export function FinanceScreen() {
         />
 
       <AppScrollView refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 24 }}>
-        <Card style={{ gap: 12 }}>
-          <View style={{ gap: 4 }}>
-            <Text style={{ color: tokens.colors.textMuted, textTransform: "uppercase", letterSpacing: 0.8, fontSize: 12 }}>Finance snapshot</Text>
-            <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900" }}>Track money in, money out, and the positions that matter.</Text>
-            <Text style={{ color: tokens.colors.textSecondary, lineHeight: 18, fontSize: 12 }}>
-              Expenses, income, invoices, credit notes, payments, bank accounts, and petty cash all live here. Sales reports stay in the Reports area.
-            </Text>
+        <Card style={{ gap: 10, padding: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>Finance overview</Text>
+              <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{rangeLabel}</Text>
+            </View>
+            <Ionicons name="calendar-outline" size={18} color={tokens.colors.icon} />
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {([
@@ -261,7 +267,7 @@ export function FinanceScreen() {
             ))}
             <Tag label="Custom Range" tone="warning" selected={activeFilter === "custom"} onPress={() => setPickerVisible(true)} />
           </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
               <PrimaryButton title="Export PDF" variant="secondary" onPress={exportPdf} />
             </View>
@@ -275,12 +281,8 @@ export function FinanceScreen() {
         {loading && !overview ? (
           <View style={{ gap: 16 }}>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <SkeletonBlock height={120} style={{ flex: 1 }} />
-              <SkeletonBlock height={120} style={{ flex: 1 }} />
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <SkeletonBlock height={120} style={{ flex: 1 }} />
-              <SkeletonBlock height={120} style={{ flex: 1 }} />
+              <SkeletonBlock height={84} style={{ flex: 1 }} />
+              <SkeletonBlock height={84} style={{ flex: 1 }} />
             </View>
             <SkeletonBlock height={220} />
             <SkeletonBlock height={220} />
@@ -308,49 +310,34 @@ export function FinanceScreen() {
           />
         ) : (
           <>
-            <Card style={{ gap: 12, padding: 18 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Position overview</Text>
-                  <Text style={{ color: tokens.colors.text, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}>{formatMoney(overview?.profitLossTotal ?? 0, business?.currency)}</Text>
-                  <Text style={{ color: tokens.colors.textSecondary }}>Net result for {rangeLabel.toLowerCase()}.</Text>
+            <Card style={{ gap: 12, padding: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 0.7, textTransform: "uppercase" }}>Net result</Text>
+                  <Text style={{ color: overview?.profitLossTotal && overview.profitLossTotal < 0 ? tokens.colors.danger : tokens.colors.text, fontSize: 22, fontWeight: "800" }} adjustsFontSizeToFit numberOfLines={1}>{formatMoney(overview?.profitLossTotal ?? 0, business?.currency)}</Text>
                 </View>
-                <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: tokens.colors.success + "18" }}>
-                  <Ionicons name="analytics-outline" size={23} color={tokens.colors.success} />
+                <View style={{ alignItems: "flex-end", gap: 2 }}>
+                  <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>Cash flow*</Text>
+                  <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1}>{formatMoney(overview?.cashFlowTotal ?? 0, business?.currency)}</Text>
                 </View>
               </View>
-              <View style={{ height: 8, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
-                <View style={{ width: `${Math.max(8, Math.min(100, Math.round(((overview?.incomeTotal ?? 0) / Math.max(overview?.incomeTotal ?? 0, overview?.expensesTotal ?? 0, 1)) * 100)))}%`, height: "100%", borderRadius: 999, backgroundColor: tokens.colors.success }} />
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", gap: 14 }}>
+                <FinanceMetric label="Income" value={formatMoney(overview?.incomeTotal ?? 0, business?.currency)} />
+                <FinanceMetric label="Expenses" value={formatMoney(overview?.expensesTotal ?? 0, business?.currency)} tone="warning" />
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Income {formatMoney(overview?.incomeTotal ?? 0, business?.currency)}</Text>
-                <Text style={{ color: tokens.colors.textMuted, fontSize: 12 }}>Outflow {formatMoney(overview?.expensesTotal ?? 0, business?.currency)}</Text>
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", gap: 14 }}>
+                <FinanceMetric label="Payments received" value={formatMoney(overview?.paymentTotal ?? 0, business?.currency)} />
+                <FinanceMetric label="Outstanding invoices" value={formatMoney(overview?.invoiceTotal ?? 0, business?.currency)} tone="danger" />
               </View>
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", gap: 14 }}>
+                <FinanceMetric label="Tax" value={formatMoney(overview?.taxTotal ?? 0, business?.currency)} />
+                <FinanceMetric label="Petty cash" value={formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)} />
+              </View>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, lineHeight: 14 }}>*Cash flow follows the existing overview formula, including payments, expenses, and petty cash movement.</Text>
             </Card>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Income" value={formatMoney(overview?.incomeTotal ?? 0, business?.currency)} icon="trending-up-outline" tone="success" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Expenses" value={formatMoney(overview?.expensesTotal ?? 0, business?.currency)} icon="trending-down-outline" tone="warning" />
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Profit & Loss" value={formatMoney(overview?.profitLossTotal ?? 0, business?.currency)} icon="analytics-outline" tone="primary" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Cash Flow" value={formatMoney(overview?.cashFlowTotal ?? 0, business?.currency)} icon="water-outline" tone="success" />
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Tax Reports" value={formatMoney(overview?.taxTotal ?? 0, business?.currency)} icon="document-text-outline" tone="danger" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StatCard label="Payments" value={formatMoney(overview?.paymentTotal ?? 0, business?.currency)} icon="card-outline" tone="primary" />
-              </View>
-            </View>
 
             <Card style={{ gap: 12 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Invoices</Text>
@@ -498,8 +485,8 @@ export function FinanceScreen() {
 
             <Card style={{ gap: 12 }}>
               <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Expenses</Text>
-              {expenses.length ? (
-                expenses.map((expense) => (
+              {periodExpenses.length ? (
+                periodExpenses.map((expense) => (
                   <FinanceRow
                     key={expense.id}
                     title={expense.note}
@@ -780,6 +767,14 @@ function CreditNoteForm({
 
 function FinanceFormShell({ children }: { children: React.ReactNode }) {
   return <View style={{ gap: 12 }}>{children}</View>;
+}
+
+function FinanceMetric({ label, value, tone = "primary" }: { label: string; value: string; tone?: "primary" | "warning" | "danger" }) {
+  const color = tone === "warning" ? tokens.colors.warning : tone === "danger" ? tokens.colors.danger : tokens.colors.text;
+  return <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+    <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>{label}</Text>
+    <Text style={{ color, fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>{value}</Text>
+  </View>;
 }
 
 function FinanceRow({

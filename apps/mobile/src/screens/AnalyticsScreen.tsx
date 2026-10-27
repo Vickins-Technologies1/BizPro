@@ -5,7 +5,7 @@ import { addDays, endOfDay, endOfMonth, format, startOfDay, startOfMonth, startO
 import { useNavigation } from "@react-navigation/native";
 import { hasPermission, resolveBusinessTypeConfig } from "@shared";
 import type { EnterpriseAnalytics } from "@shared";
-import { AppScrollView, Badge, Card, DateRangePickerModal, EmptyState, ErrorState, GradientHeader, PrimaryButton, Screen, SkeletonBlock, StatCard, Tag } from "@/components/Primitives";
+import { AppScrollView, Badge, Card, DateRangePickerModal, EmptyState, ErrorState, GradientHeader, PrimaryButton, Screen, SkeletonBlock, Tag } from "@/components/Primitives";
 import { tokens } from "@/theme/tokens";
 import { formatMoney } from "@/utils/money";
 import { useAppStore } from "@/store/useAppStore";
@@ -306,44 +306,33 @@ export function AnalyticsScreen() {
 
 function SummaryGrid({ analytics, currency, config }: { analytics: EnterpriseAnalytics | null; currency: string; config: ReturnType<typeof resolveBusinessTypeConfig> }) {
   return (
-    <View style={{ gap: 12 }}>
+    <Card style={{ gap: 11, padding: 14 }}>
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <StatCard label="Revenue" value={formatMoney(analytics?.summary.revenueTotal ?? 0, currency)} icon="cash-outline" tone="primary" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <StatCard label={config.workspace.activityLabel} value={formatCount(analytics?.summary.salesCount ?? 0)} icon="cart-outline" tone="success" />
-        </View>
+        <AnalyticsMetric label="Revenue" value={formatMoney(analytics?.summary.revenueTotal ?? 0, currency)} prominent />
+        <AnalyticsMetric label="Est. net profit" value={formatMoney(analytics?.summary.profitTotal ?? 0, currency)} prominent tone={(analytics?.summary.profitTotal ?? 0) < 0 ? "danger" : "success"} />
       </View>
+      <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <StatCard label={config.capabilities.products ? "Products" : config.navigation.catalogLabel} value={formatCount(analytics?.summary.productCount ?? 0)} icon="cube-outline" tone="warning" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <StatCard label="Customers" value={formatCount(analytics?.summary.customerCount ?? 0)} icon="people-outline" tone="primary" />
-        </View>
+        <AnalyticsMetric label={config.workspace.activityLabel} value={formatCount(analytics?.summary.salesCount ?? 0)} />
+        <AnalyticsMetric label={config.capabilities.products ? "Catalog total" : `${config.navigation.catalogLabel} total`} value={formatCount(analytics?.summary.productCount ?? 0)} />
+        <AnalyticsMetric label="Customers total" value={formatCount(analytics?.summary.customerCount ?? 0)} />
       </View>
-      <View style={{ flexDirection: "row", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <StatCard label="Profit" value={formatMoney(analytics?.summary.profitTotal ?? 0, currency)} icon="analytics-outline" tone="success" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <StatCard label="Forecast" value={formatMoney(analytics?.summary.forecastRevenue ?? 0, currency)} icon="trending-up-outline" tone="warning" />
-        </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 7 }}>
+        <Badge label={`Avg. order ${formatMoney(analytics?.summary.averageOrderValue ?? 0, currency)}`} tone="primary" />
+        {analytics?.summary.peakHour ? <Badge label={`Peak ${formatCount(analytics.summary.peakHourSales)} at ${analytics.summary.peakHour}`} tone="primary" /> : null}
+        {config.capabilities.inventory ? <Badge label={`Turnover ${formatDecimal(analytics?.summary.inventoryTurnover ?? 0, 2)}`} tone="primary" /> : null}
       </View>
-      <Card style={{ gap: 10 }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          <Badge label={`Peak hour ${analytics?.summary.peakHour ?? "n/a"}`} tone="primary" />
-          <Badge label={`${formatCount(analytics?.summary.peakHourSales ?? 0)} ${config.workspace.primaryEntity.toLowerCase()} at peak`} tone="success" />
-          <Badge label={`Growth ${formatPercent(analytics?.summary.monthlyGrowthPercent ?? 0)}`} tone="warning" />
-          {config.capabilities.inventory ? <Badge label={`Inventory turnover ${formatDecimal(analytics?.summary.inventoryTurnover ?? 0, 2)}`} tone="danger" /> : null}
-        </View>
-        <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-          {analytics?.summary.averageOrderValue ? `Average order value is ${formatMoney(analytics.summary.averageOrderValue, currency)}.` : "Average order value will appear as sales come in."}
-        </Text>
-      </Card>
-    </View>
+      <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>Profit is estimated from revenue, product costs, and recorded expenses.</Text>
+    </Card>
   );
+}
+
+function AnalyticsMetric({ label, value, prominent = false, tone = "primary" }: { label: string; value: string; prominent?: boolean; tone?: "primary" | "success" | "danger" }) {
+  const color = tone === "success" ? tokens.colors.success : tone === "danger" ? tokens.colors.danger : tokens.colors.text;
+  return <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+    <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>{label}</Text>
+    <Text style={{ color, fontSize: prominent ? 17 : 12, fontWeight: "700", fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{value}</Text>
+  </View>;
 }
 
 function TrendCard({
@@ -360,16 +349,12 @@ function TrendCard({
   valueFormatter: (value: number) => string;
 }) {
   const values = React.useMemo(() => points.map((point) => Number(point.value ?? 0)), [points]);
-  const max = React.useMemo(() => Math.max(1, ...values), [values]);
-  const animatedValues = React.useRef<Animated.Value[]>([]);
-
-  React.useEffect(() => {
-    animatedValues.current = points.map((_, index) => animatedValues.current[index] ?? new Animated.Value(0));
-    Animated.stagger(
-      45,
-      animatedValues.current.map((value) => Animated.timing(value, { toValue: 1, duration: 420, useNativeDriver: false }))
-    ).start();
-  }, [points.length]);
+  const maxMagnitude = React.useMemo(() => Math.max(1, ...values.map((value) => Math.abs(value))), [values]);
+  const hasNegative = values.some((value) => value < 0);
+  const zeroY = hasNegative ? 69 : 116;
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  React.useEffect(() => setSelectedIndex(Math.max(0, points.length - 1)), [points]);
+  const selectedPoint = points[selectedIndex];
 
   return (
     <Card style={{ gap: 12 }}>
@@ -378,34 +363,30 @@ function TrendCard({
         <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>{subtitle}</Text>
       </View>
       {points.length ? (
-        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, minHeight: 190 }}>
+        <View accessible accessibilityLabel={`${title} chart. ${points.length} labeled periods. ${selectedPoint ? `Selected ${selectedPoint.label}, ${valueFormatter(selectedPoint.value)}${selectedPoint.note ? `, ${selectedPoint.note}` : ""}.` : ""}`}>
+          {selectedPoint ? <View style={{ flexDirection: "row", alignItems: "baseline", gap: 7, marginBottom: 8 }}>
+            <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{selectedPoint.label}</Text>
+            <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "700" }}>{valueFormatter(selectedPoint.value)}</Text>
+            {selectedPoint.note ? <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }} numberOfLines={1}>{selectedPoint.note}</Text> : null}
+          </View> : null}
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 7, height: 152 }}>
           {points.map((point, index) => {
-            const barHeight = 120 * (Number(point.value ?? 0) / max);
-            const animatedHeight = animatedValues.current[index]?.interpolate({ inputRange: [0, 1], outputRange: [0, Math.max(8, barHeight)] }) ?? barHeight;
+            const magnitude = Math.abs(Number(point.value ?? 0));
+            const available = point.value < 0 ? 34 : hasNegative ? 58 : 110;
+            const barHeight = magnitude === 0 ? 0 : Math.max(2, available * (magnitude / maxMagnitude));
+            const isSelected = selectedIndex === index;
+            const barColor = point.value < 0 ? tokens.colors.danger : toneColor(accent, 1);
             return (
-              <View key={`${title}-${point.label}-${index}`} style={{ flex: 1, alignItems: "center", gap: 8 }}>
-                <View style={{ height: 128, width: "100%", justifyContent: "flex-end" }}>
-                  <Animated.View
-                    style={{
-                      height: animatedHeight,
-                      borderRadius: 16,
-                      backgroundColor: toneColor(accent, 1),
-                      opacity: 0.92
-                    }}
-                  />
+              <Pressable key={`${title}-${point.label}-${index}`} onPress={() => setSelectedIndex(index)} accessibilityRole="button" accessibilityState={{ selected: isSelected }} accessibilityLabel={`${point.label}: ${valueFormatter(point.value)}${point.note ? `, ${point.note}` : ""}`} style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
+                <View style={{ height: 122, width: "100%", position: "relative", borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}>
+                  {hasNegative ? <View style={{ position: "absolute", top: zeroY, left: 0, right: 0, borderTopWidth: 1, borderStyle: "dashed", borderColor: tokens.colors.textMuted }} /> : null}
+                  {barHeight > 0 ? <View style={{ position: "absolute", top: point.value < 0 ? zeroY : zeroY - barHeight, left: "22%", right: "22%", height: barHeight, borderTopLeftRadius: 4, borderTopRightRadius: 4, borderBottomLeftRadius: point.value < 0 ? 4 : 0, borderBottomRightRadius: point.value < 0 ? 4 : 0, backgroundColor: barColor, opacity: isSelected ? 1 : 0.56 }} /> : null}
                 </View>
-                <View style={{ gap: 2, alignItems: "center" }}>
-                  <Text style={{ color: tokens.colors.text, fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
-                    {point.label}
-                  </Text>
-                  <Text style={{ color: tokens.colors.textSecondary, fontSize: 10 }} numberOfLines={1}>
-                    {valueFormatter(point.value)}
-                  </Text>
-                  {point.note ? <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }} numberOfLines={1}>{point.note}</Text> : null}
-                </View>
-              </View>
+                <Text style={{ color: isSelected ? tokens.colors.text : tokens.colors.textSecondary, fontSize: 9, fontWeight: isSelected ? "700" : "500", marginTop: 5 }} numberOfLines={1}>{point.label}</Text>
+              </Pressable>
             );
           })}
+          </View>
         </View>
       ) : (
         <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>No data was recorded for this period.</Text>

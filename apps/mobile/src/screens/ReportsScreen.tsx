@@ -207,29 +207,23 @@ export function ReportsScreen() {
           />
         ) : (
           <>
-            <View style={{ gap: 14, paddingVertical: 4 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+            <Card style={{ gap: 11, padding: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                 <ReportMetric label="Revenue" value={formatMoney(summary?.salesTotal ?? 0, business?.currency)} />
-                <ReportMetric label="Profit" value={formatMoney(summary?.estimatedProfit ?? 0, business?.currency)} tone="success" />
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <ReportMetric label="COGS" value={formatMoney(summary?.cogsTotal ?? 0, business?.currency)} />
-                <ReportMetric label="Margin" value={`${summary?.salesTotal ? Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100) : 0}%`} tone="success" />
+                <ReportMetric label="Estimated net profit" value={formatMoney(summary?.estimatedProfit ?? 0, business?.currency)} tone={(summary?.estimatedProfit ?? 0) < 0 ? "danger" : "success"} />
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-                <ReportMetric label="Expenses" value={formatMoney(summary?.expensesTotal ?? 0, business?.currency)} tone="warning" />
-                <ReportMetric label="Debt" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
+                <ReportMetric label="Gross profit" value={formatMoney(summary?.grossProfit ?? 0, business?.currency)} />
+                <ReportMetric label="Cost of goods" value={formatMoney(summary?.cogsTotal ?? 0, business?.currency)} />
               </View>
-            </View>
-
-            <Card style={{ gap: 12 }}>
-              <Text style={{ color: tokens.colors.text, fontSize: 18, fontWeight: "800" }}>Financial mix</Text>
-              <Text style={{ color: tokens.colors.textSecondary }}>Sales, expenses, and profit for the selected period.</Text>
-              <BarMeter label="Sales" value={summary?.salesTotal ?? 0} max={Math.max(summary?.salesTotal ?? 1, summary?.expensesTotal ?? 1, summary?.estimatedProfit ?? 1, summary?.debtTotal ?? 1)} tone="primary" currency={business?.currency ?? "KES"} />
-              <BarMeter label="Expenses" value={summary?.expensesTotal ?? 0} max={Math.max(summary?.salesTotal ?? 1, summary?.expensesTotal ?? 1, summary?.estimatedProfit ?? 1, summary?.debtTotal ?? 1)} tone="warning" currency={business?.currency ?? "KES"} />
-              <BarMeter label="Profit" value={summary?.estimatedProfit ?? 0} max={Math.max(summary?.salesTotal ?? 1, summary?.expensesTotal ?? 1, summary?.estimatedProfit ?? 1, summary?.debtTotal ?? 1)} tone="success" currency={business?.currency ?? "KES"} />
-              <BarMeter label="Debt" value={summary?.debtTotal ?? 0} max={Math.max(summary?.salesTotal ?? 1, summary?.expensesTotal ?? 1, summary?.estimatedProfit ?? 1, summary?.debtTotal ?? 1)} tone="danger" currency={business?.currency ?? "KES"} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <ReportMetric label="Expenses" value={formatMoney(summary?.expensesTotal ?? 0, business?.currency)} tone="warning" />
+                <ReportMetric label="Est. net margin" value={`${summary?.salesTotal ? Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100) : 0}%`} tone="success" />
+              </View>
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <ReportMetric label="Outstanding balance (API figure)" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>The existing debt calculation mixes period sales with all-date invoices and standalone payments.</Text>
             </Card>
 
             <IndustryReportFocus config={businessConfig} summary={summary} topProducts={topProducts} operations={operations} currency={business?.currency ?? "KES"} />
@@ -418,21 +412,6 @@ function maxPayment(rows: PaymentRow[]) {
 
 function maxQuantity(rows: ReportRow[]) {
   return Math.max(1, ...rows.map((row) => row.quantity));
-}
-
-function BarMeter({ label, value, max, tone, currency }: { label: string; value: number; max: number; tone: "primary" | "success" | "warning" | "danger"; currency: string }) {
-  const percentage = Math.max(0, Math.min(100, (value / max) * 100));
-  return (
-    <View style={{ gap: 6 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-        <Text style={{ color: tokens.colors.textSecondary, fontWeight: "700" }}>{label}</Text>
-        <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{formatMoney(value, currency)}</Text>
-      </View>
-      <View style={{ height: 10, borderRadius: 999, backgroundColor: tokens.colors.surfaceAlt, overflow: "hidden" }}>
-        <View style={{ width: `${percentage}%`, height: "100%", borderRadius: 999, backgroundColor: toneColor(tone) }} />
-      </View>
-    </View>
-  );
 }
 
 function PaymentBar({ row, currency, max }: { row: PaymentRow; currency: string; max: number }) {

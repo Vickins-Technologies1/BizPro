@@ -144,6 +144,7 @@ function patchAndroidRootBuildGradle(contents) {
 function patchAndroidGradleProperties(contents, versionCode) {
   const required = [
     // Expo SDK and React Native provide scoped consumer rules for reflective APIs.
+    "org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8",
     "android.enableProguardInReleaseBuilds=true",
     "android.enableShrinkResourcesInReleaseBuilds=true",
     "android.ndkVersion=28.1.13356709",
@@ -166,7 +167,7 @@ function patchAndroidGradleProperties(contents, versionCode) {
 
 function patchAndroidProguardRules(contents) {
   const marker = "# Dira SecureStore R8 compatibility";
-  const rules = `${marker}\n# Expo SDK consumer rules preserve module registration, reflected records, and DoNotStrip APIs.\n# Keep the Kotlin and Java reflection metadata used by Expo Modules Core converters.\n-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault`;
+  const rules = `${marker}\n# Expo Modules Core uses reflection to convert native bridge maps into Kotlin Record values, including SecureStoreOptions.\n-keep class expo.modules.kotlin.records.** { *; }\n-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault`;
   const markerIndex = contents.indexOf(marker);
   if (markerIndex >= 0) {
     const prefix = contents

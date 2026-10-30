@@ -6,6 +6,7 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 const realMobileRoot = process.env.DIRAOS_REAL_MOBILE_ROOT || projectRoot;
 const realWorkspaceRoot = process.env.DIRAOS_REAL_WORKSPACE_ROOT || workspaceRoot;
 const expoModulesCoreRoot = process.env.DIRAOS_EXPO_MODULES_CORE || path.resolve(workspaceRoot, "node_modules/expo-modules-core");
+const pnpmVirtualStore = process.env.DIRAOS_PNPM_VIRTUAL_STORE;
 
 const config = getDefaultConfig(projectRoot);
 const mobileReactRoot = path.resolve(realMobileRoot, "node_modules/react");
@@ -32,7 +33,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
 // Keep both paths available for local Windows builds that use a short `subst`
 // drive. Metro resolves some pnpm junction targets through that mapped root.
-config.watchFolders = [projectRoot, workspaceRoot, realWorkspaceRoot, expoModulesCoreRoot];
+config.watchFolders = [
+  projectRoot,
+  workspaceRoot,
+  realWorkspaceRoot,
+  expoModulesCoreRoot,
+  ...(pnpmVirtualStore ? [path.resolve(pnpmVirtualStore)] : [])
+];
 config.resolver.nodeModulesPaths = [
   path.resolve(realMobileRoot, "node_modules"),
   path.resolve(realWorkspaceRoot, "node_modules")

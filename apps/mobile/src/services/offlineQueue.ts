@@ -12,6 +12,7 @@ export type OfflineQueueKind =
   | "createSupplier"
   | "createExpense"
   | "recordCustomerPayment"
+  | "recordSalePayment"
   | "createSale"
   | "createBusinessOperation"
   | "updateBusinessOperation"
@@ -197,6 +198,24 @@ export type OfflineQueueEntry =
       payload: {
         businessId: string;
         customerId: string;
+        externalId: string;
+        branchId?: string | null;
+        amount: number;
+        method: Payment["method"];
+        reference?: string | null;
+        note?: string | null;
+      };
+      createdAt: string;
+      attempts: number;
+      lastError: string | null;
+    }
+  | {
+      id: string;
+      businessId: string;
+      kind: "recordSalePayment";
+      payload: {
+        businessId: string;
+        saleId: string;
         externalId: string;
         branchId?: string | null;
         amount: number;

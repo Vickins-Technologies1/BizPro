@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { Type } from "class-transformer";
 import { IsArray, IsIn, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { SalesService } from "./sales.service";
@@ -39,6 +39,14 @@ class CreateSaleDto {
   items!: SaleItemDto[];
 }
 
+class RecordSalePaymentDto {
+  @IsString() externalId!: string;
+  @IsIn(PAYMENT_METHODS) method!: any;
+  @IsNumber() @Min(Number.EPSILON) amount!: number;
+  @IsOptional() @IsString() reference?: string;
+  @IsOptional() @IsString() note?: string;
+}
+
 @Controller("sales")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SalesController {
@@ -54,5 +62,20 @@ export class SalesController {
   @Roles("owner", "manager", "cashier")
   create(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Body() dto: CreateSaleDto) {
     return this.sales.create({ ...dto, businessId: user.businessId, branchId: dto.branchId ?? user.branchId ?? null, cashierId: user.sub }, { role: user.role ?? null, branchId: user.branchId ?? null });
+  }
+
+  @Post(":id/payments")
+  @Roles("owner", "manager", "cashier")
+  recordPayment(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: RecordSalePaymentDto, @Query("branchId") branchId?: string) {
+    return this.sales.recordPayment({
+      businessId: user.businessId,
+      saleId: id,
+      externalId: dto.externalId,
+      amount: dto.amount,
+      method: dto.method,
+      reference: dto.reference ?? null,
+      note: dto.note ?? null,
+      recordedById: user.sub
+    }, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 }

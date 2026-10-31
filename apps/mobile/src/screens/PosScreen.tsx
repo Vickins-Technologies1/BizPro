@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { resolveBusinessTypeConfig } from "@shared";
+import { resolveBusinessTypeConfig, type Sale } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
 import { AppScrollView, Badge, Card, Dropdown, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { SectionHeader } from "@/components/DesignSystem";
@@ -38,6 +38,7 @@ export function PosScreen() {
   const pendingSync = useAppStore((state) => state.pendingSync);
   const syncMessage = useAppStore((state) => state.syncMessage);
   const createSale = useAppStore((state) => state.createSale);
+  const recordSalePayment = useAppStore((state) => state.recordSalePayment);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const primaryAction = businessConfig.workspace.primaryAction;
@@ -72,6 +73,12 @@ export function PosScreen() {
   const [stkInitiating, setStkInitiating] = React.useState(false);
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [receipt, setReceipt] = React.useState<ReceiptArtifacts | null>(null);
+  const [paymentSale, setPaymentSale] = React.useState<Sale | null>(null);
+  const [laterPaymentAmount, setLaterPaymentAmount] = React.useState("");
+  const [laterPaymentMethod, setLaterPaymentMethod] = React.useState<Sale["paymentMethod"]>("cash");
+  const [laterPaymentReference, setLaterPaymentReference] = React.useState("");
+  const [laterPaymentNote, setLaterPaymentNote] = React.useState("");
+  const [savingLaterPayment, setSavingLaterPayment] = React.useState(false);
   const [scannerVisible, setScannerVisible] = React.useState(false);
   const deferredSearch = React.useDeferredValue(search);
   const deferredProductSearch = React.useDeferredValue(productSearch);
@@ -169,6 +176,45 @@ export function PosScreen() {
       await loadCatalog();
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  function openLaterPayment(sale: Sale) {
+    setPaymentSale(sale);
+    setLaterPaymentAmount(String(sale.balanceDue));
+    setLaterPaymentMethod("cash");
+    setLaterPaymentReference("");
+    setLaterPaymentNote("");
+  }
+
+  async function saveLaterPayment() {
+    if (!paymentSale || savingLaterPayment) return;
+    const amount = Number(laterPaymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Alert.alert("Invalid amount", "Enter a payment greater than zero.");
+      return;
+    }
+    if (amount - paymentSale.balanceDue > 0.009) {
+      Alert.alert("Amount exceeds balance", `The outstanding balance is ${formatMoney(paymentSale.balanceDue, business?.currency ?? "KES")}.`);
+      return;
+    }
+    setSavingLaterPayment(true);
+    try {
+      const sale = await recordSalePayment({
+        saleId: paymentSale.id,
+        amount,
+        method: laterPaymentMethod,
+        reference: laterPaymentReference.trim() || null,
+        note: laterPaymentNote.trim() || null
+      });
+      setPaymentSale(null);
+      Alert.alert(sale.balanceDue <= 0 ? "Sale fully paid" : "Payment recorded", sale.balanceDue <= 0
+        ? `${sale.receiptNumber} is now fully paid.`
+        : `${formatMoney(amount, business?.currency ?? "KES")} recorded. ${formatMoney(sale.balanceDue, business?.currency ?? "KES")} remains due.`);
+    } catch (error) {
+      Alert.alert("Payment failed", error instanceof Error ? error.message : "Could not record payment.");
+    } finally {
+      setSavingLaterPayment(false);
     }
   }
 
@@ -555,6 +601,12 @@ export function PosScreen() {
                   <Badge label={formatPaymentStatusLabel(paymentState)} tone={paymentState === "paid" ? "success" : paymentState === "unpaid" ? "danger" : "warning"} />
                   {sale.balanceDue > 0 ? <Text style={{ color: tokens.colors.warning, fontSize: 11, fontWeight: "700" }}>Due {formatMoney(sale.balanceDue, business?.currency ?? "KES")}</Text> : null}
                   <View style={{ flex: 1 }} />
+                  {sale.balanceDue > 0 && transactionType !== "refund" && transactionType !== "return" ? (
+                    <Pressable onPress={() => openLaterPayment(sale)} accessibilityRole="button" accessibilityLabel={`Record payment for ${sale.receiptNumber}`} hitSlop={5} style={{ minHeight: 38, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8 }}>
+                      <Ionicons name="cash-outline" size={18} color={tokens.colors.primaryStrong} />
+                      <Text style={{ color: tokens.colors.primaryStrong, fontSize: 11, fontWeight: "800" }}>Pay</Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable onPress={() => { const receiptArtifacts = buildReceiptArtifacts(sale as any, sale.items as any, business?.currency ?? "KES", user?.fullName?.trim() || user?.roleLabel?.trim() || "Staff", business?.name ?? "Dira OS"); setPreviewReceipt(receiptArtifacts); setPreviewVisible(true); }} accessibilityRole="button" accessibilityLabel={`Preview receipt ${sale.receiptNumber}`} hitSlop={5} style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center" }}>
                     <Ionicons name="receipt-outline" size={19} color={tokens.colors.primaryStrong} />
                   </Pressable>
@@ -1039,6 +1091,35 @@ export function PosScreen() {
             }}
           />
         </View>
+      </SimpleModal>
+
+      <SimpleModal visible={Boolean(paymentSale)} title="Record sale payment" subtitle={paymentSale?.receiptNumber ?? ""} onClose={() => setPaymentSale(null)}>
+        {paymentSale ? (
+          <View style={{ gap: 12 }}>
+            <Card style={{ gap: 5 }}>
+              <Text style={{ color: tokens.colors.textSecondary }}>Outstanding balance</Text>
+              <Text style={{ color: tokens.colors.primaryStrong, fontSize: 20, fontWeight: "900" }}>{formatMoney(paymentSale.balanceDue, business?.currency ?? "KES")}</Text>
+              <Text style={{ color: tokens.colors.textSecondary }}>{paymentSale.customerId ? customers.find((customer) => customer.id === paymentSale.customerId)?.name ?? "Customer sale" : "Walk-in sale"}</Text>
+            </Card>
+            <InputField label="Amount received" value={laterPaymentAmount} onChangeText={setLaterPaymentAmount} keyboardType="decimal-pad" helperText="Cannot exceed the remaining balance." />
+            <View style={{ gap: 7 }}>
+              <Text style={{ color: tokens.colors.text, fontWeight: "700" }}>Payment method</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+                {(["cash", "mpesa", "bank", "card", "cheque", "other"] as const).map((method) => (
+                  <Pressable key={method} onPress={() => setLaterPaymentMethod(method)}>
+                    <Badge label={formatPaymentMethodLabel(method)} tone={laterPaymentMethod === method ? "success" : "primary"} />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <InputField label="Reference" value={laterPaymentReference} onChangeText={setLaterPaymentReference} placeholder="M-Pesa code or slip number" />
+            <InputField label="Note" value={laterPaymentNote} onChangeText={setLaterPaymentNote} placeholder="Optional note" />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flex: 1 }}><PrimaryButton title="Cancel" variant="secondary" onPress={() => setPaymentSale(null)} disabled={savingLaterPayment} /></View>
+              <View style={{ flex: 1 }}><PrimaryButton title="Record payment" onPress={() => void saveLaterPayment()} loading={savingLaterPayment} /></View>
+            </View>
+          </View>
+        ) : null}
       </SimpleModal>
 
       <SimpleModal visible={Boolean(receipt)} title="Receipt saved" onClose={() => setReceipt(null)}>

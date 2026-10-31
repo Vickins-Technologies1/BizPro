@@ -1219,6 +1219,24 @@ export async function listSales(branchId?: string | null) {
   return sales.map((sale) => withSaleItems(sale)) as Sale[];
 }
 
+export async function recordSalePayment(saleId: string, input: { externalId: string; amount: number; method: Payment["method"]; reference?: string | null; note?: string | null; branchId?: string | null }) {
+  const suffix = input.branchId ? `?branchId=${encodeURIComponent(input.branchId)}` : "";
+  const result = await apiRequest<{ sale: RawEntity; payment: RawEntity }>(`/sales/${encodeURIComponent(saleId)}/payments${suffix}`, {
+    method: "POST",
+    body: {
+      externalId: input.externalId,
+      amount: input.amount,
+      method: input.method,
+      reference: input.reference ?? null,
+      note: input.note ?? null
+    }
+  });
+  return {
+    sale: withSaleItems(result.sale) as Sale,
+    payment: withId(result.payment) as Payment
+  };
+}
+
 export async function listBusinessOperations(input: { kind?: BusinessOperationKind; status?: BusinessOperationStatus; branchId?: string | null } = {}) {
   const query = new URLSearchParams();
   if (input.kind) query.set("kind", input.kind);

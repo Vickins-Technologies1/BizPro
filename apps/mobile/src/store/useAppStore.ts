@@ -5,7 +5,7 @@ import { secureStore } from "@/storage/secure";
 import { createId } from "@/utils/id";
 import { dateKey } from "@/utils/date";
 import { buildReceiptArtifacts, type ReceiptArtifacts } from "@/services/receiptService";
-import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, createIndustryDomain, updateIndustryDomain, getReportsSummary, getTopProducts } from "@/services/apiClient";
+import { registerBusiness, loginBusiness, authMe, listCategories, listBrands, listBranches, listProducts, listCustomers, listCustomerGroups, listSuppliers, listSales, listExpenses, createCategory, createBrand, createProduct, createSupplier, adjustProductStock, createCustomer, updateCustomer as apiUpdateCustomer, recordCustomerPayment, recordSalePayment as apiRecordSalePayment, createExpense, createSale as apiCreateSale, createBusinessOperation, updateBusinessOperation, createIndustryDomain, updateIndustryDomain, getReportsSummary, getTopProducts } from "@/services/apiClient";
 import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
 import { initialThemeMode, resolveThemeMode, setThemeTokens, type ThemeMode, type ThemePreference } from "@/theme/tokens";
@@ -250,6 +250,7 @@ interface AppState {
   updateCustomer: (input: { customerId: string; patch: Partial<Pick<Customer, "groupId" | "name" | "phone" | "email" | "creditLimit" | "loyaltyPoints" | "notes" | "attachments">> & { branchId?: string | null } }) => Promise<Customer>;
   addExpense: (input: Omit<Expense, "id" | "createdAt" | "updatedAt" | "deletedAt">) => Promise<Expense>;
   recordDebtPayment: (input: { customerId: string; amount: number; method: Sale["paymentMethod"]; reference?: string | null; note?: string | null }) => Promise<Payment>;
+  recordSalePayment: (input: { saleId: string; amount: number; method: Sale["paymentMethod"]; reference?: string | null; note?: string | null }) => Promise<Sale>;
   createSale: (input: {
     branchId?: string | null;
     customerId?: string | null;
@@ -291,6 +292,12 @@ function upsertById<T extends { id: string }>(items: T[], item: T) {
   return [item, ...items.filter((candidate) => candidate.id !== item.id)];
 }
 
+function applySalePayment(sale: Sale, amount: number): Sale {
+  const amountPaid = Number((sale.amountPaid + amount).toFixed(2));
+  const balanceDue = Math.max(0, Number((sale.balanceDue - amount).toFixed(2)));
+  return { ...sale, amountPaid, balanceDue, paymentStatus: balanceDue <= 0 ? "paid" : "partial" };
+}
+
 function buildQueueDedupKey(kind: string, businessId: string, ...parts: Array<string | null | undefined>) {
   return [kind, businessId, ...parts.map((part) => (part?.trim ? part.trim() : part ?? "all"))].join(":");
 }
@@ -303,6 +310,8 @@ function describeQueuedAction(action: { kind: string; payload: Record<string, un
       return `Stock adjustment ${String(action.payload.referenceId ?? "")}`.trim();
     case "recordCustomerPayment":
       return `Payment ${String(action.payload.externalId ?? "")}`.trim();
+    case "recordSalePayment":
+      return `Sale payment ${String(action.payload.saleId ?? "")}`.trim();
     case "createExpense":
       return `Expense ${String(action.payload.externalId ?? "")}`.trim();
     case "createBusinessOperation":
@@ -806,6 +815,16 @@ export const useAppStore = create<AppState>((set, get) => ({
                 : customer
             );
             break;
+          case "recordSalePayment": {
+            const sale = nextSales.find((row) => row.id === action.payload.saleId);
+            nextSales = nextSales.map((row) => row.id === action.payload.saleId ? applySalePayment(row, action.payload.amount) : row);
+            if (sale?.customerId) {
+              nextCustomers = nextCustomers.map((customer) => customer.id === sale.customerId
+                ? { ...customer, balance: Math.max(0, Number((customer.balance - action.payload.amount).toFixed(2))) }
+                : customer);
+            }
+            break;
+          }
           case "createSale":
             nextSales = upsertById(nextSales, createQueuedSaleDraft(action.payload));
             nextProducts = nextProducts.map((product) => {
@@ -1238,6 +1257,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       return payment;
     }
   },
+  recordSalePayment: async (input) => {
+    const businessId = get().business?.id;
+    const branchId = resolveWriteBranchId(get());
+    if (!businessId) throw new Error("No business loaded");
+    const payload = {
+      businessId,
+      saleId: input.saleId,
+      externalId: createId(),
+      amount: input.amount,
+      method: input.method,
+      reference: input.reference ?? null,
+      note: input.note ?? null,
+      branchId
+    };
+    try {
+      const result = await apiRecordSalePayment(input.saleId, payload);
+      set((state) => ({
+        sales: state.sales.map((sale) => sale.id === result.sale.id ? result.sale : sale),
+        customers: result.sale.customerId
+          ? state.customers.map((customer) => customer.id === result.sale.customerId ? { ...customer, balance: Math.max(0, Number((customer.balance - input.amount).toFixed(2))) } : customer)
+          : state.customers
+      }));
+      void Promise.allSettled([get().loadDashboard(), get().loadCatalog()]);
+      return result.sale;
+    } catch (error) {
+      if (!isOfflineError(error)) throw error;
+      const sale = get().sales.find((row) => row.id === input.saleId);
+      if (!sale) throw new Error("Sale is not available on this device");
+      await enqueueAction({ id: createQueueId(), businessId, kind: "recordSalePayment", payload });
+      const updatedSale = applySalePayment(sale, input.amount);
+      set((state) => ({
+        sales: state.sales.map((row) => row.id === input.saleId ? updatedSale : row),
+        customers: sale.customerId
+          ? state.customers.map((customer) => customer.id === sale.customerId ? { ...customer, balance: Math.max(0, Number((customer.balance - input.amount).toFixed(2))) } : customer)
+          : state.customers,
+        pendingSync: state.pendingSync + 1,
+        syncMessage: "Payment saved locally. Waiting to sync..."
+      }));
+      return updatedSale;
+    }
+  },
   createSale: async (input) => {
     const business = get().business;
     if (!business) throw new Error("No business loaded");
@@ -1399,6 +1459,9 @@ export const useAppStore = create<AppState>((set, get) => ({
               break;
             case "recordCustomerPayment":
               await recordCustomerPayment(action.payload.customerId, action.payload);
+              break;
+            case "recordSalePayment":
+              await apiRecordSalePayment(action.payload.saleId, action.payload);
               break;
             case "createSale":
               await apiCreateSale(action.payload);

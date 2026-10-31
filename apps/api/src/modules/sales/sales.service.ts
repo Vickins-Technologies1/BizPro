@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
-import { Connection, Model } from "mongoose";
+import { ClientSession, Connection, Model } from "mongoose";
 import { Business, BusinessDocument, Customer, CustomerDocument, Payment, PaymentDocument, Product, ProductDocument, Sale, SaleDocument, SaleItem, StockMovement, StockMovementDocument } from "../schemas";
-import { calculateSale, calculateTax, FINANCIAL_CALCULATION_VERSION, resolveBusinessTypeConfig } from "@vbo/shared";
+import { calculateSale, calculateTax, FINANCIAL_CALCULATION_VERSION, resolveBusinessTypeConfig, roundMoney } from "@vbo/shared";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import {
@@ -27,6 +27,17 @@ export interface CreateSaleInput {
   paymentLines?: Array<{ method: Sale["paymentMethod"]; amount: number; reference?: string | null; note?: string | null }>;
   notes?: string | null;
   items: Array<{ productId: string; quantity: number; discount?: number; tax?: number }>;
+}
+
+export interface RecordSalePaymentInput {
+  businessId: string;
+  saleId: string;
+  externalId: string;
+  amount: number;
+  method: Payment["method"];
+  reference?: string | null;
+  note?: string | null;
+  recordedById?: string | null;
 }
 
 @Injectable()
@@ -240,5 +251,71 @@ export class SalesService {
         .catch(() => undefined);
     }
     return sale;
+  }
+
+  async recordPayment(input: RecordSalePaymentInput, scope: BranchScope = {}) {
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    const amount = roundMoney(Number(input.amount));
+    if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException("Payment amount must be greater than zero");
+
+    return runInTransaction(this.connection, async (session) => {
+      const existing = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).session(session).lean();
+      if (existing) {
+        const existingSale = await this.findSaleForPayment(input.businessId, input.saleId, branchId, session);
+        if (!existingSale) throw new NotFoundException("Sale not found");
+        if (existing.saleId !== existingSale._id.toString()) throw new BadRequestException("Payment reference is already in use");
+        return { sale: existingSale.toObject(), payment: existing };
+      }
+
+      const sale = await this.findSaleForPayment(input.businessId, input.saleId, branchId, session);
+      if (!sale) throw new NotFoundException("Sale not found");
+      const currentBalance = roundMoney(Math.max(0, Number(sale.balanceDue ?? Number(sale.grandTotal ?? 0) - Number(sale.amountPaid ?? 0))));
+      if (currentBalance <= 0) throw new BadRequestException("Sale is already fully paid");
+      if (amount - currentBalance > 0.009) throw new BadRequestException("Payment amount cannot exceed the outstanding balance");
+
+      sale.amountPaid = roundMoney(Number(sale.amountPaid ?? 0) + amount);
+      sale.balanceDue = roundMoney(Math.max(0, Number(sale.grandTotal ?? 0) - sale.amountPaid));
+      sale.paymentStatus = sale.balanceDue <= 0 ? "paid" : "partial";
+      await sale.save({ session });
+
+      const payment = (await this.paymentModel.create([{
+        businessId: input.businessId,
+        branchId,
+        customerId: sale.customerId ?? null,
+        saleId: sale._id.toString(),
+        externalId: input.externalId,
+        debtPaymentId: null,
+        method: input.method,
+        status: "paid",
+        amount,
+        reference: input.reference ?? null,
+        note: input.note ?? null,
+        provider: input.method === "mpesa" ? "tuma" : null,
+        reconciledAt: input.method === "mpesa" ? new Date() : null
+      }], { session }))[0]!;
+
+      if (sale.customerId) {
+        const customerKeys: Array<Record<string, string>> = [{ externalId: sale.customerId }];
+        if (isMongoObjectId(sale.customerId)) customerKeys.unshift({ _id: sale.customerId });
+        const customer = await this.customerModel.findOne({
+          businessId: input.businessId,
+          deletedAt: null,
+          $or: customerKeys,
+          ...buildBranchMatch(branchId)
+        }).session(session);
+        if (customer) {
+          customer.balance = Math.max(0, roundMoney(Number(customer.balance ?? 0) - amount));
+          await customer.save({ session });
+        }
+      }
+
+      return { sale: sale.toObject(), payment: payment.toObject() };
+    });
+  }
+
+  private findSaleForPayment(businessId: string, saleId: string, branchId: string | null, session: ClientSession) {
+    const identifiers: Array<Record<string, string>> = [{ externalId: saleId }];
+    if (isMongoObjectId(saleId)) identifiers.unshift({ _id: saleId });
+    return this.saleModel.findOne({ businessId, deletedAt: null, $or: identifiers, ...buildBranchMatch(branchId) }).session(session);
   }
 }

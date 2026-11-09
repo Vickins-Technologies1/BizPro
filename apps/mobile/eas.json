@@ -6,7 +6,10 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "autoIncrement": true
+      }
     },
     "ios-simulator": {
       "ios": {
@@ -16,12 +19,15 @@
     "preview": {
       "distribution": "internal",
       "android": {
+        "autoIncrement": true,
         "buildType": "apk"
       }
     },
     "production": {
       "credentialsSource": "local",
-      "autoIncrement": true
+      "android": {
+        "autoIncrement": true
+      }
     }
   },
   "submit": {

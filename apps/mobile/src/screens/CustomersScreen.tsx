@@ -76,6 +76,8 @@ function buildCustomerAnalytics(customers: Customer[], groups: CustomerGroup[]):
   return {
     totalCustomers: customers.length,
     totalOutstanding: customers.reduce((sum, customer) => sum + Math.max(0, Number(customer.balance ?? 0)), 0),
+    totalCustomerCredit: 0,
+    customerCredits: [],
     totalCreditLimit: customers.reduce((sum, customer) => sum + Math.max(0, Number(customer.creditLimit ?? 0)), 0),
     totalLoyaltyPoints: customers.reduce((sum, customer) => sum + Number(customer.loyaltyPoints ?? 0), 0),
     owingCustomers: customers.filter((customer) => Math.max(0, Number(customer.balance ?? 0)) > 0).length,
@@ -87,6 +89,7 @@ function buildCustomerAnalytics(customers: Customer[], groups: CustomerGroup[]):
         customerId: customer.id,
         name: customer.name,
         balance: Math.max(0, Number(customer.balance ?? 0)),
+        customerCredit: 0,
         creditLimit: Number(customer.creditLimit ?? 0),
         loyaltyPoints: Number(customer.loyaltyPoints ?? 0)
       }))
@@ -118,9 +121,10 @@ export function CustomersScreen() {
   const [selectedPayments, setSelectedPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [debtPaymentAmount, setDebtPaymentAmount] = useState("0");
-  const [debtPaymentMethod, setDebtPaymentMethod] = useState<"cash" | "mpesa" | "bank" | "credit">("cash");
+  const [debtPaymentMethod, setDebtPaymentMethod] = useState<"cash" | "mpesa" | "bank">("cash");
   const [debtPaymentReference, setDebtPaymentReference] = useState("");
   const [debtPaymentNote, setDebtPaymentNote] = useState("");
+  const [debtPaymentExternalId, setDebtPaymentExternalId] = useState(createId());
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -162,6 +166,7 @@ export function CustomersScreen() {
     [selectedCustomerSales]
   );
   const selectedCustomerOutstanding = selectedCustomer ? Math.max(0, Number(selectedCustomer.balance ?? 0)) : 0;
+  const selectedCustomerCredit = selectedCustomer ? activeAnalytics.customerCredits.find((credit) => credit.customerId === selectedCustomer.id)?.amount ?? 0 : 0;
   const selectedCustomerAvailableCredit = selectedCustomer ? Math.max(0, Number(selectedCustomer.creditLimit ?? 0) - selectedCustomerOutstanding) : 0;
   const selectedCustomerIsOverLimit = selectedCustomer ? selectedCustomer.creditLimit > 0 && selectedCustomerOutstanding > selectedCustomer.creditLimit : false;
 
@@ -692,6 +697,7 @@ export function CustomersScreen() {
                 <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "800" }}>
                   Outstanding: {formatMoney(selectedCustomerOutstanding, business?.currency ?? "KES")}
                 </Text>
+                {selectedCustomerCredit > 0 ? <Text style={{ color: tokens.colors.primaryStrong, fontWeight: "700" }}>Unapplied customer credit: {formatMoney(selectedCustomerCredit, business?.currency ?? "KES")}</Text> : null}
                 {selectedCustomer.creditLimit > 0 ? (
                   <Text style={{ color: tokens.colors.textSecondary }}>Available credit: {formatMoney(selectedCustomerAvailableCredit, business?.currency ?? "KES")}</Text>
                 ) : null}
@@ -722,7 +728,7 @@ export function CustomersScreen() {
               <Card style={{ gap: 10 }}>
                 <Text style={{ color: tokens.colors.text, fontSize: 16, fontWeight: "800" }}>Record payment</Text>
                 <Text style={{ color: tokens.colors.textSecondary, lineHeight: 20 }}>
-                  Capture the amount received and a reference so the balance stays easy to track.
+                  Record an unallocated customer payment. It stays as customer credit until it is applied to a specific sale or invoice.
                 </Text>
                 <InputField
                   label="Amount"
@@ -740,7 +746,7 @@ export function CustomersScreen() {
                 />
                 <InputField label="Note" value={debtPaymentNote} onChangeText={setDebtPaymentNote} placeholder="Optional note" helperText="Use this for any extra context." />
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
+                  {(["cash", "mpesa", "bank"] as const).map((method) => (
                     <Tag key={method} label={formatPaymentMethodLabel(method)} tone="primary" selected={debtPaymentMethod === method} onPress={() => setDebtPaymentMethod(method)} />
                   ))}
                 </View>
@@ -758,13 +764,15 @@ export function CustomersScreen() {
                         customerId: selectedCustomer.id,
                         amount,
                         method: debtPaymentMethod,
+                        externalId: debtPaymentExternalId,
                         reference: debtPaymentReference.trim() || null,
                         note: debtPaymentNote.trim() || null
                       });
+                      setDebtPaymentExternalId(createId());
                       const refreshedPayments = await listCustomerPayments(selectedCustomer.id, selectedBranchId);
                       setSelectedPayments(refreshedPayments);
                       await reloadAnalytics();
-                      Alert.alert("Payment recorded", "Customer payment recorded successfully.");
+                      Alert.alert(debtPaymentMethod === "mpesa" ? "M-Pesa pending verification" : "Customer credit recorded", debtPaymentMethod === "mpesa" ? "The payment will appear as customer credit after verification. It does not reduce outstanding balances while unallocated." : "The payment is held as unapplied customer credit. Apply it to a specific sale or invoice to reduce that balance.");
                     } catch (error) {
                       Alert.alert("Payment failed", error instanceof Error ? error.message : "Failed to record payment");
                     } finally {

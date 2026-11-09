@@ -1,12 +1,37 @@
 const { getDefaultConfig } = require("expo/metro-config");
+const fs = require("fs");
 const path = require("path");
 
 const projectRoot = process.env.DIRAOS_MOBILE_ROOT || __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
 const realMobileRoot = process.env.DIRAOS_REAL_MOBILE_ROOT || projectRoot;
 const realWorkspaceRoot = process.env.DIRAOS_REAL_WORKSPACE_ROOT || workspaceRoot;
-const expoModulesCoreRoot = process.env.DIRAOS_EXPO_MODULES_CORE || path.resolve(workspaceRoot, "node_modules/expo-modules-core");
+const expoModulesCorePath = process.env.DIRAOS_EXPO_MODULES_CORE || path.resolve(workspaceRoot, "node_modules/expo-modules-core");
+// The workspace's node_modules entry is a Windows junction to the checked-in
+// expo-modules-core-copy directory. Watching both aliases makes Metro's TreeFS
+// register the same path once as a file and once as a directory.
+const expoModulesCoreRoot = fs.realpathSync.native(expoModulesCorePath);
 const pnpmVirtualStore = process.env.DIRAOS_PNPM_VIRTUAL_STORE;
+
+const canonicalPath = (value) => {
+  const absolute = path.resolve(value);
+  try {
+    return fs.realpathSync.native(absolute);
+  } catch {
+    return absolute;
+  }
+};
+const canonicalWorkspaceRoot = canonicalPath(realWorkspaceRoot);
+const expoModulesCoreRelativePath = path.relative(canonicalWorkspaceRoot, expoModulesCoreRoot);
+const expoModulesCoreIsInsideWorkspace = expoModulesCoreRelativePath === "" ||
+  (!expoModulesCoreRelativePath.startsWith(`..${path.sep}`) && expoModulesCoreRelativePath !== ".." && !path.isAbsolute(expoModulesCoreRelativePath));
+const watchFolders = [
+  projectRoot,
+  workspaceRoot,
+  realWorkspaceRoot,
+  ...(!expoModulesCoreIsInsideWorkspace ? [expoModulesCoreRoot] : []),
+  ...(pnpmVirtualStore ? [path.resolve(pnpmVirtualStore)] : [])
+].map(canonicalPath);
 
 const config = getDefaultConfig(projectRoot);
 const mobileReactRoot = path.resolve(realMobileRoot, "node_modules/react");
@@ -33,13 +58,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
 // Keep both paths available for local Windows builds that use a short `subst`
 // drive. Metro resolves some pnpm junction targets through that mapped root.
-config.watchFolders = [
-  projectRoot,
-  workspaceRoot,
-  realWorkspaceRoot,
-  expoModulesCoreRoot,
-  ...(pnpmVirtualStore ? [path.resolve(pnpmVirtualStore)] : [])
-];
+config.watchFolders = [...new Set(watchFolders)];
 config.resolver.nodeModulesPaths = [
   path.resolve(realMobileRoot, "node_modules"),
   path.resolve(realWorkspaceRoot, "node_modules")

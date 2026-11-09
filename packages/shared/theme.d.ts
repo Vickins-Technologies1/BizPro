@@ -10,6 +10,8 @@ export declare const theme: {
         readonly success: "#10B981";
         readonly warning: "#F59E0B";
         readonly danger: "#EF4444";
+        readonly info: "#3B82F6";
+        readonly neutral: "#64748B";
         readonly text: "#F8FAFC";
         readonly textSecondary: "#CBD5E1";
         readonly textMuted: "#94A3B8";
@@ -21,6 +23,7 @@ export declare const theme: {
         readonly md: 12;
         readonly lg: 14;
         readonly xl: 18;
+        readonly xxl: 24;
     };
     readonly spacing: {
         readonly xxs: 4;
@@ -30,6 +33,7 @@ export declare const theme: {
         readonly lg: 16;
         readonly xl: 20;
         readonly xxl: 24;
+        readonly xxxl: 32;
     };
     readonly typography: {
         readonly title: 22;
@@ -37,5 +41,10 @@ export declare const theme: {
         readonly body: 14;
         readonly small: 12;
         readonly micro: 11;
+        readonly display: 28;
+        readonly heading: 20;
+        readonly label: 12;
+        readonly caption: 10;
+        readonly numeric: 20;
     };
 };

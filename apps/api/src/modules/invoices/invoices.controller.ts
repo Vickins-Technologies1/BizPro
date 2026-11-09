@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDateString, IsIn, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
 import { CurrentUser } from "../../common/current-user.decorator";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { Roles } from "../../common/roles.decorator";
@@ -12,14 +12,14 @@ class InvoiceLineItemDto {
   @IsOptional() @IsString() productId?: string | null;
   @IsOptional() @IsString() productName?: string | null;
   @IsString() description!: string;
-  @IsNumber() quantity!: number;
+  @IsNumber() @Min(Number.EPSILON) quantity!: number;
   @IsString() unit!: string;
-  @IsNumber() unitPrice!: number;
+  @IsNumber() @Min(0) unitPrice!: number;
   @IsOptional() @IsIn(["percentage", "fixed"]) discountType?: "percentage" | "fixed";
-  @IsOptional() @IsNumber() discountValue?: number;
+  @IsOptional() @IsNumber() @Min(0) discountValue?: number;
   @IsOptional() @IsIn(["vat", "zero_rated", "exempt", "non_taxable", "custom"]) taxCategory?: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
   @IsOptional() @IsString() taxCode?: string | null;
-  @IsOptional() @IsNumber() taxRate?: number;
+  @IsOptional() @IsNumber() @Min(0) @Max(1000) taxRate?: number;
   @IsOptional() @IsBoolean() taxInclusive?: boolean;
 }
 
@@ -49,7 +49,8 @@ class CreateInvoiceDto {
   @ValidateNested({ each: true })
   @IsArray()
   lineItems!: InvoiceLineItemDto[];
-  @IsOptional() @IsNumber() amountPaid?: number;
+  @IsOptional() @IsNumber() @Min(0) amountPaid?: number;
+  @IsOptional() @IsIn(PAYMENT_METHODS) initialPaymentMethod?: string;
 }
 
 class PatchInvoiceDto {
@@ -80,12 +81,12 @@ class PatchInvoiceDto {
 }
 
 class RecordInvoicePaymentDto {
-  @IsNumber() amount!: number;
+  @IsNumber() @Min(0.01) amount!: number;
   @IsIn(PAYMENT_METHODS) method!: string;
   @IsDateString() paymentDate!: string;
   @IsOptional() @IsString() reference?: string | null;
   @IsOptional() @IsString() note?: string | null;
-  @IsOptional() @IsString() externalId?: string | null;
+  @IsString() externalId!: string;
 }
 
 class CreateCreditNoteDto {
@@ -192,6 +193,7 @@ export class InvoicesController {
         notes: dto.notes ?? null,
         termsAndConditions: dto.termsAndConditions ?? null,
         amountPaid: dto.amountPaid ?? 0,
+      initialPaymentMethod: dto.initialPaymentMethod,
         lineItems: dto.lineItems
       },
       { role: user.role ?? null, branchId: user.branchId ?? null }
@@ -207,19 +209,19 @@ export class InvoicesController {
       id,
       {
         ...restDto,
-        customerId: dto.customerId ?? null,
-        customerName: dto.customerName ?? null,
-        customerBusinessName: dto.customerBusinessName ?? null,
-        customerEmail: dto.customerEmail ?? null,
-        customerPhone: dto.customerPhone ?? null,
-        customerAddress: dto.customerAddress ?? null,
-        customerTaxPin: dto.customerTaxPin ?? null,
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerId") ? { customerId: dto.customerId ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerName") ? { customerName: dto.customerName ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerBusinessName") ? { customerBusinessName: dto.customerBusinessName ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerEmail") ? { customerEmail: dto.customerEmail ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerPhone") ? { customerPhone: dto.customerPhone ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerAddress") ? { customerAddress: dto.customerAddress ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "customerTaxPin") ? { customerTaxPin: dto.customerTaxPin ?? null } : {}),
         ...(issueDate ? { issueDate: new Date(issueDate) } : {}),
         ...(dueDate ? { dueDate: new Date(dueDate) } : {}),
-        referenceNumber: dto.referenceNumber ?? null,
-        purchaseOrderNumber: dto.purchaseOrderNumber ?? null,
-        notes: dto.notes ?? null,
-        termsAndConditions: dto.termsAndConditions ?? null,
+        ...(Object.prototype.hasOwnProperty.call(dto, "referenceNumber") ? { referenceNumber: dto.referenceNumber ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "purchaseOrderNumber") ? { purchaseOrderNumber: dto.purchaseOrderNumber ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "notes") ? { notes: dto.notes ?? null } : {}),
+        ...(Object.prototype.hasOwnProperty.call(dto, "termsAndConditions") ? { termsAndConditions: dto.termsAndConditions ?? null } : {}),
         ...(lineItems ? { lineItems } : {})
       },
       { role: user.role ?? null, branchId: user.branchId ?? null }
@@ -312,6 +314,18 @@ export class InvoicesController {
     );
   }
 
+  @Post(":id/credit-notes/:noteId/issue")
+  @Roles("owner", "manager")
+  issueCreditNote(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Param("noteId") noteId: string, @Query("branchId") branchId?: string) {
+    return this.invoices.issueCreditNote(user.businessId, id, noteId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Post(":id/credit-notes/:noteId/void")
+  @Roles("owner", "manager")
+  voidCreditNote(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Param("noteId") noteId: string, @Query("branchId") branchId?: string) {
+    return this.invoices.voidCreditNote(user.businessId, id, noteId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
   @Post(":id/debit-notes")
   @Roles("owner", "manager")
   createDebitNote(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Body() dto: CreateDebitNoteDto) {
@@ -328,5 +342,17 @@ export class InvoicesController {
       },
       { role: user.role ?? null, branchId: user.branchId ?? null }
     );
+  }
+
+  @Post(":id/debit-notes/:noteId/issue")
+  @Roles("owner", "manager")
+  issueDebitNote(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Param("noteId") noteId: string, @Query("branchId") branchId?: string) {
+    return this.invoices.issueDebitNote(user.businessId, id, noteId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Post(":id/debit-notes/:noteId/void")
+  @Roles("owner", "manager")
+  voidDebitNote(@CurrentUser() user: { businessId: string; branchId?: string | null; role?: string }, @Param("id") id: string, @Param("noteId") noteId: string, @Query("branchId") branchId?: string) {
+    return this.invoices.voidDebitNote(user.businessId, id, noteId, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 }

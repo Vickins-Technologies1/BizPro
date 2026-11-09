@@ -336,10 +336,20 @@ export function FinanceScreen() {
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
               <View style={{ flexDirection: "row", gap: 14 }}>
-                <FinanceMetric label="Tax" value={formatMoney(overview?.taxTotal ?? 0, business?.currency)} />
-                <FinanceMetric label="Petty cash movement" value={formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)} />
+                <FinanceMetric label="Customer credit" value={formatMoney(overview?.customerCreditTotal ?? 0, business?.currency)} />
+                <FinanceMetric label="Pending payments" value={formatMoney(overview?.pendingPaymentTotal ?? 0, business?.currency)} tone="warning" />
               </View>
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, lineHeight: 14 }}>Cash flow follows the existing overview formula: period payments less period expenses plus petty-cash movement. *Receivables deduplicate linked sale/invoice balances and subtract standalone payments for this period.</Text>
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", gap: 14 }}>
+                <FinanceMetric label="Failed payments" value={formatMoney(overview?.failedPaymentTotal ?? 0, business?.currency)} tone="danger" />
+                <FinanceMetric label="Tax" value={formatMoney(overview?.taxTotal ?? 0, business?.currency)} />
+              </View>
+              <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
+              <View style={{ flexDirection: "row", gap: 14 }}>
+                <FinanceMetric label="Petty cash movement" value={formatMoney(overview?.pettyCashBalance ?? 0, business?.currency)} />
+                <FinanceMetric label="Bank balance" value={formatMoney(overview?.bankBalanceTotal ?? 0, business?.currency)} />
+              </View>
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10, lineHeight: 14 }}>Sales revenue is recorded separately from cash received. Pending and failed payments are excluded from collected cash. *Receivables deduplicate linked sale/invoice balances; unallocated customer payments remain customer credit.</Text>
             </Card>
 
             <Card style={{ gap: 12 }}>
@@ -899,8 +909,11 @@ function buildExportHtml(input: {
     row("Cash Flow", formatMoney(input.overview.cashFlowTotal, input.currency)),
     row("Tax Reports", formatMoney(input.overview.taxTotal, input.currency)),
     row("Invoice total", formatMoney(input.overview.invoiceTotal, input.currency)),
+    row("Customer credit", formatMoney(input.overview.customerCreditTotal ?? 0, input.currency)),
     row("Credit notes", formatMoney(input.overview.creditNoteTotal, input.currency)),
     row("Payments", formatMoney(input.overview.paymentTotal, input.currency)),
+    row("Pending payments", formatMoney(input.overview.pendingPaymentTotal ?? 0, input.currency)),
+    row("Failed payments", formatMoney(input.overview.failedPaymentTotal ?? 0, input.currency)),
     row("Bank accounts", formatMoney(input.overview.bankBalanceTotal, input.currency)),
     row("Petty cash", formatMoney(input.overview.pettyCashBalance, input.currency))
   ].join("");

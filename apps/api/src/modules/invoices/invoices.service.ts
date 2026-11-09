@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { randomUUID } from "crypto";
 import { endOfDay, parseISO, startOfDay } from "date-fns";
@@ -22,12 +22,16 @@ import {
   SaleDocument
 } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
+import { assertPaymentRequestMatches, buildPaymentRequestFingerprint, isDuplicateKeyError } from "../../common/payment-integrity";
+import { eligiblePaymentMatch } from "../../common/payment-integrity";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import { buildBusinessLookup } from "../../common/business-lookup";
+import { isMongoObjectId } from "../products/product-identity";
 import { toSafeIsoDateString, toSafeIsoString } from "../../common/date-normalizer";
 import { NotificationsService } from "../notifications/notifications.service";
 import { FiscalizationService, type FiscalizationOutcome } from "./fiscalization.service";
-import { calculateTax } from "@vbo/shared";
+import { deriveInvoiceLifecycleStatus } from "./invoice-lifecycle";
+import { assertCurrencyAmount, assertInitialPayment, assertInvoiceDiscount, assertQuantity, assertSubsequentPayment, assertTaxRate, assertUnitPrice, calculateTax, PAYMENT_METHODS, roundMoney } from "@vbo/shared";
 import type { DebitNote as DebitNoteView, Invoice as InvoiceView, InvoiceLineItem, InvoicePaymentRecord, InvoiceTaxSnapshot, InvoiceLifecycleStatus, FinanceInvoice } from "@vbo/shared";
 
 type InvoiceListQuery = {
@@ -75,6 +79,7 @@ type InvoiceCreateInput = {
   termsAndConditions?: string | null;
   status?: InvoiceLifecycleStatus;
   amountPaid?: number;
+  initialPaymentMethod?: string | undefined;
   lineItems: InvoiceLineInput[];
   taxPolicy?: { defaultTaxRate?: number; defaultTaxCategory?: InvoiceTaxSnapshot["taxCategory"]; defaultTaxInclusive?: boolean };
 };
@@ -211,7 +216,7 @@ export class InvoicesService {
       this.invoiceModel.find(filter).lean(),
       this.invoiceModel.countDocuments({ ...filter, status: "draft" }),
       this.invoiceModel.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: "$amountPaid" } } }]),
-      this.paymentModel.aggregate([{ $match: { businessId, ...buildBranchMatch(branchId), ...(range ? { createdAt: range } : {}) } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+      this.paymentModel.aggregate([{ $match: { businessId, ...(range ? { createdAt: range } : {}), $and: [eligiblePaymentMatch(), buildBranchMatch(branchId)] } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
       this.invoiceModel.countDocuments({ ...filter, status: { $in: ["sent", "viewed", "partially_paid", "overdue"] }, balanceDue: { $gt: 0 }, dueDate: { $lt: new Date() } })
     ]);
     const totals = invoices.map((invoice) => this.serializeInvoice(invoice));
@@ -231,7 +236,7 @@ export class InvoicesService {
 
   async get(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean();
+    const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] }).lean();
     if (!invoice) throw new NotFoundException("Invoice not found");
     return this.serializeInvoice(await this.enrichInvoice(invoice));
   }
@@ -268,21 +273,31 @@ export class InvoicesService {
 
   async create(input: InvoiceCreateInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
-    return runInTransaction(this.connection, async (session) => {
+    try { return await runInTransaction(this.connection, async (session) => {
       const business = await this.businessModel.findOne(buildBusinessLookup(input.businessId)).session(session);
       if (!business) throw new NotFoundException("Business not found");
       const resolvedSettings = this.resolveInvoiceSettings(business);
       const invoiceNumber = await this.resolveInvoiceNumber(business, input.invoiceNumber ?? null, resolvedSettings, session);
       const shareToken = resolvedSettings.publicSharingEnabled ? randomUUID().replaceAll("-", "") : null;
-      const customer = input.customerId ? await this.customerModel.findOne({ _id: input.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
+      const customer = input.customerId ? await this.customerModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.entityIdMatch(input.customerId), buildBranchMatch(branchId)] }).session(session) : null;
       if (input.customerId && !customer) throw new NotFoundException("Customer not found");
       if (input.saleId) {
-        const linkedSale = await this.saleModel.findOne({ $or: [{ _id: input.saleId }, { externalId: input.saleId }], businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+        const linkedSale = await this.saleModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.entityIdMatch(input.saleId), buildBranchMatch(branchId)] }).session(session);
         if (!linkedSale) throw new NotFoundException("Linked sale not found");
-        if (input.customerId && linkedSale.customerId && input.customerId !== linkedSale.customerId) throw new BadRequestException("Invoice customer does not match linked sale customer");
+        const saleIdentifiers = [String(linkedSale._id), ...(linkedSale.externalId ? [String(linkedSale.externalId)] : [])];
+        const existingSaleInvoice = await this.invoiceModel.findOne({ businessId: input.businessId, saleId: { $in: saleIdentifiers }, deletedAt: null }).session(session).lean();
+        if (existingSaleInvoice) throw new ConflictException("This sale already has an invoice");
+        if (input.customerId && linkedSale.customerId && input.customerId !== linkedSale.customerId && String(customer?._id) !== String(linkedSale.customerId)) throw new BadRequestException("Invoice customer does not match linked sale customer");
+        input.saleId = String(linkedSale.externalId ?? linkedSale._id);
+        if (linkedSale.customerId) input.customerId = String(linkedSale.customerId);
       }
+      if (input.status && input.status !== "draft") throw new BadRequestException("Invoices must be created as drafts and issued through the send action");
+      if (!Array.isArray(input.lineItems) || input.lineItems.length === 0) throw new BadRequestException("An invoice must contain at least one line item");
+      const externalId = input.externalId?.trim() || randomUUID();
       const prepared = this.prepareInvoicePayload({
         ...input,
+        externalId,
+        status: "draft",
         currency: String(business.currency ?? "KES").toUpperCase(),
         ...(business.taxSettings ? { taxPolicy: business.taxSettings } : {}),
         invoiceNumber,
@@ -310,9 +325,27 @@ export class InvoicesService {
           { session }
         )
       )[0]!;
+      if (prepared.record.amountPaid > 0) {
+        const method = input.initialPaymentMethod;
+        if (!method || !(PAYMENT_METHODS as readonly string[]).includes(method) || method === "credit" || method === "mpesa") {
+          throw new BadRequestException("Initial payments require a posted tender method (cash, bank, card, cheque, or other)");
+        }
+        const paymentExternalId = `invoice-initial:${externalId}`;
+        const payment = (await this.paymentModel.create([{
+          businessId: input.businessId, branchId, customerId: prepared.record.customerId ?? null,
+          saleId: null, invoiceId: String(invoice._id), debtPaymentId: null, externalId: paymentExternalId,
+          method, status: prepared.record.balanceDue === 0 ? "paid" : "partial", paymentState: "posted",
+          amount: prepared.record.amountPaid, currency: prepared.record.currency, recordedById: null,
+          reference: null, note: "Initial invoice payment", provider: null, reconciledAt: null
+        }], { session }))[0]!;
+        invoice.payments.push({ id: paymentExternalId, paymentId: String(payment._id), amount: prepared.record.amountPaid, method, paymentDate: toSafeIsoString(new Date()), reference: null, note: "Initial invoice payment" });
+      }
       await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "created", { invoiceNumber });
       return this.serializeInvoice(await this.enrichInvoice(invoice.toObject()));
-    });
+    }); } catch (error) {
+      if (isDuplicateKeyError(error)) throw new ConflictException("Invoice number, external ID, or linked sale already has an invoice");
+      throw error;
+    }
   }
 
   async update(businessId: string, id: string, patch: InvoicePatchInput, scope: BranchScope = {}) {
@@ -320,9 +353,15 @@ export class InvoicesService {
     return runInTransaction(this.connection, async (session) => {
       const business = await this.businessModel.findOne(buildBusinessLookup(businessId)).session(session);
       if (!business) throw new NotFoundException("Business not found");
-      const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
       if (this.isFinalStatus(invoice.status)) throw new BadRequestException("Only draft or open invoices can be edited");
+      if (invoice.status !== "draft" && ["customerId", "saleId", "currency"].some((key) => Object.prototype.hasOwnProperty.call(patch, key))) {
+        throw new BadRequestException("Customer, sale, and currency can only be changed on a draft invoice");
+      }
+      if (Number(invoice.amountPaid ?? 0) > 0 && ["lineItems", "customerId", "saleId", "currency"].some((key) => Object.prototype.hasOwnProperty.call(patch, key))) {
+        throw new BadRequestException("Financial edits are not allowed after a payment has been recorded");
+      }
       if (patch.invoiceNumber !== undefined) invoice.invoiceNumber = patch.invoiceNumber ?? invoice.invoiceNumber;
       if (patch.customerId !== undefined) invoice.customerId = patch.customerId ?? null;
       if (patch.customerName !== undefined) invoice.customerName = patch.customerName ?? null;
@@ -339,8 +378,9 @@ export class InvoicesService {
       if (patch.purchaseOrderNumber !== undefined) invoice.purchaseOrderNumber = patch.purchaseOrderNumber ?? null;
       if (patch.notes !== undefined) invoice.notes = patch.notes ?? null;
       if (patch.termsAndConditions !== undefined) invoice.termsAndConditions = patch.termsAndConditions ?? null;
-      if (patch.status !== undefined) this.assertTransition(invoice.status, patch.status);
+      if (patch.status !== undefined) throw new BadRequestException("Use the invoice lifecycle actions to change status");
       if (patch.lineItems !== undefined) {
+        if (invoice.status !== "draft") throw new BadRequestException("Invoice financial lines can only be edited while the invoice is a draft");
         const prepared = this.prepareInvoicePayload({
           businessId,
           branchId,
@@ -361,12 +401,17 @@ export class InvoicesService {
           purchaseOrderNumber: invoice.purchaseOrderNumber ?? null,
           notes: invoice.notes ?? null,
           termsAndConditions: invoice.termsAndConditions ?? null,
-          status: invoice.status,
-          amountPaid: invoice.amountPaid,
+          status: "draft",
+          amountPaid: 0,
           lineItems: patch.lineItems,
           ...(business.taxSettings ? { taxPolicy: business.taxSettings } : {})
         });
-        Object.assign(invoice, prepared.record);
+        Object.assign(invoice, {
+          lineItems: prepared.record.lineItems, subtotal: prepared.record.subtotal,
+          discountTotal: prepared.record.discountTotal, taxableAmount: prepared.record.taxableAmount,
+          taxTotal: prepared.record.taxTotal, grandTotal: prepared.record.grandTotal,
+          amountPaid: 0, balanceDue: prepared.record.grandTotal
+        });
       }
       invoice.history.push(this.createHistoryEntry("updated", "Invoice updated", null, { changedFields: Object.keys(patch) }));
       await invoice.save({ session });
@@ -417,12 +462,18 @@ export class InvoicesService {
 
   async send(businessId: string, id: string, scope: BranchScope = {}) {
     return runInTransaction(this.connection, async (session) => {
-      const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId(scope, scope.branchId ?? null)) }).session(session);
+      const branchId = resolveReadBranchId(scope, scope.branchId ?? null);
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
-      if (invoice.status !== "draft" && invoice.status !== "archived") {
+      if (invoice.status !== "draft") {
         throw new BadRequestException("Only draft invoices can be sent");
       }
-      invoice.status = invoice.amountPaid > 0 && invoice.balanceDue > 0 ? "partially_paid" : invoice.balanceDue > 0 ? "sent" : "paid";
+      const linkedSale = invoice.saleId ? await this.saleModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.saleId), buildBranchMatch(branchId)] }).session(session) : null;
+      if (linkedSale) {
+        const pendingSalePayment = await this.paymentModel.exists({ businessId, saleId: String(linkedSale._id), $or: [{ paymentState: "reconciliation_pending" }, { status: "pending_confirmation" }] }).session(session);
+        if (pendingSalePayment) throw new BadRequestException("Resolve pending sale payment confirmations before issuing the linked invoice");
+      }
+      invoice.status = invoice.balanceDue <= 0 ? "paid" : invoice.amountPaid > 0 ? "partially_paid" : "sent";
       invoice.sentAt = new Date();
       invoice.history.push(this.createHistoryEntry("sent", "Invoice sent", null, {}));
       const fiscalization = await this.fiscalization.submitInvoice({
@@ -432,9 +483,10 @@ export class InvoicesService {
         payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown>
       });
       this.applyFiscalization(invoice, fiscalization);
-      const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId, deletedAt: null, ...buildBranchMatch(resolveReadBranchId(scope, scope.branchId ?? null)) }).session(session) : null;
-      if (customer && invoice.balanceDue > 0) {
-        customer.balance = Math.max(0, Number(customer.balance ?? 0) + invoice.balanceDue);
+      const customer = invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+      if (customer) {
+        const priorReceivable = linkedSale ? Number(linkedSale.balanceDue ?? 0) : 0;
+        customer.balance = Math.max(0, Number(customer.balance ?? 0) + invoice.balanceDue - priorReceivable);
         await customer.save({ session });
       }
       await invoice.save({ session });
@@ -456,7 +508,7 @@ export class InvoicesService {
 
   async markViewed(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) });
+    const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] });
     if (!invoice) throw new NotFoundException("Invoice not found");
     if (!["sent", "viewed", "partially_paid", "overdue"].includes(invoice.status)) {
       throw new BadRequestException("Only sent invoices can be marked viewed");
@@ -470,13 +522,32 @@ export class InvoicesService {
 
   async recordPayment(input: InvoicePaymentInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? null);
-    return runInTransaction(this.connection, async (session) => {
-      const invoice = await this.invoiceModel.findOne({ _id: input.invoiceId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+    if (!input.externalId?.trim()) throw new BadRequestException("A stable payment idempotency key is required");
+    let amount: number;
+    try {
+      amount = assertSubsequentPayment(input.amount);
+      if (typeof input.method !== "string" || !(PAYMENT_METHODS as readonly string[]).includes(input.method)) throw new Error("Payment method is not supported");
+      if (input.method === "credit") throw new Error("Credit is a settlement state, not a payment method");
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid payment");
+    }
+    let requestFingerprint: string | null = null;
+    try { return await runInTransaction(this.connection, async (session) => {
+      const invoice = await this.invoiceModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.invoiceIdMatch(input.invoiceId), buildBranchMatch(branchId)] }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
+      if (invoice.status === "draft") throw new BadRequestException("Send the invoice before recording a later payment");
       if (this.isFinalStatus(invoice.status)) throw new BadRequestException("Cannot record payments against a finalised invoice");
+      const fingerprint = buildPaymentRequestFingerprint({ operation: "invoice_payment", businessId: input.businessId, targetId: invoice._id.toString(), customerId: invoice.customerId ?? null, branchId, amount, currency: invoice.currency, method: input.method, reference: input.reference, paymentDate: input.paymentDate });
+      requestFingerprint = fingerprint;
+      const existing = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).session(session).lean();
+      if (existing) {
+        try { assertPaymentRequestMatches(existing, fingerprint); }
+        catch (error) { throw new ConflictException(error instanceof Error ? error.message : "Payment idempotency conflict"); }
+        return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), payment: this.serializePayment(existing) };
+      }
       const outstandingBefore = Number(invoice.balanceDue ?? 0);
-      if (input.amount <= 0) throw new BadRequestException("Payment amount must be greater than zero");
-      if (input.amount > outstandingBefore) throw new BadRequestException("Overpayment is not allowed for this invoice");
+      if (amount > outstandingBefore) throw new BadRequestException("Overpayment is not allowed for this invoice");
+      const pendingProvider = input.method === "mpesa";
       const payment = (
         await this.paymentModel.create(
           [
@@ -487,45 +558,61 @@ export class InvoicesService {
               saleId: null,
               invoiceId: invoice._id.toString(),
               debtPaymentId: null,
-              externalId: input.externalId ?? null,
+              externalId: input.externalId,
               method: input.method,
-              status: input.amount >= outstandingBefore ? "paid" : "partial",
-              amount: input.amount,
+              status: pendingProvider ? "pending_confirmation" : amount >= outstandingBefore ? "paid" : "partial",
+              paymentState: pendingProvider ? "reconciliation_pending" : "posted",
+              amount,
+              currency: invoice.currency,
+              recordedById: input.recordedById ?? null,
+              requestFingerprint: fingerprint,
               reference: input.reference ?? null,
               note: input.note ?? null,
-              provider: input.method === "mpesa" ? "tuma" : null,
-              reconciledAt: input.method === "mpesa" ? input.paymentDate : null
+              provider: null,
+              reconciledAt: null
             }
           ],
           { session }
         )
       )[0]!;
-      invoice.amountPaid = Number(invoice.amountPaid ?? 0) + input.amount;
-      invoice.balanceDue = Math.max(0, Number(invoice.grandTotal ?? 0) - invoice.amountPaid);
-      invoice.status = invoice.balanceDue <= 0 ? "paid" : "partially_paid";
-      invoice.paidAt = invoice.balanceDue <= 0 ? new Date() : invoice.paidAt ?? null;
-      invoice.payments.push({
-        id: input.externalId ?? payment._id.toString(),
-        paymentId: payment._id.toString(),
-        amount: input.amount,
-        method: input.method,
-        paymentDate: toSafeIsoString(input.paymentDate),
-        reference: input.reference ?? null,
-        note: input.note ?? null
-      });
-      invoice.history.push(this.createHistoryEntry("payment_recorded", "Payment recorded", input.recordedById ?? null, { amount: input.amount, method: input.method }));
-      const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
-      if (customer) {
-        customer.balance = Math.max(0, Number(customer.balance ?? 0) - input.amount);
+      if (!pendingProvider) {
+        invoice.amountPaid = Number(invoice.amountPaid ?? 0) + amount;
+        invoice.balanceDue = roundMoney(Math.max(0, Number(invoice.balanceDue ?? 0) - amount));
+        invoice.status = invoice.balanceDue <= 0 ? "paid" : "partially_paid";
+        invoice.paidAt = invoice.balanceDue <= 0 ? new Date() : invoice.paidAt ?? null;
+        invoice.payments.push({
+          id: input.externalId,
+          paymentId: payment._id.toString(),
+          amount,
+          method: input.method,
+          paymentDate: toSafeIsoString(input.paymentDate),
+          reference: input.reference ?? null,
+          note: input.note ?? null
+        });
+      }
+      invoice.history.push(this.createHistoryEntry(pendingProvider ? "payment_pending" : "payment_recorded", pendingProvider ? "M-Pesa payment is awaiting verification" : "Payment recorded", input.recordedById ?? null, { amount, method: input.method, externalId: input.externalId }));
+      const customerIdentifiers = invoice.customerId ? [{ externalId: invoice.customerId }, ...(isMongoObjectId(invoice.customerId) ? [{ _id: invoice.customerId }] : [])] : [];
+      const customer = customerIdentifiers.length ? await this.customerModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [{ $or: customerIdentifiers }, buildBranchMatch(branchId)] }).session(session) : null;
+      if (customer && !pendingProvider) {
+        customer.balance = Math.max(0, Number(customer.balance ?? 0) - amount);
         await customer.save({ session });
       }
       await invoice.save({ session });
-      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "payment_recorded", { amount: input.amount, method: input.method });
+      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), pendingProvider ? "payment_pending" : "payment_recorded", { amount, method: input.method, externalId: input.externalId });
       return {
         invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())),
         payment: this.serializePayment(payment.toObject())
       };
-    });
+    }); } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+      const existing = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).lean();
+      if (!existing || !requestFingerprint) throw error;
+      try { assertPaymentRequestMatches(existing, requestFingerprint); } catch (conflict) { throw new ConflictException(conflict instanceof Error ? conflict.message : "Payment idempotency conflict"); }
+      if (!existing.invoiceId) throw error;
+      const invoice = await this.invoiceModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.invoiceIdMatch(existing.invoiceId), buildBranchMatch(branchId)] }).lean();
+      if (!invoice) throw error;
+      return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice)), payment: this.serializePayment(existing) };
+    }
   }
 
   async cancel(businessId: string, id: string, scope: BranchScope = {}) {
@@ -542,10 +629,10 @@ export class InvoicesService {
 
   async restore(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) });
+    const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] });
     if (!invoice) throw new NotFoundException("Invoice not found");
     if (invoice.status !== "archived") throw new BadRequestException("Only archived invoices can be restored");
-    invoice.status = invoice.balanceDue > 0 ? (invoice.amountPaid > 0 ? "partially_paid" : invoice.sentAt ? "sent" : "draft") : "paid";
+    invoice.status = deriveInvoiceLifecycleStatus({ status: invoice.sentAt ? "sent" : "draft", amountPaid: Number(invoice.amountPaid ?? 0), balanceDue: Number(invoice.balanceDue ?? 0), dueDate: invoice.dueDate, sentAt: invoice.sentAt, viewedAt: invoice.viewedAt });
     invoice.archivedAt = null;
     invoice.history.push(this.createHistoryEntry("restored", "Invoice restored", null, {}));
     await invoice.save();
@@ -554,9 +641,10 @@ export class InvoicesService {
 
   async deleteDraft(businessId: string, id: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
-    const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) });
+    const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] });
     if (!invoice) throw new NotFoundException("Invoice not found");
     if (invoice.status !== "draft") throw new BadRequestException("Only draft invoices can be deleted");
+    if (Number(invoice.amountPaid ?? 0) > 0) throw new BadRequestException("Draft invoices with posted payments cannot be deleted");
     invoice.deletedAt = new Date();
     invoice.history.push(this.createHistoryEntry("deleted", "Draft invoice deleted", null, {}));
     await invoice.save();
@@ -567,22 +655,21 @@ export class InvoicesService {
   async createCreditNote(input: CreditNoteInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
     return runInTransaction(this.connection, async (session) => {
-      if (!Number.isFinite(input.amount) || input.amount <= 0) throw new BadRequestException("Credit note amount must be greater than zero");
+      let amount: number;
+      try { amount = assertCurrencyAmount(input.amount, "Credit note amount", { min: 0.01 }); }
+      catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Invalid credit note amount"); }
+      const invoice = await this.invoiceModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.invoiceIdMatch(input.invoiceId), buildBranchMatch(branchId)] }).session(session);
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      if (input.status && input.status !== "draft") throw new BadRequestException("Credit notes must be created as drafts and issued through the lifecycle action");
       if (input.externalId) {
         const existing = await this.creditNoteModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).session(session).lean();
-        if (existing) return { creditNote: this.serializeCreditNote(existing) };
+        if (existing) {
+          const sameRequest = existing.invoiceId === String(invoice._id) && existing.reference === input.reference && Number(existing.amount) === amount && existing.reason === input.reason && new Date(existing.creditDate).getTime() === input.creditDate.getTime();
+          if (!sameRequest) throw new ConflictException("Credit note idempotency key was already used for a different request");
+          return { creditNote: this.serializeCreditNote(existing) };
+        }
       }
-      const invoice = await this.invoiceModel.findOne({ _id: input.invoiceId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
-      if (!invoice) throw new NotFoundException("Invoice not found");
-      const priorCredits = await this.creditNoteModel.find({
-        businessId: input.businessId,
-        invoiceId: invoice._id.toString(),
-        deletedAt: null,
-        status: { $in: ["draft", "issued"] }
-      }).session(session).lean();
-      const creditedTotal = priorCredits.reduce((sum, credit) => sum + Number(credit.amount ?? 0), 0);
-      const remainingCredit = Math.max(0, Number(invoice.grandTotal ?? 0) - creditedTotal);
-      if (input.amount > remainingCredit) throw new BadRequestException(`Credit note exceeds remaining invoice value of ${remainingCredit.toFixed(2)}`);
+      if (amount > Number(invoice.grandTotal ?? 0)) throw new BadRequestException("Credit note exceeds the invoice value");
       const created = await this.creditNoteModel.create(
         [
           {
@@ -593,10 +680,10 @@ export class InvoicesService {
             reference: input.reference,
             relatedSaleId: null,
             customerId: input.customerId ?? invoice.customerId ?? null,
-            amount: input.amount,
+            amount,
             reason: input.reason,
             note: input.note ?? null,
-            status: input.status ?? "draft",
+            status: "draft",
             creditDate: input.creditDate,
             deletedAt: null
           }
@@ -604,27 +691,56 @@ export class InvoicesService {
         { session }
       );
       const note = created[0]!;
-      invoice.balanceDue = Math.max(0, Number(invoice.balanceDue ?? 0) - input.amount);
-      if (input.amount >= invoice.amountPaid && invoice.amountPaid > 0) {
-        invoice.status = "refunded";
-        invoice.refundedAt = new Date();
-      } else if (invoice.balanceDue > 0) {
-        invoice.status = invoice.amountPaid > 0 ? "partially_paid" : invoice.status;
-      }
-      invoice.history.push(this.createHistoryEntry("credit_note", "Credit note created", null, { amount: input.amount, reference: input.reference }));
-      const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
-      if (customer) {
-        customer.balance = Math.max(0, Number(customer.balance ?? 0) - input.amount);
-        await customer.save({ session });
-      }
+      invoice.history.push(this.createHistoryEntry("credit_note_draft", "Credit note draft created", null, { amount, reference: input.reference }));
       await invoice.save({ session });
-      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "credit_note_created", { amount: input.amount, reference: input.reference });
-      await this.fiscalization.creditNote({
-        invoiceId: String(invoice._id),
-        businessId: input.businessId,
-        invoiceNumber: invoice.invoiceNumber,
-        payload: { creditNoteId: String(note._id), amount: input.amount, reason: input.reason }
-      });
+      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "credit_note_draft_created", { amount, reference: input.reference, creditNoteId: String(note._id) });
+      return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), creditNote: this.serializeCreditNote(note.toObject()) };
+    });
+  }
+
+  async issueCreditNote(businessId: string, invoiceId: string, noteId: string, scope: BranchScope = {}) {
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    return runInTransaction(this.connection, async (session) => {
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(invoiceId), buildBranchMatch(branchId)] }).session(session);
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      const note = await this.creditNoteModel.findOne({ _id: noteId, businessId, invoiceId: String(invoice._id), deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      if (!note) throw new NotFoundException("Credit note not found");
+      if (!["sent", "viewed", "partially_paid", "overdue"].includes(invoice.status)) throw new BadRequestException("Only an open invoice can receive a credit note");
+      if (note.status !== "draft") throw new BadRequestException("Only draft credit notes can be issued");
+      if (!Number.isFinite(Number(note.amount)) || note.amount <= 0 || note.amount > Number(invoice.balanceDue ?? 0)) throw new BadRequestException("Credit note exceeds the remaining invoice obligation");
+      note.status = "issued";
+      note.issuedAt = new Date();
+      invoice.balanceDue = roundMoney(Number(invoice.balanceDue ?? 0) - note.amount);
+      invoice.status = deriveInvoiceLifecycleStatus({ status: invoice.status, amountPaid: Number(invoice.amountPaid ?? 0), balanceDue: invoice.balanceDue, dueDate: invoice.dueDate, sentAt: invoice.sentAt, viewedAt: invoice.viewedAt });
+      invoice.history.push(this.createHistoryEntry("credit_note_issued", "Credit note issued", null, { creditNoteId: String(note._id), amount: note.amount }));
+      const customer = invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+      if (customer) { customer.balance = Math.max(0, Number(customer.balance ?? 0) - note.amount); await customer.save({ session }); }
+      await note.save({ session }); await invoice.save({ session });
+      await this.writeAudit(session, businessId, "invoice", String(invoice._id), "credit_note_issued", { creditNoteId: String(note._id), amount: note.amount });
+      await this.fiscalization.creditNote({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: { creditNoteId: String(note._id), amount: note.amount, reason: note.reason } });
+      return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), creditNote: this.serializeCreditNote(note.toObject()) };
+    });
+  }
+
+  async voidCreditNote(businessId: string, invoiceId: string, noteId: string, scope: BranchScope = {}) {
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    return runInTransaction(this.connection, async (session) => {
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(invoiceId), buildBranchMatch(branchId)] }).session(session);
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      const note = await this.creditNoteModel.findOne({ _id: noteId, businessId, invoiceId: String(invoice._id), deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      if (!note) throw new NotFoundException("Credit note not found");
+      if (note.status === "void") throw new BadRequestException("Credit note is already void");
+      if (note.status === "issued") {
+        invoice.balanceDue = roundMoney(Number(invoice.balanceDue ?? 0) + note.amount);
+        const customer = invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+        if (customer) { customer.balance = Number(customer.balance ?? 0) + note.amount; await customer.save({ session }); }
+      }
+      note.status = "void";
+      note.voidedAt = new Date();
+      if (invoice.status !== "draft") invoice.status = deriveInvoiceLifecycleStatus({ status: invoice.status, amountPaid: Number(invoice.amountPaid ?? 0), balanceDue: Number(invoice.balanceDue ?? 0), dueDate: invoice.dueDate, sentAt: invoice.sentAt, viewedAt: invoice.viewedAt });
+      invoice.history.push(this.createHistoryEntry("credit_note_voided", "Credit note voided", null, { creditNoteId: String(note._id), amount: note.amount }));
+      await note.save({ session }); await invoice.save({ session });
+      await this.writeAudit(session, businessId, "invoice", String(invoice._id), "credit_note_voided", { creditNoteId: String(note._id), amount: note.amount });
       return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), creditNote: this.serializeCreditNote(note.toObject()) };
     });
   }
@@ -632,8 +748,24 @@ export class InvoicesService {
   async createDebitNote(input: DebitNoteInput, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
     return runInTransaction(this.connection, async (session) => {
-      const invoice = await this.invoiceModel.findOne({ _id: input.invoiceId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      const invoice = await this.invoiceModel.findOne({ businessId: input.businessId, deletedAt: null, $and: [this.invoiceIdMatch(input.invoiceId), buildBranchMatch(branchId)] }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
+      if (input.status && input.status !== "draft") throw new BadRequestException("Debit notes must be created as drafts and issued through the lifecycle action");
+      let debitBase: number;
+      let debitTax: number;
+      try {
+        debitBase = assertCurrencyAmount(input.amount, "Debit note amount", { min: 0 });
+        debitTax = assertCurrencyAmount(input.taxAdjustment, "Debit note tax adjustment", { min: 0 });
+      } catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Invalid debit note amounts"); }
+      const debitAmount = roundMoney(debitBase + debitTax);
+      if (input.externalId) {
+        const existing = await this.debitNoteModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).session(session).lean();
+        if (existing) {
+          const sameRequest = existing.invoiceId === String(invoice._id) && existing.reference === input.reference && Number(existing.amount) === debitBase && Number(existing.taxAdjustment) === debitTax && existing.reason === input.reason && new Date(existing.issuedAt).getTime() === input.issuedAt.getTime();
+          if (!sameRequest) throw new ConflictException("Debit note idempotency key was already used for a different request");
+          return { debitNote: this.serializeDebitNote(existing) };
+        }
+      }
       const created = await this.debitNoteModel.create(
         [
           {
@@ -644,10 +776,10 @@ export class InvoicesService {
             customerId: invoice.customerId ?? null,
             reference: input.reference,
             reason: input.reason,
-            amount: input.amount,
-            taxAdjustment: input.taxAdjustment,
+            amount: debitBase,
+            taxAdjustment: debitTax,
             note: input.note ?? null,
-            status: input.status ?? "draft",
+            status: "draft",
             issuedAt: input.issuedAt,
             deletedAt: null
           }
@@ -655,22 +787,59 @@ export class InvoicesService {
         { session }
       );
       const note = created[0]!;
-      invoice.balanceDue = Number(invoice.balanceDue ?? 0) + input.amount + input.taxAdjustment;
-      invoice.status = invoice.balanceDue > 0 ? (invoice.amountPaid > 0 ? "partially_paid" : "sent") : invoice.status;
-      invoice.history.push(this.createHistoryEntry("debit_note", "Debit note created", null, { amount: input.amount, reference: input.reference }));
-      const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId: input.businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
-      if (customer) {
-        customer.balance = Number(customer.balance ?? 0) + input.amount + input.taxAdjustment;
-        await customer.save({ session });
-      }
+      invoice.history.push(this.createHistoryEntry("debit_note_draft", "Debit note draft created", null, { amount: debitAmount, reference: input.reference }));
       await invoice.save({ session });
-      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "debit_note_created", { amount: input.amount, reference: input.reference });
-      await this.fiscalization.debitNote({
-        invoiceId: String(invoice._id),
-        businessId: input.businessId,
-        invoiceNumber: invoice.invoiceNumber,
-        payload: { debitNoteId: String(note._id), amount: input.amount, reason: input.reason }
-      });
+      await this.writeAudit(session, input.businessId, "invoice", invoice._id.toString(), "debit_note_draft_created", { amount: debitAmount, reference: input.reference });
+      return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), debitNote: this.serializeDebitNote(note.toObject()) };
+    });
+  }
+
+  async issueDebitNote(businessId: string, invoiceId: string, noteId: string, scope: BranchScope = {}) {
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    return runInTransaction(this.connection, async (session) => {
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(invoiceId), buildBranchMatch(branchId)] }).session(session);
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      const note = await this.debitNoteModel.findOne({ _id: noteId, businessId, invoiceId: String(invoice._id), deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      if (!note) throw new NotFoundException("Debit note not found");
+      if (["draft", "cancelled", "void", "archived", "refunded"].includes(invoice.status)) throw new BadRequestException("Only an active invoice can receive a debit note");
+      if (note.status !== "draft") throw new BadRequestException("Only draft debit notes can be issued");
+      const amount = roundMoney(Number(note.amount) + Number(note.taxAdjustment));
+      if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException("Debit note amount must be greater than zero");
+      note.status = "issued";
+      note.issuedAt = new Date();
+      invoice.balanceDue = roundMoney(Number(invoice.balanceDue ?? 0) + amount);
+      invoice.status = deriveInvoiceLifecycleStatus({ status: invoice.status, amountPaid: Number(invoice.amountPaid ?? 0), balanceDue: invoice.balanceDue, dueDate: invoice.dueDate, sentAt: invoice.sentAt, viewedAt: invoice.viewedAt });
+      invoice.history.push(this.createHistoryEntry("debit_note_issued", "Debit note issued", null, { debitNoteId: String(note._id), amount }));
+      const customer = invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+      if (customer) { customer.balance = Number(customer.balance ?? 0) + amount; await customer.save({ session }); }
+      await note.save({ session }); await invoice.save({ session });
+      await this.writeAudit(session, businessId, "invoice", String(invoice._id), "debit_note_issued", { debitNoteId: String(note._id), amount });
+      await this.fiscalization.debitNote({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: { debitNoteId: String(note._id), amount, reason: note.reason } });
+      return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), debitNote: this.serializeDebitNote(note.toObject()) };
+    });
+  }
+
+  async voidDebitNote(businessId: string, invoiceId: string, noteId: string, scope: BranchScope = {}) {
+    const branchId = resolveWriteBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
+    return runInTransaction(this.connection, async (session) => {
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(invoiceId), buildBranchMatch(branchId)] }).session(session);
+      if (!invoice) throw new NotFoundException("Invoice not found");
+      const note = await this.debitNoteModel.findOne({ _id: noteId, businessId, invoiceId: String(invoice._id), deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      if (!note) throw new NotFoundException("Debit note not found");
+      if (note.status === "void") throw new BadRequestException("Debit note is already void");
+      const amount = roundMoney(Number(note.amount) + Number(note.taxAdjustment));
+      if (note.status === "issued") {
+        if (amount > Number(invoice.balanceDue ?? 0)) throw new BadRequestException("Reverse or refund payments allocated to this debit note before voiding it");
+        invoice.balanceDue = roundMoney(Math.max(0, Number(invoice.balanceDue ?? 0) - amount));
+        const customer = invoice.status !== "draft" && invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+        if (customer) { customer.balance = Math.max(0, Number(customer.balance ?? 0) - amount); await customer.save({ session }); }
+      }
+      note.status = "void";
+      note.voidedAt = new Date();
+      if (invoice.status !== "draft") invoice.status = deriveInvoiceLifecycleStatus({ status: invoice.status, amountPaid: Number(invoice.amountPaid ?? 0), balanceDue: Number(invoice.balanceDue ?? 0), dueDate: invoice.dueDate, sentAt: invoice.sentAt, viewedAt: invoice.viewedAt });
+      invoice.history.push(this.createHistoryEntry("debit_note_voided", "Debit note voided", null, { debitNoteId: String(note._id), amount }));
+      await note.save({ session }); await invoice.save({ session });
+      await this.writeAudit(session, businessId, "invoice", String(invoice._id), "debit_note_voided", { debitNoteId: String(note._id), amount });
       return { invoice: this.serializeInvoice(await this.enrichInvoice(invoice.toObject())), debitNote: this.serializeDebitNote(note.toObject()) };
     });
   }
@@ -685,9 +854,22 @@ export class InvoicesService {
   private async transitionInvoice(businessId: string, id: string, nextStatus: InvoiceLifecycleStatus, action: string, scope: BranchScope = {}) {
     const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
     return runInTransaction(this.connection, async (session) => {
-      const invoice = await this.invoiceModel.findOne({ _id: id, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session);
+      const invoice = await this.invoiceModel.findOne({ businessId, deletedAt: null, $and: [this.invoiceIdMatch(id), buildBranchMatch(branchId)] }).session(session);
       if (!invoice) throw new NotFoundException("Invoice not found");
       this.assertTransition(invoice.status, nextStatus);
+      const wasActive = !["draft", "cancelled", "void", "archived"].includes(invoice.status);
+      if ((nextStatus === "cancelled" || nextStatus === "void") && Number(invoice.amountPaid ?? 0) > 0) {
+        throw new BadRequestException("Reverse or refund posted payments before cancelling or voiding the invoice");
+      }
+      if (nextStatus === "cancelled" || nextStatus === "void") {
+        const pendingPayment = await this.paymentModel.exists({ businessId, invoiceId: String(invoice._id), $or: [{ paymentState: "reconciliation_pending" }, { status: "pending_confirmation" }] }).session(session);
+        if (pendingPayment) throw new BadRequestException("Resolve pending payment confirmations before cancelling or voiding the invoice");
+      }
+      if (nextStatus === "archived" && Number(invoice.balanceDue ?? 0) > 0) throw new BadRequestException("Invoices with an outstanding balance cannot be archived");
+      const issuedCredit = await this.creditNoteModel.exists({ businessId, invoiceId: String(invoice._id), deletedAt: null, status: "issued" }).session(session);
+      const issuedDebit = await this.debitNoteModel.exists({ businessId, invoiceId: String(invoice._id), deletedAt: null, status: "issued" }).session(session);
+      if ((nextStatus === "cancelled" || nextStatus === "void") && (issuedCredit || issuedDebit)) throw new BadRequestException("Void or reverse issued invoice adjustments before cancelling or voiding the invoice");
+      const sale = invoice.saleId ? await this.saleModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.saleId), buildBranchMatch(branchId)] }).session(session) : null;
       invoice.status = nextStatus;
       if (nextStatus === "cancelled") invoice.cancelledAt = new Date();
       if (nextStatus === "void") invoice.voidedAt = new Date();
@@ -695,15 +877,24 @@ export class InvoicesService {
       invoice.history.push(this.createHistoryEntry(action, `Invoice ${action}`, null, {}));
       const fiscalization = nextStatus === "cancelled" ? await this.fiscalization.cancelInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown> }) : nextStatus === "void" ? await this.fiscalization.voidInvoice({ invoiceId: String(invoice._id), businessId, invoiceNumber: invoice.invoiceNumber, payload: this.serializeInvoice(invoice.toObject()) as unknown as Record<string, unknown> }) : { status: "not_configured" as const };
       this.applyFiscalization(invoice, fiscalization);
-      const customer = invoice.customerId ? await this.customerModel.findOne({ _id: invoice.customerId, businessId, deletedAt: null, ...buildBranchMatch(branchId) }).session(session) : null;
-      if (customer && (nextStatus === "cancelled" || nextStatus === "void")) {
-        customer.balance = Math.max(0, Number(customer.balance ?? 0) - Number(invoice.balanceDue ?? 0));
+      const customer = invoice.customerId ? await this.customerModel.findOne({ businessId, deletedAt: null, $and: [this.entityIdMatch(invoice.customerId), buildBranchMatch(branchId)] }).session(session) : null;
+      if (customer && (nextStatus === "cancelled" || nextStatus === "void") && wasActive) {
+        const restoredObligation = sale ? Number(sale.balanceDue ?? 0) : 0;
+        customer.balance = Math.max(0, Number(customer.balance ?? 0) - Number(invoice.balanceDue ?? 0) + restoredObligation);
         await customer.save({ session });
       }
       await invoice.save({ session });
       await this.writeAudit(session, businessId, "invoice", invoice._id.toString(), action, { invoiceNumber: invoice.invoiceNumber });
       return this.serializeInvoice(await this.enrichInvoice(invoice.toObject()));
     });
+  }
+
+  private invoiceIdMatch(id: string) {
+    return isMongoObjectId(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
+  }
+
+  private entityIdMatch(id: string) {
+    return isMongoObjectId(id) ? { $or: [{ _id: id }, { externalId: id }] } : { externalId: id };
   }
 
   private async enrichInvoice(invoice: Record<string, any>) {
@@ -755,7 +946,12 @@ export class InvoicesService {
     const taxableAmount = roundMoney(lineItems.reduce((sum, line) => sum + line.tax.taxableAmount, 0));
     const taxTotal = roundMoney(lineItems.reduce((sum, line) => sum + line.lineTax, 0));
     const grandTotal = roundMoney(lineItems.reduce((sum, line) => sum + line.lineTotal, 0));
-    const amountPaid = roundMoney(Math.min(Number(input.amountPaid ?? 0), grandTotal));
+    let amountPaid: number;
+    try {
+      amountPaid = assertInitialPayment(input.amountPaid ?? 0, grandTotal);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid initial payment");
+    }
     const balanceDue = roundMoney(Math.max(0, grandTotal - amountPaid));
     return {
       record: {
@@ -816,16 +1012,40 @@ export class InvoicesService {
   }
 
   private calculateLineItem(input: InvoiceLineInput, taxPolicy?: InvoiceCreateInput["taxPolicy"]): InvoiceLineItem {
-    const quantity = Number(input.quantity ?? 0);
-    const unitPrice = Number(input.unitPrice ?? 0);
+    let quantity: number;
+    let unitPrice: number;
+    try {
+      quantity = assertQuantity(input.quantity, "Invoice quantity");
+      unitPrice = assertUnitPrice(input.unitPrice, "Invoice unit price");
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid invoice quantity or price");
+    }
     const lineSubtotal = roundMoney(quantity * unitPrice);
-    const discountValue = Number(input.discountValue ?? 0);
-    const lineDiscount =
-      (input.discountType ?? "fixed") === "percentage" ? roundMoney(lineSubtotal * (discountValue / 100)) : roundMoney(Math.min(discountValue, lineSubtotal));
+    let discountValue: number;
+    let lineDiscount: number;
+    try {
+      if ((input.discountType ?? "fixed") === "percentage") {
+        discountValue = assertInvoiceDiscount(input.discountValue ?? 0, lineSubtotal, "percentage");
+        lineDiscount = roundMoney(lineSubtotal * (discountValue / 100));
+      } else {
+        discountValue = assertInvoiceDiscount(input.discountValue ?? 0, lineSubtotal, "fixed");
+        lineDiscount = discountValue;
+      }
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid invoice discount");
+    }
     const taxableAmount = roundMoney(Math.max(0, lineSubtotal - lineDiscount));
     const taxCategory = input.taxCategory ?? taxPolicy?.defaultTaxCategory ?? "vat";
+    if (!["vat", "zero_rated", "exempt", "non_taxable", "custom"].includes(taxCategory)) {
+      throw new BadRequestException("Invoice tax category is not supported");
+    }
     const isNonTaxable = ["zero_rated", "exempt", "non_taxable"].includes(taxCategory);
-    const taxRate = isNonTaxable ? 0 : Number(taxPolicy?.defaultTaxRate ?? input.taxRate ?? 0);
+    let taxRate: number;
+    try {
+      taxRate = isNonTaxable ? 0 : assertTaxRate(taxPolicy?.defaultTaxRate ?? input.taxRate ?? 0, "Invoice tax rate");
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid invoice tax rate");
+    }
     const taxInclusive = taxPolicy?.defaultTaxInclusive ?? Boolean(input.taxInclusive);
     const taxAmount = calculateTax(taxableAmount, taxRate, taxInclusive);
     const lineTotal = taxInclusive ? taxableAmount : roundMoney(taxableAmount + taxAmount);
@@ -908,7 +1128,7 @@ export class InvoicesService {
     const issueDate = toSafeIsoDateString(rest.issueDate ?? null);
     const dueDate = toSafeIsoDateString(rest.dueDate ?? null);
     const balanceDue = Number(rest.balanceDue ?? 0);
-    const status = this.resolveStatus(rest.status, dueDate, balanceDue);
+    const status = deriveInvoiceLifecycleStatus({ status: rest.status ?? "draft", amountPaid: Number(rest.amountPaid ?? 0), balanceDue, dueDate, sentAt: rest.sentAt, viewedAt: rest.viewedAt });
     return {
       id: String(rest.externalId ?? _id),
       businessId: String(rest.businessId),
@@ -1039,6 +1259,8 @@ export class InvoicesService {
       reason: String(rest.reason ?? ""),
       note: rest.note ?? null,
       creditDate: toSafeIsoDateString(rest.creditDate ?? null),
+      issuedAt: rest.issuedAt ? toSafeIsoString(rest.issuedAt) : null,
+      voidedAt: rest.voidedAt ? toSafeIsoString(rest.voidedAt) : null,
       status: rest.status ?? "draft"
     };
   }
@@ -1059,15 +1281,9 @@ export class InvoicesService {
       taxAdjustment: Number(rest.taxAdjustment ?? 0),
       note: rest.note ?? null,
       status: rest.status ?? "draft",
+      voidedAt: rest.voidedAt ? toSafeIsoString(rest.voidedAt) : null,
       issuedAt: toSafeIsoDateString(rest.issuedAt ?? null)
     };
-  }
-
-  private resolveStatus(status: any, dueDate: string, balanceDue: number): InvoiceLifecycleStatus {
-    if (status === "sent" || status === "viewed" || status === "partially_paid" || status === "overdue") {
-      if (balanceDue > 0 && new Date(dueDate).getTime() < Date.now()) return "overdue";
-    }
-    return (status ?? (balanceDue <= 0 ? "paid" : "draft")) as InvoiceLifecycleStatus;
   }
 
   private async enrichCustomerFromInvoice(customerId: string | null, businessId: string, branchId: string | null) {
@@ -1094,10 +1310,6 @@ function normalizeRangeBound(value: string, bound: "from" | "to") {
     return date;
   }
   return bound === "from" ? startOfDay(date) : endOfDay(date);
-}
-
-function roundMoney(value: number) {
-  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
 function escapeRegex(value: string) {

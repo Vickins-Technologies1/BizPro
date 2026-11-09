@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { InjectConnection, InjectModel } from "@nestjs/mongoose";
 import { ClientSession, Connection, Model } from "mongoose";
-import { AuditLog, AuditLogDocument, Customer, CustomerDocument, CustomerGroup, CustomerGroupDocument, Invoice, InvoiceDocument, Payment, PaymentDocument, Sale, SaleDocument } from "../schemas";
+import { AuditLog, AuditLogDocument, Business, BusinessDocument, Customer, CustomerDocument, CustomerGroup, CustomerGroupDocument, Invoice, InvoiceDocument, Payment, PaymentDocument, Sale, SaleDocument } from "../schemas";
 import { runInTransaction } from "../../common/mongo-transaction";
 import { buildBranchMatch, resolveReadBranchId, resolveWriteBranchId, type BranchScope } from "../../common/branch-scope";
 import { toSafeIsoString } from "../../common/date-normalizer";
-import { calculateCustomerOutstanding, reconcileCustomerBalance } from "./customer-balance";
+import { calculateCustomerCredit, calculateCustomerOutstanding, reconcileCustomerBalance } from "./customer-balance";
+import { assertSubsequentPayment, PAYMENT_METHODS } from "@vbo/shared";
+import { assertPaymentRequestMatches, buildPaymentRequestFingerprint, isDuplicateKeyError } from "../../common/payment-integrity";
+import { buildBusinessLookup } from "../../common/business-lookup";
+import { eligiblePaymentMatch } from "../../common/payment-integrity";
 
 type CustomerAttachmentInput = {
   id?: string;
@@ -48,7 +52,8 @@ export class CustomersService {
     @InjectConnection() private readonly connection: Connection,
     @Optional() @InjectModel(Sale.name) private readonly saleModel?: Model<SaleDocument>,
     @Optional() @InjectModel(Invoice.name) private readonly invoiceModel?: Model<InvoiceDocument>,
-    @Optional() @InjectModel(AuditLog.name) private readonly auditLogModel?: Model<AuditLogDocument>
+    @Optional() @InjectModel(AuditLog.name) private readonly auditLogModel?: Model<AuditLogDocument>,
+    @Optional() @InjectModel(Business.name) private readonly businessModel?: Model<BusinessDocument>
   ) {}
 
   list(businessId: string, scope: BranchScope = {}) {
@@ -110,6 +115,7 @@ export class CustomersService {
 
   async create(input: Partial<Customer> & { businessId: string; name: string }, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
+    if (!input.externalId?.trim()) throw new BadRequestException("A stable payment idempotency key is required");
     if (input.externalId) {
       const existing = await this.customerModel.findOne({ businessId: input.businessId, externalId: input.externalId, deletedAt: null }).lean();
       if (existing) {
@@ -189,15 +195,34 @@ export class CustomersService {
     recordedById?: string | null;
   }, scope: BranchScope = {}) {
     const branchId = resolveWriteBranchId(scope, input.branchId ?? null);
-    if (input.externalId) {
-      const existingPayment = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).lean();
-      if (existingPayment) {
-        return existingPayment;
-      }
+      if (!input.externalId?.trim()) throw new BadRequestException("A stable payment idempotency key is required");
+    let amount: number;
+    try {
+      amount = assertSubsequentPayment(input.amount);
+      if (!(PAYMENT_METHODS as readonly string[]).includes(input.method)) throw new Error("Payment method is not supported");
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Invalid payment");
     }
-    return runInTransaction(this.connection, async (session) => {
+      let requestFingerprint: string | null = null;
+      try { return await runInTransaction(this.connection, async (session) => {
       const customer = await this.findCustomerById(input.businessId, input.customerId, branchId, session);
       if (!customer) throw new NotFoundException("Customer not found");
+      const business = this.businessModel
+        ? await this.businessModel.findOne({ ...buildBusinessLookup(input.businessId), deletedAt: null }).session(session).lean()
+        : { currency: "KES" };
+      if (!business) throw new NotFoundException("Business not found");
+      const currency = String((business as { currency?: string }).currency ?? "KES").toUpperCase();
+      const customerId = customer.externalId ?? customer._id.toString();
+        const fingerprint = buildPaymentRequestFingerprint({ operation: "customer_payment", businessId: input.businessId, targetId: customer._id.toString(), customerId, branchId, amount, currency, method: input.method, reference: input.reference });
+        requestFingerprint = fingerprint;
+      const existingPayment = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).session(session).lean();
+      if (existingPayment) {
+        try { assertPaymentRequestMatches(existingPayment, fingerprint); }
+        catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Payment idempotency conflict"); }
+        return existingPayment;
+      }
+      const pendingProvider = input.method === "mpesa";
+        if (input.method === "credit") throw new BadRequestException("Credit is a settlement state, not a payment method");
       const payment = (
         await this.paymentModel.create(
           [
@@ -209,41 +234,52 @@ export class CustomersService {
               saleId: null,
               debtPaymentId: `${input.customerId}-${Date.now()}`,
               method: input.method,
-              status: "paid",
-              amount: input.amount,
+              status: pendingProvider ? "pending_confirmation" : "paid",
+              paymentState: pendingProvider ? "reconciliation_pending" : "posted",
+              amount,
+              currency,
+              recordedById: input.recordedById ?? null,
+              requestFingerprint: fingerprint,
               reference: input.reference ?? null,
               note: input.note ?? null,
-              provider: input.method === "mpesa" ? "tuma" : null,
-              reconciledAt: input.method === "mpesa" ? new Date() : null
+              provider: null,
+              reconciledAt: null
             }
           ],
           { session }
         )
       )[0]!;
-      customer.balance = Math.max(0, Number(customer.balance ?? 0) - Math.abs(input.amount));
-      await customer.save({ session });
       return payment.toObject();
-    });
+      }); } catch (error) {
+        if (!isDuplicateKeyError(error)) throw error;
+        const existing = await this.paymentModel.findOne({ businessId: input.businessId, externalId: input.externalId }).lean();
+        if (!existing || !requestFingerprint) throw error;
+        try { assertPaymentRequestMatches(existing, requestFingerprint); } catch (conflict) { throw new BadRequestException(conflict instanceof Error ? conflict.message : "Payment idempotency conflict"); }
+        return existing;
+      }
   }
 
   async analytics(businessId: string, scope: BranchScope = {}) {
+    const branchId = resolveReadBranchId(scope, scope.requestedBranchId ?? scope.branchId ?? null);
     const [customers, groups] = await Promise.all([this.list(businessId, scope), this.listGroups(businessId)]);
     const [sales, invoices, payments] = this.saleModel && this.invoiceModel
       ? await Promise.all([
-          this.saleModel.find({ businessId, deletedAt: null }).select({ customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
-          this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] } }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
-          this.paymentModel.find({ businessId, customerId: { $ne: null }, saleId: null, invoiceId: null, deletedAt: null }).select({ customerId: 1, amount: 1 }).lean()
+          this.saleModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).select({ _id: 1, customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
+          this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["draft", "void", "cancelled", "archived"] }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
+          this.paymentModel.find({ businessId, customerId: { $ne: null }, saleId: null, invoiceId: null, deletedAt: null, $and: [eligiblePaymentMatch(), buildBranchMatch(branchId)] }).select({ customerId: 1, amount: 1 }).lean()
         ])
       : [[], [], []];
     const canonicalBalances = new Map<string, number>();
+    const canonicalCredits = new Map<string, number>();
     for (const customer of customers) {
       const customerKey = String(customer.id ?? "");
       const keys = [customerKey, String((customer as { _id?: unknown })._id ?? "")].filter(Boolean);
       canonicalBalances.set(customerKey, calculateCustomerOutstanding({
-        sales: sales.filter((sale) => keys.includes(String(sale.customerId))).map((sale) => ({ id: String(sale.externalId ?? sale._id), balanceDue: Number(sale.balanceDue ?? 0), currency: sale.currency ?? null })),
+        sales: sales.filter((sale) => keys.includes(String(sale.customerId))).map((sale) => ({ _id: sale._id, id: String(sale.externalId ?? sale._id), externalId: sale.externalId ?? null, balanceDue: Number(sale.balanceDue ?? 0), currency: sale.currency ?? null })),
         invoices: invoices.filter((invoice) => keys.includes(String(invoice.customerId))).map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), saleId: invoice.saleId ?? null, balanceDue: Number(invoice.balanceDue ?? 0), currency: invoice.currency ?? null })),
         standalonePayments: payments.filter((payment) => keys.includes(String(payment.customerId)))
       }));
+      canonicalCredits.set(customerKey, calculateCustomerCredit(payments.filter((payment) => keys.includes(String(payment.customerId)))));
     }
     const groupById = new Map(groups.map((group) => [group.id, group]));
     const grouped = new Map<string | null, { groupId: string | null; groupName: string; customerCount: number; outstanding: number; loyaltyPoints: number }>();
@@ -271,6 +307,7 @@ export class CustomersService {
         customerId: customer.id,
         name: customer.name,
         balance: Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)),
+        customerCredit: Number(canonicalCredits.get(String(customer.id ?? "")) ?? 0),
         creditLimit: Number(customer.creditLimit ?? 0),
         loyaltyPoints: Number(customer.loyaltyPoints ?? 0)
       }));
@@ -278,6 +315,8 @@ export class CustomersService {
     return {
       totalCustomers: customers.length,
       totalOutstanding: customers.reduce((sum, customer) => sum + Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)), 0),
+      totalCustomerCredit: customers.reduce((sum, customer) => sum + Number(canonicalCredits.get(String(customer.id ?? "")) ?? 0), 0),
+      customerCredits: customers.map((customer) => ({ customerId: String(customer.id ?? ""), amount: Number(canonicalCredits.get(String(customer.id ?? "")) ?? 0) })),
       totalCreditLimit: customers.reduce((sum, customer) => sum + Math.max(0, Number(customer.creditLimit ?? 0)), 0),
       totalLoyaltyPoints: customers.reduce((sum, customer) => sum + Number(customer.loyaltyPoints ?? 0), 0),
       owingCustomers: customers.filter((customer) => Math.max(0, Number(canonicalBalances.get(String(customer.id ?? "")) ?? 0)) > 0).length,
@@ -292,12 +331,12 @@ export class CustomersService {
     if (!customer) throw new NotFoundException("Customer not found");
     const keys = [customer._id.toString(), customer.externalId].filter(Boolean) as string[];
     const [sales, invoices, payments] = await Promise.all([
-      this.saleModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null }).select({ _id: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
-      this.invoiceModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] } }).select({ _id: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
-      this.paymentModel.find({ businessId, customerId: { $in: keys }, saleId: null, invoiceId: null, deletedAt: null }).select({ amount: 1 }).lean()
+      this.saleModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null, ...buildBranchMatch(branchId) }).select({ _id: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
+      this.invoiceModel!.find({ businessId, customerId: { $in: keys }, deletedAt: null, status: { $nin: ["draft", "void", "cancelled", "archived"] }, ...buildBranchMatch(branchId) }).select({ _id: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean(),
+      this.paymentModel.find({ businessId, customerId: { $in: keys }, saleId: null, invoiceId: null, deletedAt: null, $and: [eligiblePaymentMatch(), buildBranchMatch(branchId)] }).select({ amount: 1 }).lean()
     ]);
     const calculatedBalance = calculateCustomerOutstanding({ sales, invoices, standalonePayments: payments });
-    return { customerId: customer.externalId ?? customer._id.toString(), name: customer.name, ...reconcileCustomerBalance(customer.balance, calculatedBalance), status: customer.balance < 0 ? "INVALID" : calculatedBalance === customer.balance ? "MATCH" : "MISMATCH" };
+    return { customerId: customer.externalId ?? customer._id.toString(), name: customer.name, customerCredit: calculateCustomerCredit(payments), ...reconcileCustomerBalance(customer.balance, calculatedBalance), status: customer.balance < 0 ? "INVALID" : calculatedBalance === customer.balance ? "MATCH" : "MISMATCH" };
   }
 
   async repairBalance(businessId: string, id: string, actorId: string, reason: string, operationId: string, scope: BranchScope = {}) {

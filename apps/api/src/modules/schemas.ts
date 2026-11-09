@@ -1032,6 +1032,12 @@ export class CreditNote {
   creditDate!: Date;
 
   @Prop({ type: Date, default: null })
+  issuedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  voidedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type CreditNoteDocument = HydratedDocument<CreditNote>;
@@ -1232,6 +1238,9 @@ export class DebitNote {
   issuedAt!: Date;
 
   @Prop({ type: Date, default: null })
+  voidedAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
 export type DebitNoteDocument = HydratedDocument<DebitNote>;
@@ -1254,6 +1263,9 @@ export interface SaleItem {
 export class Sale {
   @Prop({ type: String, index: true })
   externalId?: string | null;
+
+  @Prop({ type: String, default: null })
+  createFingerprint?: string | null;
 
   @Prop({ required: true, index: true })
   businessId!: string;
@@ -1339,8 +1351,23 @@ export class Payment {
   @Prop({ type: String, required: true })
   status!: PaymentStatus;
 
+  @Prop({ type: String, enum: ["posted", "reconciliation_pending", "reconciled", "failed", "reversed", "refunded"], default: "reconciliation_pending", index: true })
+  paymentState!: "posted" | "reconciliation_pending" | "reconciled" | "failed" | "reversed" | "refunded";
+
   @Prop({ required: true })
   amount!: number;
+
+  @Prop({ type: String, required: true, default: "KES" })
+  currency!: string;
+
+  @Prop({ type: String, default: null })
+  requestFingerprint?: string | null;
+
+  @Prop({ type: String, default: null })
+  recordedById?: string | null;
+
+  @Prop({ type: String, default: null })
+  reversalOfPaymentId?: string | null;
 
   @Prop({ type: String })
   reference?: string | null;

@@ -522,7 +522,7 @@ const RankedBarRow = React.memo(function RankedBarRow({
   );
 });
 
-function MonthlyGrowthCard({ growth, currency }: { growth: Array<{ month: string; revenue: number; growthPercent: number }>; currency: string }) {
+function MonthlyGrowthCard({ growth, currency }: { growth: Array<{ month: string; revenue: number; growthPercent: number | null }>; currency: string }) {
   return (
     <Card style={{ gap: 8 }}>
       <View style={{ gap: 4 }}>
@@ -532,15 +532,15 @@ function MonthlyGrowthCard({ growth, currency }: { growth: Array<{ month: string
       {growth.length ? (
         <View>
           {growth.map((point, index) => {
-            const hasPreviousPeriod = index > 0 && (growth[index - 1]?.revenue ?? 0) > 0;
-            const positive = point.growthPercent >= 0;
+            const hasPreviousPeriod = index > 0 && (growth[index - 1]?.revenue ?? 0) > 0 && point.growthPercent !== null;
+            const positive = (point.growthPercent ?? 0) >= 0;
             return (
               <View key={point.month} style={{ minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 7, borderTopWidth: 1, borderColor: tokens.colors.border }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                   <Text style={{ color: tokens.colors.text, fontWeight: "800" }}>{point.month}</Text>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 2 }}>
-                  <Text style={{ color: hasPreviousPeriod ? positive ? tokens.colors.success : tokens.colors.danger : tokens.colors.textMuted, fontSize: 11, fontWeight: "800" }}>{hasPreviousPeriod ? formatPercent(point.growthPercent) : "No baseline"}</Text>
+                  <Text style={{ color: hasPreviousPeriod ? positive ? tokens.colors.success : tokens.colors.danger : tokens.colors.textMuted, fontSize: 11, fontWeight: "800" }}>{hasPreviousPeriod ? formatPercent(point.growthPercent ?? 0) : "No baseline"}</Text>
                   <Text style={{ color: tokens.colors.textSecondary, fontSize: 11 }}>{formatMoney(point.revenue, currency)}</Text>
                 </View>
               </View>

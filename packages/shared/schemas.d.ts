@@ -143,7 +143,7 @@ export declare const saleCreateSchema: z.ZodObject<{
     customerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     cashierId: z.ZodOptional<z.ZodString>;
     paymentMethod: z.ZodEnum<["cash", "mpesa", "bank", "card", "cheque", "other", "credit"]>;
-    paymentStatus: z.ZodEnum<["paid", "partial", "pending_confirmation", "credit", "unpaid", "reconciled", "manual_mpesa"]>;
+    paymentStatus: z.ZodEnum<["paid", "partial", "pending_confirmation", "credit", "unpaid", "reconciled", "manual_mpesa", "failed", "reversed", "refunded"]>;
     items: z.ZodArray<z.ZodObject<{
         productId: z.ZodString;
         quantity: z.ZodNumber;
@@ -171,7 +171,7 @@ export declare const saleCreateSchema: z.ZodObject<{
     amountPaid: number;
     businessId: string;
     paymentMethod: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
-    paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa";
+    paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa" | "failed" | "reversed" | "refunded";
     items: {
         quantity: number;
         unitPrice: number;
@@ -188,7 +188,7 @@ export declare const saleCreateSchema: z.ZodObject<{
 }, {
     businessId: string;
     paymentMethod: "cash" | "mpesa" | "bank" | "card" | "cheque" | "other" | "credit";
-    paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa";
+    paymentStatus: "credit" | "paid" | "partial" | "pending_confirmation" | "unpaid" | "reconciled" | "manual_mpesa" | "failed" | "reversed" | "refunded";
     items: {
         quantity: number;
         unitPrice: number;
@@ -336,8 +336,8 @@ export declare const invoiceLineItemSchema: z.ZodObject<{
     unit: string;
     quantity: number;
     description: string;
-    taxRate: number;
     unitPrice: number;
+    taxRate: number;
     discountType: "percentage" | "fixed";
     discountValue: number;
     taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -396,8 +396,8 @@ export declare const invoiceCreateSchema: z.ZodObject<{
         unit: string;
         quantity: number;
         description: string;
-        taxRate: number;
         unitPrice: number;
+        taxRate: number;
         discountType: "percentage" | "fixed";
         discountValue: number;
         taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -425,7 +425,7 @@ export declare const invoiceCreateSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     currency: string;
     amountPaid: number;
-    status: "paid" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "refunded" | "archived";
+    status: "paid" | "refunded" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "archived";
     businessId: string;
     discountTotal: number;
     taxTotal: number;
@@ -436,8 +436,8 @@ export declare const invoiceCreateSchema: z.ZodObject<{
         unit: string;
         quantity: number;
         description: string;
-        taxRate: number;
         unitPrice: number;
+        taxRate: number;
         discountType: "percentage" | "fixed";
         discountValue: number;
         taxCategory: "vat" | "zero_rated" | "exempt" | "non_taxable" | "custom";
@@ -480,7 +480,7 @@ export declare const invoiceCreateSchema: z.ZodObject<{
         taxInclusive?: boolean | undefined;
     }[];
     amountPaid?: number | undefined;
-    status?: "paid" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "refunded" | "archived" | undefined;
+    status?: "paid" | "refunded" | "draft" | "cancelled" | "sent" | "viewed" | "partially_paid" | "overdue" | "void" | "archived" | undefined;
     branchId?: string | null | undefined;
     customerId?: string | null | undefined;
     notes?: string | null | undefined;

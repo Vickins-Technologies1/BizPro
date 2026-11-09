@@ -222,8 +222,8 @@ export function ReportsScreen() {
                 <ReportMetric label="Est. net margin" value={summary?.salesTotal ? `${Math.round(((summary.estimatedProfit ?? 0) / summary.salesTotal) * 100)}%` : "—"} tone={summary?.salesTotal && (summary.estimatedProfit ?? 0) / summary.salesTotal < 0 ? "danger" : "success"} />
               </View>
               <View style={{ height: 1, backgroundColor: tokens.colors.border }} />
-              <ReportMetric label="Outstanding balance · mixed date scope" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
-              <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>The existing debt calculation mixes period sales with all-date invoices and standalone payments.</Text>
+              <ReportMetric label="Current outstanding" value={formatMoney(summary?.debtTotal ?? 0, business?.currency)} tone="danger" />
+              <Text style={{ color: tokens.colors.textMuted, fontSize: 10 }}>Current open sale and invoice obligations, with linked records counted once. Unallocated customer payments remain customer credit.</Text>
             </Card>
 
             <IndustryReportFocus config={businessConfig} summary={summary} topProducts={topProducts} operations={operations} currency={business?.currency ?? "KES"} />

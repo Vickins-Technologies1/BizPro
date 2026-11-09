@@ -18,6 +18,56 @@ export function assertMoney(value: unknown, name: string, options: { min?: numbe
   return rounded;
 }
 
+/** Validate a new transaction amount against the repository's current 2-place currency convention. */
+export function assertCurrencyAmount(value: unknown, name: string, options: { min?: number; max?: number } = {}): number {
+  const amount = assertMoney(value, name, options);
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(amount)) * 4;
+  if (Math.abs((value as number) - amount) > tolerance) {
+    throw new Error(`${name} must have no more than 2 decimal places`);
+  }
+  if (!Number.isSafeInteger(Math.round(amount * MONEY_SCALE))) {
+    throw new Error(`${name} is outside the supported monetary range`);
+  }
+  return amount;
+}
+
+export function assertQuantity(value: unknown, name = "quantity"): number {
+  if (!isFiniteNumber(value) || value <= 0) throw new Error(`${name} must be greater than zero`);
+  if (!Number.isFinite(value * 1_000_000)) throw new Error(`${name} is outside the supported range`);
+  return value;
+}
+
+export function assertUnitPrice(value: unknown, name = "unitPrice"): number {
+  return assertCurrencyAmount(value, name, { min: 0 });
+}
+
+export function assertLineDiscount(value: unknown, lineSubtotal: number, name = "discount"): number {
+  return assertCurrencyAmount(value, name, { min: 0, max: lineSubtotal });
+}
+
+export function assertInvoiceDiscount(value: unknown, lineSubtotal: number, type: "percentage" | "fixed"): number {
+  return type === "percentage"
+    ? assertMoney(value, "Invoice discount percentage", { min: 0, max: 100 })
+    : assertCurrencyAmount(value, "Invoice discount", { min: 0, max: lineSubtotal });
+}
+
+export function assertTaxRate(value: unknown, name = "taxRate"): number {
+  return assertMoney(value, name, { min: 0, max: 1000 });
+}
+
+export function assertInitialPayment(value: unknown, grandTotal: number, name = "amountPaid"): number {
+  return assertCurrencyAmount(value, name, { min: 0, max: grandTotal });
+}
+
+export function assertSubsequentPayment(value: unknown, outstanding?: number, name = "Payment amount"): number {
+  return assertCurrencyAmount(value, name, { min: 0.01, ...(outstanding === undefined ? {} : { max: outstanding }) });
+}
+
+export function assertPaymentMethod<T extends string>(value: unknown, allowed: readonly T[], name = "payment method"): T {
+  if (typeof value !== "string" || !allowed.includes(value as T)) throw new Error(`${name} is not supported`);
+  return value as T;
+}
+
 export function calculatePercentage(value: number, percentage: number): number {
   return roundMoney(assertMoney(value, "value", { min: 0 }) * assertMoney(percentage, "percentage", { min: 0, max: 100 }) / 100);
 }
@@ -82,23 +132,55 @@ export type SaleCalculationLine = SaleCalculationLineInput & {
   lineTotal: number;
 };
 
-export function calculateSale(lines: SaleCalculationLineInput[], amountPaid: number) {
+export type SaleCalculationOptions = {
+  orderDiscount?: number;
+  taxRate?: number;
+  taxInclusive?: boolean;
+};
+
+export function calculateSale(lines: SaleCalculationLineInput[], amountPaid: number, options: SaleCalculationOptions = {}) {
   if (!lines.length) throw new Error("A sale must contain at least one item");
-  const calculatedLines = lines.map((line) => {
-    if (!isFiniteNumber(line.quantity) || line.quantity <= 0) throw new Error("Sale quantities must be greater than zero");
-    const quantity = line.quantity;
-    const unitPrice = assertMoney(line.unitPrice, "unitPrice", { min: 0 });
-    const unitCost = assertMoney(line.unitCost, "unitCost", { min: 0 });
+  const baseLines = lines.map((line) => {
+    const quantity = assertQuantity(line.quantity, "Sale quantity");
+    const unitPrice = assertUnitPrice(line.unitPrice);
+    const unitCost = assertCurrencyAmount(line.unitCost, "unitCost", { min: 0 });
     const lineSubtotal = roundMoney(unitPrice * quantity);
-    const lineDiscount = assertMoney(line.discount ?? 0, "discount", { min: 0, max: lineSubtotal });
-    const lineTax = assertMoney(line.tax ?? 0, "tax", { min: 0 });
-    const lineTotal = roundMoney(lineSubtotal - lineDiscount + lineTax);
-    return { ...line, quantity, unitPrice, unitCost, lineSubtotal, lineDiscount, lineTax, lineTotal };
+    const lineDiscount = assertLineDiscount(line.discount ?? 0, lineSubtotal);
+    return { ...line, quantity, unitPrice, unitCost, lineSubtotal, lineDiscount };
   });
-  const subtotal = roundMoney(calculatedLines.reduce((sum, line) => sum + line.lineSubtotal, 0));
-  const discountTotal = roundMoney(calculatedLines.reduce((sum, line) => sum + line.lineDiscount, 0));
+
+  const subtotal = roundMoney(baseLines.reduce((sum, line) => sum + line.lineSubtotal, 0));
+  const lineDiscountTotal = roundMoney(baseLines.reduce((sum, line) => sum + line.lineDiscount, 0));
+  const discountableSubtotal = roundMoney(subtotal - lineDiscountTotal);
+  const orderDiscount = assertCurrencyAmount(options.orderDiscount ?? 0, "orderDiscount", { min: 0, max: discountableSubtotal });
+  const orderDiscountMinor = Math.round(orderDiscount * MONEY_SCALE);
+  const discountableMinor = Math.round(discountableSubtotal * MONEY_SCALE);
+  let allocatedOrderDiscountMinor = 0;
+  const allocated = baseLines.map((line, index) => {
+    const lineBase = roundMoney(line.lineSubtotal - line.lineDiscount);
+    const lineBaseMinor = Math.round(lineBase * MONEY_SCALE);
+    const allocation = index === baseLines.length - 1
+      ? orderDiscountMinor - allocatedOrderDiscountMinor
+      : discountableMinor > 0
+        ? Math.floor(orderDiscountMinor * lineBaseMinor / discountableMinor)
+        : 0;
+    allocatedOrderDiscountMinor += allocation;
+    return { ...line, orderDiscountAllocation: allocation / MONEY_SCALE };
+  });
+
+  const taxRate = assertTaxRate(options.taxRate ?? 0);
+  const taxInclusive = options.taxInclusive ?? false;
+  const calculatedLines = allocated.map((line) => {
+    const taxableBase = roundMoney(line.lineSubtotal - line.lineDiscount - line.orderDiscountAllocation);
+    const lineTax = line.tax === undefined
+      ? calculateTax(taxableBase, taxRate, taxInclusive)
+      : assertCurrencyAmount(line.tax, "tax", { min: 0 });
+    const lineTotal = roundMoney(taxableBase + (taxInclusive ? 0 : lineTax));
+    return { ...line, lineTax, lineTotal };
+  });
+  const discountTotal = roundMoney(lineDiscountTotal + orderDiscount);
   const taxTotal = roundMoney(calculatedLines.reduce((sum, line) => sum + line.lineTax, 0));
   const grandTotal = roundMoney(calculatedLines.reduce((sum, line) => sum + line.lineTotal, 0));
-  const paid = assertMoney(amountPaid, "amountPaid", { min: 0, max: grandTotal });
+  const paid = assertInitialPayment(amountPaid, grandTotal);
   return { lines: calculatedLines, subtotal, discountTotal, taxTotal, grandTotal, amountPaid: paid, balanceDue: roundMoney(grandTotal - paid) };
 }

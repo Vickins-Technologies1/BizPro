@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { secureStore } from "@/storage/secure";
+import { roundMoney } from "@shared";
 import { cacheBusinessOperations, createBusinessOperationDraft, enqueueAction, isOfflineError, listCachedBusinessOperations, listQueuedBusinessOperations } from "@/services/offlineQueue";
 import type {
   AccessPermission,
@@ -254,6 +255,8 @@ function normalizeCustomerAnalytics(analytics: RawEntity): CustomerAnalytics {
   return {
     totalCustomers: Number(analytics.totalCustomers ?? 0),
     totalOutstanding: Number(analytics.totalOutstanding ?? 0),
+    totalCustomerCredit: Number(analytics.totalCustomerCredit ?? 0),
+    customerCredits: Array.isArray(analytics.customerCredits) ? analytics.customerCredits.map((credit: RawEntity) => ({ customerId: String(credit.customerId ?? ""), amount: Number(credit.amount ?? 0) })) : [],
     totalCreditLimit: Number(analytics.totalCreditLimit ?? 0),
     totalLoyaltyPoints: Number(analytics.totalLoyaltyPoints ?? 0),
     owingCustomers: Number(analytics.owingCustomers ?? 0),
@@ -271,6 +274,7 @@ function normalizeCustomerAnalytics(analytics: RawEntity): CustomerAnalytics {
           customerId: String(customer.customerId ?? customer.id ?? ""),
           name: String(customer.name ?? ""),
           balance: Number(customer.balance ?? 0),
+          customerCredit: Number(customer.customerCredit ?? 0),
           creditLimit: Number(customer.creditLimit ?? 0),
           loyaltyPoints: Number(customer.loyaltyPoints ?? 0)
         }))
@@ -408,9 +412,10 @@ async function readErrorMessage(response: Response) {
   const raw = await response.text();
   if (!raw) return fallback;
   try {
-    const parsed = JSON.parse(raw) as { message?: string | string[]; error?: string };
+    const parsed = JSON.parse(raw) as { message?: string | string[] | { message?: string }; error?: string };
     if (Array.isArray(parsed.message)) return parsed.message.join(", ");
     if (typeof parsed.message === "string" && parsed.message.trim()) return parsed.message;
+    if (parsed.message && typeof parsed.message === "object" && typeof parsed.message.message === "string") return parsed.message.message;
     if (typeof parsed.error === "string" && parsed.error.trim()) return parsed.error;
   } catch {
     // fall through
@@ -1407,10 +1412,17 @@ export async function createSale(input: {
   paymentMethod: Sale["paymentMethod"];
   paymentStatus?: Sale["paymentStatus"];
   amountPaid: number;
+  orderDiscount?: number;
+  discountTotal?: number;
+  expectedGrandTotal?: number;
+  grandTotal?: number;
+  paymentLines?: Array<{ method: Sale["paymentMethod"]; amount: number; reference?: string | null; note?: string | null }>;
   notes?: string | null;
   receiptNumber: string;
-  items: Array<{ productId: string; quantity: number; discount?: number; tax?: number; productName?: string; unitPrice?: number; costPrice?: number; lineDiscount?: number; lineTotal?: number }>;
+  items: Array<{ productId: string; quantity: number; discount?: number; expectedUnitPrice?: number; productName?: string; unitPrice?: number; costPrice?: number; lineDiscount?: number; lineTotal?: number }>;
 }) {
+  const lineDiscountTotal = input.items.reduce((sum, item) => sum + Number(item.discount ?? item.lineDiscount ?? 0), 0);
+  const orderDiscount = input.orderDiscount ?? (input.discountTotal === undefined ? 0 : roundMoney(Math.max(0, input.discountTotal - lineDiscountTotal)));
   const sale = await apiRequest<RawEntity>("/sales", {
     method: "POST",
     body: {
@@ -1420,9 +1432,12 @@ export async function createSale(input: {
       paymentMethod: input.paymentMethod,
       paymentStatus: input.paymentStatus ?? "unpaid",
       amountPaid: input.amountPaid,
+      orderDiscount,
+      expectedGrandTotal: input.expectedGrandTotal ?? input.grandTotal,
+      paymentLines: input.paymentLines,
       notes: input.notes,
       receiptNumber: input.receiptNumber,
-      items: input.items.map((item) => ({ productId: item.productId, quantity: item.quantity, discount: item.discount ?? item.lineDiscount ?? 0, tax: item.tax ?? 0 }))
+      items: input.items.map((item) => ({ productId: item.productId, quantity: item.quantity, discount: item.discount ?? item.lineDiscount ?? 0, expectedUnitPrice: item.expectedUnitPrice ?? item.unitPrice }))
     }
   });
   return withSaleItems(sale) as Sale;

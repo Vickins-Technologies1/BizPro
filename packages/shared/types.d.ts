@@ -210,6 +210,7 @@ export interface DebitNote extends BaseEntity {
     note?: string | null;
     status: "draft" | "issued" | "void";
     issuedAt: string;
+    voidedAt?: string | null;
 }
 export interface User extends BaseEntity {
     ownerId?: string | null;
@@ -324,9 +325,14 @@ export interface CustomerGroup extends BaseEntity {
 export interface CustomerAnalytics {
     totalCustomers: number;
     totalOutstanding: number;
+    totalCustomerCredit: number;
     totalCreditLimit: number;
     totalLoyaltyPoints: number;
     owingCustomers: number;
+    customerCredits: Array<{
+        customerId: string;
+        amount: number;
+    }>;
     grouped: Array<{
         groupId: string | null;
         groupName: string;
@@ -338,6 +344,7 @@ export interface CustomerAnalytics {
         customerId: string;
         name: string;
         balance: number;
+        customerCredit: number;
         creditLimit: number;
         loyaltyPoints: number;
     }>;
@@ -501,6 +508,7 @@ export interface Payment {
     debtPaymentId?: string | null;
     method: PaymentMethod;
     status: PaymentStatus;
+    paymentState?: "posted" | "reconciliation_pending" | "reconciled" | "failed" | "reversed" | "refunded";
     amount: number;
     reference?: string | null;
     note?: string | null;
@@ -562,6 +570,8 @@ export interface CreditNote extends BaseEntity {
     reason: string;
     note?: string | null;
     creditDate: string;
+    issuedAt?: string | null;
+    voidedAt?: string | null;
     status: "draft" | "issued" | "void";
 }
 export interface FinanceInvoice {
@@ -608,6 +618,9 @@ export interface FinanceOverview {
     creditNoteCount: number;
     creditNoteTotal: number;
     paymentTotal: number;
+    pendingPaymentTotal?: number;
+    failedPaymentTotal?: number;
+    customerCreditTotal?: number;
     bankBalanceTotal: number;
     pettyCashBalance: number;
 }
@@ -640,7 +653,7 @@ export interface EnterpriseAnalytics {
         staffCount: number;
         averageOrderValue: number;
         profitTotal: number;
-        monthlyGrowthPercent: number;
+        monthlyGrowthPercent: number | null;
         forecastRevenue: number;
         inventoryTurnover: number;
     };
@@ -667,7 +680,7 @@ export interface EnterpriseAnalytics {
     monthlyGrowth: Array<{
         month: string;
         revenue: number;
-        growthPercent: number;
+        growthPercent: number | null;
     }>;
     forecast: Array<{
         month: string;
@@ -706,6 +719,8 @@ export interface DailySummary {
     date: string;
     salesTotal: number;
     transactionsCount?: number;
+    itemsSold?: number;
+    taxTotal?: number;
     grossProfit?: number;
     expensesTotal: number;
     cogsTotal: number;

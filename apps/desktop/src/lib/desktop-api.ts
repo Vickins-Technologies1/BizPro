@@ -210,7 +210,13 @@ let saleRequestInFlight = false;
 
 export const api = {
   me: () => request<Omit<Session, "accessToken">>("/auth/me"),
-  dashboard: (branchId?: string | null) => request<ApiEntity>(`/reports/summary${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`).then(normalizeSummary) as Promise<DailySummary>,
+  dashboard: (branchId?: string | null, from?: string, to?: string) => {
+    const query = new URLSearchParams();
+    if (branchId) query.set("branchId", branchId);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return request<ApiEntity>(`/reports/summary${query.size ? `?${query.toString()}` : ""}`).then(normalizeSummary) as Promise<DailySummary>;
+  },
   products: async (branchId?: string | null) => (await request<ApiEntity[]>(`/products${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`)).map(normalizeProduct) as unknown as Product[],
   productsPage: (params: { branchId?: string | null; page?: number; pageSize?: number; search?: string } = {}) => {
     const query = new URLSearchParams();

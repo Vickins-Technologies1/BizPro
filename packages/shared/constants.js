@@ -54,6 +54,9 @@ exports.PAYMENT_STATUSES = [
     "unpaid",
     "reconciled",
     "manual_mpesa",
+    "failed",
+    "reversed",
+    "refunded",
 ];
 exports.SYNC_ACTIONS = [
     "create",

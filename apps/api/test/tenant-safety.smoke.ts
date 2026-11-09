@@ -35,9 +35,49 @@ async function main() {
   await testSalesService(SalesService);
   await testSalesServiceInvalidProductId(SalesService);
   await testInvoicePaymentBranchQuery(InvoicesController);
+  await testInvoiceFinancialValidation();
   await testPurchaseOrderIdentityAndBranch(PurchaseOrdersService);
   await testStockTransferIdentity(StockTransfersService);
   console.log("Tenant safety smoke checks passed.");
+}
+
+async function testInvoiceFinancialValidation() {
+  const { InvoicesService } = require("../src/modules/invoices/invoices.service") as { InvoicesService: new (...args: any[]) => any };
+  const service = new InvoicesService(...Array.from({ length: 11 }, () => ({})));
+  const calculate = (input: Record<string, unknown>) => (service as any).calculateLineItem({
+    description: "Test line",
+    quantity: 1,
+    unit: "pcs",
+    unitPrice: 100,
+    discountType: "fixed",
+    discountValue: 0,
+    taxCategory: "vat",
+    taxRate: 16,
+    taxInclusive: false,
+    ...input
+  });
+  const line = calculate({});
+  assert.equal(line.lineSubtotal, 100);
+  assert.equal(line.lineTotal, 116);
+  assert.throws(() => calculate({ quantity: 0 }), /quantity/i);
+  assert.throws(() => calculate({ quantity: -1 }), /quantity/i);
+  assert.throws(() => calculate({ unitPrice: -1 }), /unit price/i);
+  assert.throws(() => calculate({ discountValue: 100.01, discountType: "percentage" }), /percentage/i);
+  assert.throws(() => calculate({ discountValue: 100.01 }), /discount/i);
+  assert.throws(() => calculate({ taxRate: 1001 }), /tax rate/i);
+
+  const prepare = (amountPaid: number) => (service as any).prepareInvoicePayload({
+    businessId: "business-1",
+    issueDate: new Date(),
+    dueDate: new Date(),
+    paymentTerms: "Due now",
+    currency: "KES",
+    lineItems: [{ description: "Test line", quantity: 1, unit: "pcs", unitPrice: 100, taxCategory: "exempt", taxRate: 0 }],
+    amountPaid
+  });
+  assert.equal(prepare(100).record.balanceDue, 0);
+  assert.throws(() => prepare(-1), /amountPaid/i);
+  assert.throws(() => prepare(100.01), /amountPaid/i);
 }
 
 function loadServices() {
@@ -304,7 +344,7 @@ async function testCustomersService(CustomersService: any) {
 
   const paymentModel = {
     findOne() {
-      return { lean: async () => null };
+      return { session() { return this; }, lean: async () => null };
     },
     create(input: Record<string, unknown>) {
       const payload = Array.isArray(input) ? input[0] ?? {} : input;
@@ -360,6 +400,7 @@ async function testCustomersService(CustomersService: any) {
   await service.recordPayment({
     businessId: "business-1",
     customerId: "customer-1",
+    externalId: "debt-payment-1",
     amount: 25,
     method: "cash",
     reference: "ref-1",
@@ -400,6 +441,25 @@ async function testCustomersService(CustomersService: any) {
     method: "cash"
   }, { role: "cashier", branchId: "branch-1" });
   assert.equal((calls.find((call) => call.method === "payment.create")?.input as Record<string, unknown> | undefined)?.branchId, "branch-1");
+
+  calls.length = 0;
+  await assert.rejects(() => service.recordPayment({
+    businessId: "business-1",
+    customerId: "customer-1",
+    externalId: "invalid-payment-negative",
+    amount: -1,
+    method: "cash"
+  }), /at least/);
+  await service.recordPayment({
+    businessId: "business-1",
+    customerId: "customer-1",
+    externalId: "advance-payment-over-balance",
+    amount: 76,
+    method: "cash"
+  });
+  assert.equal(calls.some((call) => call.method === "payment.create"), true, "advance payments may exceed outstanding debt and remain unapplied customer credit");
+  assert.equal((calls.find((call) => call.method === "payment.create")?.input as Record<string, unknown> | undefined)?.amount, 76);
+  assert.equal(customerDoc.balance, 90, "recording an unallocated advance does not change gross receivables");
 }
 
 async function testCustomersListWithInvalidAttachmentDate(CustomersService: any) {
@@ -604,12 +664,16 @@ async function testSalesService(SalesService: any) {
     businessId: "business-1",
     balance: 40
   });
+  let existingSale: Record<string, unknown> | null = null;
 
   const saleModel = {
-    findOne() { return leanResult(null); },
+    findOne(query: Record<string, unknown>) {
+      return leanResult(existingSale && query.externalId === existingSale.externalId ? existingSale : null);
+    },
     create(input: Record<string, unknown>) {
       const payload = Array.isArray(input) ? input[0] ?? {} : input;
       calls.push({ method: "sale.create", input: payload });
+      existingSale = { _id: "sale-1", ...payload };
       return Promise.resolve([
         {
           _id: "sale-1",
@@ -708,7 +772,8 @@ async function testSalesService(SalesService: any) {
   });
   const saleCreate = calls.find((call) => call.method === "sale.create")?.input as Record<string, unknown>;
   assert.equal(saleCreate.grandTotal, 100);
-  assert.equal(saleCreate.balanceDue, 5);
+  assert.equal(saleCreate.amountPaid, 45);
+  assert.equal(saleCreate.balanceDue, 55);
   const saleItem = (saleCreate.items as Array<Record<string, unknown>>)[0];
   assert.equal(saleItem.unitPrice, 50);
   assert.equal(saleItem.costPrice, 20);
@@ -725,10 +790,118 @@ async function testSalesService(SalesService: any) {
     ["cash", 45, null, "sale-external-1:payment:0"],
     ["mpesa", 50, "MPESA-123", "sale-external-1:payment:1"]
   ]);
+  assert.equal(recordedPayments[1]!.status, "pending_confirmation");
+  assert.equal(recordedPayments[1]!.reconciledAt, null);
 
   calls.length = 0;
   await service.create({
     businessId: "business-1",
+    externalId: "sale-external-1",
+    customerId: "customer-external-1",
+    receiptNumber: "R-001",
+    amountPaid: 95,
+    paymentStatus: "partial",
+    paymentMethod: "cash",
+    paymentLines: [{ method: "cash", amount: 45 }, { method: "mpesa", amount: 50, reference: "MPESA-123" }],
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 2, discount: 0 }]
+  });
+  assert.equal(calls.some((call) => call.method === "sale.create" || call.method === "payment.create" || call.method === "product.findOneAndUpdate"), false, "retry with the same sale key does not post twice");
+
+  calls.length = 0;
+  await assert.rejects(() => service.create({
+    businessId: "business-1",
+    externalId: "sale-invalid-tender",
+    receiptNumber: "R-STALE",
+    amountPaid: 95,
+    paymentStatus: "partial",
+    paymentMethod: "cash",
+    paymentLines: [{ method: "cash", amount: 94 }],
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 2, discount: 0 }]
+  }), /Payment lines must add up exactly/);
+  assert.equal(calls.length, 0, "mismatched tenders are rejected before transaction writes");
+
+  await assert.rejects(() => service.create({
+    businessId: "business-1",
+    externalId: "sale-invalid-method",
+    receiptNumber: "R-METHOD",
+    amountPaid: 1,
+    paymentStatus: "partial",
+    paymentMethod: "cash",
+    paymentLines: [{ method: "unsupported" as any, amount: 1 }],
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 1, discount: 0 }]
+  }), /not supported/);
+  assert.equal(calls.length, 0, "unsupported payment methods are rejected before transaction writes");
+
+  calls.length = 0;
+  await assert.rejects(() => service.create({
+    businessId: "business-1",
+    externalId: "sale-stale-price",
+    receiptNumber: "R-STALE",
+    amountPaid: 0,
+    paymentStatus: "unpaid",
+    paymentMethod: "cash",
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 1, expectedUnitPrice: 49.99 }]
+  }), /catalog price changed/i);
+  assert.equal(calls.some((call) => call.method === "sale.create" || call.method === "product.findOneAndUpdate"), false, "stale checkout does not persist a sale or deduct inventory");
+
+  calls.length = 0;
+  await service.create({
+    businessId: "business-1",
+    externalId: "sale-discounted",
+    receiptNumber: "R-003",
+    amountPaid: 95,
+    orderDiscount: 5,
+    expectedGrandTotal: 95,
+    paymentStatus: "paid",
+    paymentMethod: "cash",
+    paymentLines: [{ method: "cash", amount: 45 }, { method: "bank", amount: 50, reference: "BANK-1" }],
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 2, discount: 0, expectedUnitPrice: 50 }]
+  });
+  const discountedSale = calls.find((call) => call.method === "sale.create")?.input as Record<string, unknown>;
+  assert.equal(discountedSale.grandTotal, 95);
+  assert.equal(discountedSale.discountTotal, 5);
+  assert.equal((discountedSale.items as Array<Record<string, unknown>>)[0]!.lineDiscount, 5);
+  assert.deepEqual((calls.find((call) => call.method === "payment.create")?.input as Array<Record<string, unknown>>).map((row) => [row.method, row.amount]), [["cash", 45], ["bank", 50]]);
+
+  calls.length = 0;
+  const businessModel = {
+    findOne() {
+      return { session() { return { lean: async () => ({ currency: "KES", businessType: "retail", taxSettings: { defaultTaxCategory: "vat", defaultTaxRate: 16, defaultTaxInclusive: false } }) }; } };
+    }
+  };
+  const taxedService = new SalesService(saleModel as any, paymentModel as any, movementModel as any, productModel as any, customerModel as any, connection as any, businessModel as any);
+  await taxedService.create({
+    businessId: "business-1",
+    externalId: "sale-taxed",
+    receiptNumber: "R-TAX",
+    amountPaid: 0,
+    orderDiscount: 5,
+    expectedGrandTotal: 110.2,
+    paymentStatus: "unpaid",
+    paymentMethod: "cash",
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 2, discount: 0, expectedUnitPrice: 50 }]
+  });
+  const taxedSale = calls.find((call) => call.method === "sale.create")?.input as Record<string, unknown>;
+  assert.equal(taxedSale.taxTotal, 15.2);
+  assert.equal(taxedSale.grandTotal, 110.2);
+  calls.length = 0;
+  await assert.rejects(() => taxedService.create({
+    businessId: "business-1",
+    externalId: "sale-taxed-stale",
+    receiptNumber: "R-TAX-STALE",
+    amountPaid: 0,
+    orderDiscount: 5,
+    expectedGrandTotal: 95,
+    paymentStatus: "unpaid",
+    paymentMethod: "cash",
+    items: [{ productId: "QnV7IFpJ6tXuU_wB", quantity: 2, discount: 0, expectedUnitPrice: 50 }]
+  }), /tax settings or discounts changed/i);
+  assert.equal(calls.some((call) => call.method === "sale.create" || call.method === "product.findOneAndUpdate"), false, "changed tax settings do not create a sale or deduct stock");
+
+  calls.length = 0;
+  await service.create({
+    businessId: "business-1",
+    externalId: "sale-customer-link",
     customerId: "customer-external-1",
     receiptNumber: "R-002",
     amountPaid: 50,
@@ -758,6 +931,7 @@ async function testSalesServiceInvalidProductId(SalesService: any) {
   };
 
   const saleModel = {
+    findOne() { return { lean: async () => null }; },
     create() {
       throw new Error("sale.create should not run for invalid products");
     }
@@ -799,6 +973,7 @@ async function testSalesServiceInvalidProductId(SalesService: any) {
   await assert.rejects(
     service.create({
       businessId: "business-1",
+      externalId: "sale-invalid-product",
       receiptNumber: "R-002",
       subtotal: 50,
       discountTotal: 0,

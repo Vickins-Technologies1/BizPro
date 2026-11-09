@@ -1,18 +1,26 @@
 {
   "cli": {
-    "version": ">= 22.4.0",
+    "version": ">= 25.3.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "autoIncrement": true
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "autoIncrement": true
+      }
     },
     "production": {
-      "autoIncrement": true
+      "android": {
+        "autoIncrement": true
+      }
     }
   },
   "submit": {

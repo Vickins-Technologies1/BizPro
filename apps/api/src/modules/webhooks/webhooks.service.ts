@@ -14,16 +14,15 @@ export class WebhooksService {
   async receiveTuma(payload: Record<string, unknown>) {
     const log = await this.webhookLogModel.create({ provider: "tuma", eventType: String(payload.eventType ?? "callback"), payload, status: "received" });
     const reference = String(payload.reference ?? payload.transactionId ?? "");
-    const payment = reference ? await this.paymentModel.findOneAndUpdate({ reference }, { status: "reconciled", reconciledAt: new Date(), provider: "tuma" }, { new: true }) : null;
     await this.reconciliationLogModel.create({
-      businessId: String(payload.businessId ?? payment?.businessId ?? "unknown"),
-      paymentId: payment?._id.toString() ?? null,
+      businessId: "unknown",
+      paymentId: null,
       reference: reference || "unknown",
-      status: payment ? "matched" : "pending",
+      status: "pending",
       payload
     });
-    await this.webhookLogModel.findByIdAndUpdate(log._id, { status: "processed" });
-    return { ok: true };
+    await this.webhookLogModel.findByIdAndUpdate(log._id, { status: "processed", error: "Callback was logged but not verified; no payment state or balance was changed" });
+    return { ok: true, status: "pending_verification" };
   }
 
   logs(businessId: string) {

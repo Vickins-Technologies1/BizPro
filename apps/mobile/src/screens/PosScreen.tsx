@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { resolveBusinessTypeConfig, type Sale } from "@shared";
+import { calculateSale, resolveBusinessTypeConfig, roundMoney, type Sale } from "@shared";
 import { useAppStore } from "@/store/useAppStore";
 import { AppScrollView, Badge, Card, Dropdown, EmptyState, GradientHeader, InputField, PrimaryButton, Screen, SimpleModal } from "@/components/Primitives";
 import { SectionHeader } from "@/components/DesignSystem";
@@ -40,6 +40,7 @@ export function PosScreen() {
   const createSale = useAppStore((state) => state.createSale);
   const recordSalePayment = useAppStore((state) => state.recordSalePayment);
   const loadCatalog = useAppStore((state) => state.loadCatalog);
+  const refreshBusiness = useAppStore((state) => state.refreshBusiness);
   const businessConfig = resolveBusinessTypeConfig({ businessType: business?.businessType, industryKey: business?.industryKey });
   const primaryAction = businessConfig.workspace.primaryAction;
   const catalogLabel = businessConfig.navigation.catalogLabel;
@@ -78,6 +79,8 @@ export function PosScreen() {
   const [laterPaymentMethod, setLaterPaymentMethod] = React.useState<Sale["paymentMethod"]>("cash");
   const [laterPaymentReference, setLaterPaymentReference] = React.useState("");
   const [laterPaymentNote, setLaterPaymentNote] = React.useState("");
+  const [laterPaymentExternalId, setLaterPaymentExternalId] = React.useState(createId());
+  const [checkoutExternalId, setCheckoutExternalId] = React.useState(createId());
   const [savingLaterPayment, setSavingLaterPayment] = React.useState(false);
   const [scannerVisible, setScannerVisible] = React.useState(false);
   const deferredSearch = React.useDeferredValue(search);
@@ -148,21 +151,34 @@ export function PosScreen() {
   }, [deferredProductSearch, products]);
   const lookupMatch = React.useMemo(() => findProductByCode(products, lookupCode), [lookupCode, products]);
 
-  const subtotal = React.useMemo(() => cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0), [cart]);
+  const cartSubtotal = React.useMemo(() => cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0), [cart]);
   const lineDiscountTotal = React.useMemo(() => cart.reduce((sum, line) => sum + line.discount, 0), [cart]);
+  const discountableSubtotal = Math.max(0, cartSubtotal - lineDiscountTotal);
   const orderDiscountTotal = React.useMemo(() => {
     const parsed = Number(discountValue || 0);
     if (!parsed) return 0;
-    return discountMode === "percent" ? (subtotal * parsed) / 100 : parsed;
-  }, [discountMode, discountValue, subtotal]);
-  const taxableSubtotal = Math.max(0, subtotal - lineDiscountTotal - orderDiscountTotal);
-  const taxTotal = React.useMemo(() => {
-    const parsed = Number(taxValue || 0);
-    if (!parsed) return 0;
-    return taxMode === "percent" ? (taxableSubtotal * parsed) / 100 : parsed;
-  }, [taxMode, taxValue, taxableSubtotal]);
-  const total = checkoutMode === "return" ? -(taxableSubtotal + taxTotal) : taxableSubtotal + taxTotal;
+    return discountMode === "percent" ? roundMoney((discountableSubtotal * parsed) / 100) : parsed;
+  }, [discountMode, discountValue, discountableSubtotal]);
   const amountPaid = React.useMemo(() => payments.reduce((sum, line) => sum + Number(line.amount || 0), 0), [payments]);
+  const taxSettings = business?.taxSettings;
+  const taxCategory = taxSettings?.defaultTaxCategory ?? "vat";
+  const taxRate = ["zero_rated", "exempt", "non_taxable"].includes(taxCategory) ? 0 : Number(taxSettings?.defaultTaxRate ?? 0);
+  const saleCalculation = React.useMemo(() => {
+    try {
+      return calculateSale(cart.map((line) => ({ quantity: line.quantity, unitPrice: line.unitPrice, unitCost: line.costPrice, discount: line.discount })), amountPaid, {
+        orderDiscount: orderDiscountTotal,
+        taxRate,
+        taxInclusive: taxSettings?.defaultTaxInclusive ?? false
+      });
+    } catch {
+      return null;
+    }
+  }, [amountPaid, cart, orderDiscountTotal, taxRate, taxSettings?.defaultTaxInclusive]);
+  const subtotal = saleCalculation?.subtotal ?? cartSubtotal;
+  const discountTotal = saleCalculation?.discountTotal ?? lineDiscountTotal + orderDiscountTotal;
+  const taxTotal = saleCalculation?.taxTotal ?? 0;
+  const calculatedTotal = saleCalculation?.grandTotal ?? Math.max(0, cartSubtotal - lineDiscountTotal - orderDiscountTotal + taxTotal);
+  const total = checkoutMode === "return" ? -calculatedTotal : calculatedTotal;
   const balanceDue = Math.max(0, total - amountPaid);
   const paymentStatus = amountPaid >= total ? "paid" : amountPaid > 0 ? "partial" : "unpaid";
   const paymentMethod = payments[0]?.method ?? paymentMode;
@@ -180,6 +196,7 @@ export function PosScreen() {
   }
 
   function openLaterPayment(sale: Sale) {
+    setLaterPaymentExternalId(createId());
     setPaymentSale(sale);
     setLaterPaymentAmount(String(sale.balanceDue));
     setLaterPaymentMethod("cash");
@@ -202,15 +219,17 @@ export function PosScreen() {
     try {
       const sale = await recordSalePayment({
         saleId: paymentSale.id,
+        externalId: laterPaymentExternalId,
         amount,
         method: laterPaymentMethod,
         reference: laterPaymentReference.trim() || null,
         note: laterPaymentNote.trim() || null
       });
       setPaymentSale(null);
-      Alert.alert(sale.balanceDue <= 0 ? "Sale fully paid" : "Payment recorded", sale.balanceDue <= 0
-        ? `${sale.receiptNumber} is now fully paid.`
-        : `${formatMoney(amount, business?.currency ?? "KES")} recorded. ${formatMoney(sale.balanceDue, business?.currency ?? "KES")} remains due.`);
+      setLaterPaymentExternalId(createId());
+      Alert.alert(laterPaymentMethod === "mpesa" ? "M-Pesa pending verification" : sale.balanceDue <= 0 ? "Sale fully paid" : "Payment recorded", laterPaymentMethod === "mpesa"
+        ? `${formatMoney(amount, business?.currency ?? "KES")} is pending verification. ${formatMoney(sale.balanceDue, business?.currency ?? "KES")} remains due until it is confirmed.`
+        : sale.balanceDue <= 0 ? `${sale.receiptNumber} is now fully paid.` : `${formatMoney(amount, business?.currency ?? "KES")} recorded. ${formatMoney(sale.balanceDue, business?.currency ?? "KES")} remains due.`);
     } catch (error) {
       Alert.alert("Payment failed", error instanceof Error ? error.message : "Could not record payment.");
     } finally {
@@ -273,6 +292,7 @@ export function PosScreen() {
   }
 
   function clearSaleForm() {
+    setCheckoutExternalId(createId());
     setCart([]);
     setProductSearch("");
     setLookupCode("");
@@ -349,7 +369,7 @@ export function PosScreen() {
 
   function buildSalePreview() {
     const note = buildCheckoutNote();
-    const lines = cart.map((line) => ({
+    const lines = cart.map((line, index) => ({
       id: createId(),
       saleId: "preview",
       productId: line.productId,
@@ -357,8 +377,9 @@ export function PosScreen() {
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       costPrice: line.costPrice,
-      lineDiscount: line.discount,
-      lineTotal: line.unitPrice * line.quantity - line.discount
+      lineDiscount: line.discount + (saleCalculation?.lines[index]?.orderDiscountAllocation ?? 0),
+      lineTax: saleCalculation?.lines[index]?.lineTax ?? 0,
+      lineTotal: saleCalculation?.lines[index]?.lineTotal ?? line.unitPrice * line.quantity - line.discount
     }));
     const sale = {
       id: currentDraftId ?? "preview",
@@ -367,7 +388,7 @@ export function PosScreen() {
       customerId,
       receiptNumber: `PREVIEW-${Date.now().toString().slice(-6)}`,
       subtotal,
-      discountTotal: lineDiscountTotal + orderDiscountTotal,
+      discountTotal,
       taxTotal,
       grandTotal: total,
       amountPaid,
@@ -431,6 +452,7 @@ export function PosScreen() {
   }
 
   async function loadDraft(draft: PosDraft) {
+    setCheckoutExternalId(createId());
     setCheckoutMode(draft.mode);
     setCustomerId(draft.customerId ?? null);
     setCart(draft.cart);
@@ -453,6 +475,14 @@ export function PosScreen() {
       Alert.alert(`Add ${catalogItemLabel.toLowerCase()}s`, `Choose at least one ${catalogItemLabel.toLowerCase()} before recording the transaction.`);
       return;
     }
+    if (!saleCalculation) {
+      if (checkoutMode === "sale" && amountPaid > calculatedTotal) {
+        Alert.alert("Payment exceeds total", "Reduce the payment lines to the amount being applied after any cash change. The app will not cap or discard payment amounts.");
+      } else {
+        Alert.alert("Check checkout values", "Enter valid quantities, discounts, and payment amounts before recording this sale.");
+      }
+      return;
+    }
 
     if (checkoutMode === "return") {
       savingRef.current = true;
@@ -473,12 +503,14 @@ export function PosScreen() {
     try {
       const note = buildCheckoutNote();
       const result = await createSale({
+        externalId: checkoutExternalId,
         customerId,
         paymentMethod: paymentMode,
         paymentStatus,
         amountPaid,
-        discountTotal: lineDiscountTotal + orderDiscountTotal,
-        taxTotal,
+        orderDiscount: orderDiscountTotal,
+        expectedGrandTotal: saleCalculation.grandTotal,
+        paymentLines: payments.map(({ method, amount, reference, note: paymentNote }) => ({ method, amount: Number(amount), reference: reference?.trim() || null, note: paymentNote?.trim() || null })),
         notes: note ?? (paymentMode === "mpesa" ? "Mobile payment pending STK confirmation" : null),
         items: cart.map((line) => ({
           productId: line.productId,
@@ -495,7 +527,18 @@ export function PosScreen() {
       await refreshDrafts();
       Alert.alert("Sale recorded", "The sale has been saved and the history has been refreshed.");
     } catch (error) {
-      Alert.alert("Save failed", error instanceof Error ? error.message : "Failed to record sale");
+      const message = error instanceof Error ? error.message : "Failed to record sale";
+      if (message.toLowerCase().includes("changed")) {
+        await Promise.allSettled([loadCatalog(), refreshBusiness()]);
+        const latestProducts = useAppStore.getState().products;
+        setCart((current) => current.map((line) => {
+          const product = latestProducts.find((candidate) => candidate.id === line.productId);
+          return product ? { ...line, name: product.name, unitPrice: product.sellingPrice, costPrice: product.buyingPrice } : line;
+        }));
+        Alert.alert("Checkout changed", `${message} Review the refreshed catalog and total before recording it again.`);
+      } else {
+        Alert.alert("Save failed", message);
+      }
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -770,14 +813,9 @@ export function PosScreen() {
                     <Text style={{ color: tokens.colors.text, fontSize: 13, fontWeight: "900", marginLeft: "auto" }}>{formatMoney(line.unitPrice * line.quantity - line.discount, business?.currency ?? "KES")}</Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
-                    <View style={{ flex: 1 }}>
-                      <InputField
-                        label="Unit price"
-                        value={String(line.unitPrice)}
-                        onChangeText={(text) => setCart((current) => current.map((item) => item.productId === line.productId ? { ...item, unitPrice: Number(text || 0) } : item))}
-                        keyboardType="decimal-pad"
-                        helperText="Current item price."
-                      />
+                    <View style={{ flex: 1, justifyContent: "center", minHeight: 56 }}>
+                      <Text style={{ color: tokens.colors.textSecondary, fontSize: 12 }}>Catalog price</Text>
+                      <Text style={{ color: tokens.colors.text, fontSize: 15, fontWeight: "800" }}>{formatMoney(line.unitPrice, business?.currency ?? "KES")}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <InputField
@@ -853,8 +891,9 @@ export function PosScreen() {
                   placeholder="Optional note"
                 />
                 <Text style={{ color: tokens.colors.textMuted, fontSize: 11 }}>
-                  Paid {formatMoney(amountPaid, business?.currency ?? "KES")} • Due {formatMoney(balanceDue, business?.currency ?? "KES")} • Change {formatMoney(changeDue, business?.currency ?? "KES")}
+                  Paid {formatMoney(amountPaid, business?.currency ?? "KES")} • Due {formatMoney(balanceDue, business?.currency ?? "KES")}
                 </Text>
+                {changeDue > 0 ? <Text style={{ color: tokens.colors.warning, fontSize: 11 }}>Reduce the payment lines by any cash change before recording. Payments cannot exceed the sale total.</Text> : null}
               </View>
             ) : null}
 
@@ -908,23 +947,9 @@ export function PosScreen() {
                   keyboardType="decimal-pad"
                   helperText={discountMode === "percent" ? "Percent off the subtotal after line discounts." : "Flat discount amount."}
                 />
-                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                  {[
-                    { value: "flat" as const, label: "Flat" },
-                    { value: "percent" as const, label: "Percent" }
-                  ].map((option) => (
-                    <Pressable key={`tax-${option.value}`} onPress={() => setTaxMode(option.value)}>
-                      <Badge label={`Tax ${option.label}`} tone={taxMode === option.value ? "success" : "primary"} />
-                    </Pressable>
-                  ))}
-                </View>
-                <InputField
-                  label="Tax"
-                  value={taxValue}
-                  onChangeText={setTaxValue}
-                  keyboardType="decimal-pad"
-                  helperText={taxMode === "percent" ? "Percentage applied after discount." : "Flat tax amount."}
-                />
+                <Text style={{ color: tokens.colors.textSecondary }}>
+                  Tax uses the business setting: {taxCategory.replaceAll("_", " ")} · {taxRate}%{taxSettings?.defaultTaxInclusive ? " inclusive" : " exclusive"}.
+                </Text>
               </Card>
 
               <Card style={{ gap: 10 }}>
@@ -938,7 +963,7 @@ export function PosScreen() {
                       </Pressable>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                      {(["cash", "mpesa", "bank", "credit"] as const).map((method) => (
+                      {(["cash", "mpesa", "bank", "card", "cheque", "other", "credit"] as const).map((method) => (
                         <Pressable key={`${payment.id}-${method}`} onPress={() => updatePaymentLine(payment.id, { method })}>
                           <Badge label={formatPaymentMethodLabel(method)} tone={payment.method === method ? "success" : "primary"} />
                         </Pressable>

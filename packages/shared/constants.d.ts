@@ -2,7 +2,7 @@ export declare const BUSINESS_TYPES: readonly ["retail_shop", "boutique", "cosme
 export declare const PLAN_TIERS: readonly ["command", "pro", "elite", "enterprise"];
 export declare const USER_ROLES: readonly ["owner", "manager", "supervisor", "cashier", "waiter", "receptionist", "stylist", "mechanic", "pharmacist"];
 export declare const PAYMENT_METHODS: readonly ["cash", "mpesa", "bank", "card", "cheque", "other", "credit"];
-export declare const PAYMENT_STATUSES: readonly ["paid", "partial", "pending_confirmation", "credit", "unpaid", "reconciled", "manual_mpesa"];
+export declare const PAYMENT_STATUSES: readonly ["paid", "partial", "pending_confirmation", "credit", "unpaid", "reconciled", "manual_mpesa", "failed", "reversed", "refunded"];
 export declare const SYNC_ACTIONS: readonly ["create", "update", "delete", "upsert", "reconcile"];
 export declare const INVENTORY_UNITS: readonly ["pcs", "box", "pack", "kg", "g", "litre", "ml", "dozen"];
 export declare const CURRENCY_DEFAULT = "KES";

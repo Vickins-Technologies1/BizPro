@@ -194,7 +194,7 @@ export function DashboardScreen() {
     () => filterSalesToRange(sales, currentRange),
     [sales, currentRange?.from, currentRange?.to]
   );
-  const periodSalesTotal = periodSales.reduce((total, sale) => total + sale.grandTotal, 0);
+  const periodSalesTotal = periodSales.reduce((total, sale) => total + sale.grandTotal - sale.taxTotal, 0);
   const revenueTotal = summary?.salesTotal ?? (periodSales.length ? periodSalesTotal : null);
   const comparisonPercent = summary && previousSummary && previousSummary.salesTotal > 0
     ? ((summary.salesTotal - previousSummary.salesTotal) / previousSummary.salesTotal) * 100
@@ -1110,7 +1110,7 @@ function buildSalesTrend(sales: Sale[], range: RangeState | null) {
     if (!Number.isFinite(createdAt) || createdAt < start || createdAt >= end) continue;
     const index = Math.min(count - 1, Math.floor(((createdAt - start) / duration) * count));
     const bucket = buckets[index];
-    if (bucket) bucket.value += sale.grandTotal;
+    if (bucket) bucket.value += sale.grandTotal - sale.taxTotal;
   }
   return buckets.map((bucket) => ({ label: format(new Date(bucket.from), count <= 6 && duration <= 62 * 86400000 ? "MMM d" : "MMM"), value: bucket.value }));
 }

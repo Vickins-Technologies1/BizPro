@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { IsArray, IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { toSafeIsoString } from "../../common/date-normalizer";
+import { PAYMENT_METHODS } from "@vbo/shared";
 import { CustomersService } from "./customers.service";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { RolesGuard } from "../../common/roles.guard";
@@ -17,7 +18,7 @@ class CustomerAttachmentDto {
 
 class CreateCustomerDto {
   @IsString() businessId!: string;
-  @IsOptional() @IsString() externalId?: string;
+  @IsString() externalId!: string;
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() groupId?: string | null;
   @IsString() name!: string;
@@ -51,7 +52,7 @@ class UpdateCustomerDto {
 
 class CreateCustomerGroupDto {
   @IsString() businessId!: string;
-  @IsOptional() @IsString() externalId?: string;
+    @IsString() externalId!: string;
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string | null;
   @IsOptional() @IsString() color?: string | null;
@@ -67,8 +68,8 @@ class UpdateCustomerGroupDto {
 }
 
 class RecordPaymentDto {
-  @IsNumber() amount!: number;
-  @IsString() method!: "cash" | "mpesa" | "bank" | "credit";
+  @IsNumber() @Min(0.01) amount!: number;
+  @IsIn(PAYMENT_METHODS) method!: (typeof PAYMENT_METHODS)[number];
   @IsOptional() @IsString() externalId?: string;
   @IsOptional() @IsString() branchId?: string | null;
   @IsOptional() @IsString() reference?: string;

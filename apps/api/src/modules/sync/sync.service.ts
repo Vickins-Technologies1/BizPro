@@ -399,27 +399,7 @@ export class SyncService {
       return;
     }
     if (event.entityType === "payment") {
-      const payment = event.payload as Record<string, unknown>;
-      const paymentExternalId = String(payment.id ?? event.entityId);
-      await this.paymentModel.findOneAndUpdate(
-        { businessId, externalId: paymentExternalId },
-        {
-          externalId: paymentExternalId,
-          businessId,
-          customerId: (payment.customerId as string | null) ?? null,
-          saleId: (payment.saleId as string | null) ?? null,
-          debtPaymentId: (payment.debtPaymentId as string | null) ?? null,
-          method: String(payment.method ?? "cash"),
-          status: String(payment.status ?? "paid"),
-          amount: Number(payment.amount ?? 0),
-          reference: (payment.reference as string | null) ?? null,
-          note: (payment.note as string | null) ?? null,
-          provider: (payment.provider as string | null) ?? null,
-          reconciledAt: payment.reconciledAt ? new Date(String(payment.reconciledAt)) : null
-        },
-        { upsert: true, new: true }
-      );
-      return;
+      throw new BadRequestException("Raw payment sync is disabled; replay the typed sale, invoice, or customer payment request with its original idempotency key");
     }
     if (event.entityType === "stockMovement") {
       const movementId = String(event.entityId);

@@ -12,7 +12,7 @@ class SaleItemDto {
   @IsString() productId!: string;
   @IsNumber() @Min(Number.EPSILON) quantity!: number;
   @IsOptional() @IsNumber() @Min(0) discount?: number;
-  @IsOptional() @IsNumber() @Min(0) tax?: number;
+  @IsOptional() @IsNumber() @Min(0) expectedUnitPrice?: number;
 }
 
 class SalePaymentLineDto {
@@ -23,12 +23,14 @@ class SalePaymentLineDto {
 }
 
 class CreateSaleDto {
-  @IsOptional() @IsString() externalId?: string;
+  @IsString() externalId!: string;
   @IsOptional() @IsString() branchId?: string;
   @IsOptional() @IsString() customerId?: string;
   @IsOptional() @IsString() cashierId?: string;
   @IsString() receiptNumber!: string;
   @IsNumber() amountPaid!: number;
+  @IsOptional() @IsNumber() @Min(0) orderDiscount?: number;
+  @IsOptional() @IsNumber() @Min(0) expectedGrandTotal?: number;
   @IsIn(PAYMENT_STATUSES) paymentStatus!: any;
   @IsIn(PAYMENT_METHODS) paymentMethod!: any;
   @IsOptional() @Type(() => SalePaymentLineDto) @ValidateNested({ each: true }) @IsArray() paymentLines?: SalePaymentLineDto[];

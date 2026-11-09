@@ -67,6 +67,18 @@ class CreateCreditNoteDto {
   @IsDateString() creditDate!: string;
 }
 
+class PaymentDispositionDto {
+  @IsString() reason!: string;
+  @IsIn(["reversal", "refund"]) kind!: "reversal" | "refund";
+}
+
+class ReconcilePaymentDto {
+  @IsString() providerReference!: string;
+  @IsNumber() @Min(0.01) verifiedAmount!: number;
+  @IsString() verifiedCurrency!: string;
+  @IsString() reason!: string;
+}
+
 @Controller("finance")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FinanceController {
@@ -88,6 +100,18 @@ export class FinanceController {
   @Roles("owner", "manager")
   payments(@CurrentUser() user: { businessId: string; role?: string; branchId?: string | null }, @Query("from") from?: string, @Query("to") to?: string, @Query("branchId") branchId?: string) {
     return this.finance.payments(user.businessId, from, to, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Post("payments/:id/disposition")
+  @Roles("owner", "manager")
+  paymentDisposition(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: PaymentDispositionDto, @Query("branchId") branchId?: string) {
+    return this.finance.reversePayment(user.businessId, id, dto.reason, dto.kind, user.sub, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
+  }
+
+  @Post("payments/:id/reconcile")
+  @Roles("owner", "manager")
+  reconcilePayment(@CurrentUser() user: { businessId: string; sub: string; role?: string; branchId?: string | null }, @Param("id") id: string, @Body() dto: ReconcilePaymentDto, @Query("branchId") branchId?: string) {
+    return this.finance.reconcilePendingPayment(user.businessId, id, { ...dto, actorId: user.sub }, { role: user.role ?? null, branchId: user.branchId ?? null, requestedBranchId: branchId ?? null });
   }
 
   @Get("credit-notes")

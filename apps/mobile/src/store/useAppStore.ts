@@ -10,6 +10,7 @@ import { businessSetupSchema, loginSchema } from "@shared";
 import { resolveIndustryKey } from "@shared";
 import { initialThemeMode, resolveThemeMode, setThemeTokens, type ThemeMode, type ThemePreference } from "@/theme/tokens";
 import type { AccessPermission } from "@shared";
+import { assertPaymentMethod, assertSubsequentPayment, calculateSale, PAYMENT_METHODS, roundMoney } from "@shared";
 import {
   countQueuedActions,
   createBrandDraft,
@@ -238,6 +239,7 @@ interface AppState {
   syncSystemTheme: () => void;
   loadDashboard: () => Promise<void>;
   loadCatalog: (options?: { skipProducts?: boolean }) => Promise<void>;
+  refreshBusiness: () => Promise<void>;
   setSelectedBranchId: (branchId: string | null) => Promise<void>;
   syncBranches: (branches: Branch[]) => Promise<void>;
   rehydrateQueuedState: () => Promise<void>;
@@ -249,16 +251,18 @@ interface AppState {
   addCustomer: (input: Omit<Customer, "id" | "createdAt" | "updatedAt" | "deletedAt" | "balance" | "creditLimit" | "loyaltyPoints" | "attachments"> & { balance?: number; creditLimit?: number; loyaltyPoints?: number; attachments?: CustomerAttachment[] }) => Promise<Customer>;
   updateCustomer: (input: { customerId: string; patch: Partial<Pick<Customer, "groupId" | "name" | "phone" | "email" | "creditLimit" | "loyaltyPoints" | "notes" | "attachments">> & { branchId?: string | null } }) => Promise<Customer>;
   addExpense: (input: Omit<Expense, "id" | "createdAt" | "updatedAt" | "deletedAt">) => Promise<Expense>;
-  recordDebtPayment: (input: { customerId: string; amount: number; method: Sale["paymentMethod"]; reference?: string | null; note?: string | null }) => Promise<Payment>;
-  recordSalePayment: (input: { saleId: string; amount: number; method: Sale["paymentMethod"]; reference?: string | null; note?: string | null }) => Promise<Sale>;
+  recordDebtPayment: (input: { customerId: string; amount: number; method: Sale["paymentMethod"]; externalId?: string; reference?: string | null; note?: string | null }) => Promise<Payment>;
+  recordSalePayment: (input: { saleId: string; amount: number; method: Sale["paymentMethod"]; externalId?: string; reference?: string | null; note?: string | null }) => Promise<Sale>;
   createSale: (input: {
+    externalId?: string;
     branchId?: string | null;
     customerId?: string | null;
     paymentMethod: Sale["paymentMethod"];
     paymentStatus: Sale["paymentStatus"];
     amountPaid: number;
-    discountTotal?: number;
-    taxTotal?: number;
+    orderDiscount?: number;
+    expectedGrandTotal?: number;
+    paymentLines?: Array<{ method: Sale["paymentMethod"]; amount: number; reference?: string | null; note?: string | null }>;
     notes?: string | null;
     items: Array<{ productId: string; quantity: number; unitPrice: number; costPrice: number; discount: number }>;
   }) => Promise<{ sale: Sale; receipt: ReceiptArtifacts }>;
@@ -293,8 +297,8 @@ function upsertById<T extends { id: string }>(items: T[], item: T) {
 }
 
 function applySalePayment(sale: Sale, amount: number): Sale {
-  const amountPaid = Number((sale.amountPaid + amount).toFixed(2));
-  const balanceDue = Math.max(0, Number((sale.balanceDue - amount).toFixed(2)));
+  const amountPaid = roundMoney(sale.amountPaid + amount);
+  const balanceDue = roundMoney(Math.max(0, sale.balanceDue - amount));
   return { ...sale, amountPaid, balanceDue, paymentStatus: balanceDue <= 0 ? "paid" : "partial" };
 }
 
@@ -723,6 +727,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }).catch(() => undefined);
     await get().rehydrateQueuedState();
   },
+  refreshBusiness: async () => {
+    const current = get().business;
+    if (!current) return;
+    const session = await authMe();
+    if (session.business.id === current.id) set({ business: session.business, user: session.user });
+  },
   setSelectedBranchId: async (branchId) => {
     const state = get();
     const resolvedBranchId =
@@ -809,11 +819,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             nextExpenses = upsertById(nextExpenses, createExpenseDraft(action.payload));
             break;
           case "recordCustomerPayment":
-            nextCustomers = nextCustomers.map((customer) =>
-              customer.id === action.payload.customerId
-                ? { ...customer, balance: Math.max(0, customer.balance - Math.abs(action.payload.amount)) }
-                : customer
-            );
             break;
           case "recordSalePayment": {
             const sale = nextSales.find((row) => row.id === action.payload.saleId);
@@ -1217,23 +1222,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const businessId = get().business?.id;
     const branchId = resolveWriteBranchId(get());
     if (!businessId) throw new Error("No business loaded");
+    const customer = get().customers.find((row) => row.id === input.customerId);
+    const amount = assertSubsequentPayment(input.amount);
+    assertPaymentMethod(input.method, PAYMENT_METHODS);
     const payload = {
       businessId,
       branchId,
       customerId: input.customerId,
-      externalId: createId(),
-      amount: input.amount,
+      externalId: input.externalId ?? createId(),
+      amount,
       method: input.method,
       reference: input.reference ?? null,
       note: input.note ?? null
     };
     try {
       const payment = await recordCustomerPayment(input.customerId, payload);
-      set((state) => ({
-        customers: state.customers.map((customer) =>
-          customer.id === input.customerId ? { ...customer, balance: Math.max(0, customer.balance - Math.abs(input.amount)) } : customer
-        )
-      }));
       await Promise.allSettled([get().loadDashboard(), get().loadCatalog(), get().refreshPendingSync()]);
       return payment;
     } catch (error) {
@@ -1248,9 +1251,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       const payment = createPaymentDraft(payload);
       set((state) => ({
-        customers: state.customers.map((customer) =>
-          customer.id === input.customerId ? { ...customer, balance: Math.max(0, customer.balance - Math.abs(input.amount)) } : customer
-        ),
         pendingSync: state.pendingSync + 1,
         syncMessage: "Payment saved locally. Waiting to sync..."
       }));
@@ -1261,11 +1261,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const businessId = get().business?.id;
     const branchId = resolveWriteBranchId(get());
     if (!businessId) throw new Error("No business loaded");
+    const sale = get().sales.find((row) => row.id === input.saleId);
+    const amount = assertSubsequentPayment(input.amount, sale?.balanceDue);
+    assertPaymentMethod(input.method, PAYMENT_METHODS);
     const payload = {
       businessId,
       saleId: input.saleId,
-      externalId: createId(),
-      amount: input.amount,
+      externalId: input.externalId ?? createId(),
+      amount,
       method: input.method,
       reference: input.reference ?? null,
       note: input.note ?? null,
@@ -1275,22 +1278,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       const result = await apiRecordSalePayment(input.saleId, payload);
       set((state) => ({
         sales: state.sales.map((sale) => sale.id === result.sale.id ? result.sale : sale),
-        customers: result.sale.customerId
-          ? state.customers.map((customer) => customer.id === result.sale.customerId ? { ...customer, balance: Math.max(0, Number((customer.balance - input.amount).toFixed(2))) } : customer)
+        customers: input.method !== "mpesa" && result.sale.customerId
+          ? state.customers.map((customer) => customer.id === result.sale.customerId ? { ...customer, balance: Math.max(0, roundMoney(customer.balance - amount)) } : customer)
           : state.customers
       }));
       void Promise.allSettled([get().loadDashboard(), get().loadCatalog()]);
       return result.sale;
     } catch (error) {
       if (!isOfflineError(error)) throw error;
-      const sale = get().sales.find((row) => row.id === input.saleId);
-      if (!sale) throw new Error("Sale is not available on this device");
+      const availableSale = get().sales.find((row) => row.id === input.saleId);
+      if (!availableSale) throw new Error("Sale is not available on this device");
       await enqueueAction({ id: createQueueId(), businessId, kind: "recordSalePayment", payload });
-      const updatedSale = applySalePayment(sale, input.amount);
+      const updatedSale = input.method === "mpesa" ? availableSale : applySalePayment(availableSale, amount);
       set((state) => ({
         sales: state.sales.map((row) => row.id === input.saleId ? updatedSale : row),
-        customers: sale.customerId
-          ? state.customers.map((customer) => customer.id === sale.customerId ? { ...customer, balance: Math.max(0, Number((customer.balance - input.amount).toFixed(2))) } : customer)
+        customers: input.method !== "mpesa" && availableSale.customerId
+          ? state.customers.map((customer) => customer.id === availableSale.customerId ? { ...customer, balance: Math.max(0, roundMoney(customer.balance - amount)) } : customer)
           : state.customers,
         pendingSync: state.pendingSync + 1,
         syncMessage: "Payment saved locally. Waiting to sync..."
@@ -1302,13 +1305,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     const business = get().business;
     if (!business) throw new Error("No business loaded");
     const branchId = resolveWriteBranchId(get(), input.branchId ?? null);
-    const externalId = createId();
+    const externalId = input.externalId ?? createId();
     const receiptNumber = createReceiptNumber();
-    const subtotal = input.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const discountTotal = input.discountTotal ?? input.items.reduce((sum, item) => sum + item.discount, 0);
-    const taxTotal = input.taxTotal ?? 0;
-    const grandTotal = subtotal - discountTotal + taxTotal;
-    const balanceDue = Math.max(0, grandTotal - input.amountPaid);
+    const taxSettings = business.taxSettings;
+    const taxCategory = taxSettings?.defaultTaxCategory ?? "vat";
+    const taxRate = ["zero_rated", "exempt", "non_taxable"].includes(taxCategory) ? 0 : Number(taxSettings?.defaultTaxRate ?? 0);
+    const paymentLines = input.paymentLines?.length ? input.paymentLines : [{ method: input.paymentMethod, amount: input.amountPaid }];
+    const tenderMinor = paymentLines.reduce((sum, line) => sum + Math.round(line.amount * 100), 0);
+    if (!Number.isSafeInteger(tenderMinor) || tenderMinor !== Math.round(input.amountPaid * 100)) {
+      throw new Error("Payment lines must add up exactly to the amount paid.");
+    }
+    let calculation;
+    try {
+      calculation = calculateSale(input.items.map((item) => ({
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        unitCost: item.costPrice,
+        discount: item.discount
+      })), input.amountPaid, {
+        orderDiscount: input.orderDiscount ?? 0,
+        taxRate,
+        taxInclusive: taxSettings?.defaultTaxInclusive ?? false
+      });
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "Invalid checkout values");
+    }
+    const { subtotal, discountTotal, taxTotal, grandTotal, balanceDue } = calculation;
     const payload = {
       businessId: business.id,
       externalId,
@@ -1316,7 +1338,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       customerId: input.customerId ?? null,
       paymentMethod: input.paymentMethod,
       paymentStatus: input.paymentStatus,
-      amountPaid: input.amountPaid,
+      amountPaid: calculation.amountPaid,
+      orderDiscount: input.orderDiscount ?? 0,
+      expectedGrandTotal: input.expectedGrandTotal ?? grandTotal,
+      paymentLines,
       discountTotal,
       taxTotal,
       grandTotal,
@@ -1324,19 +1349,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       receiptNumber,
       subtotal,
       balanceDue,
-      items: input.items.map((item) => {
+      items: input.items.map((item, index) => {
         const product = get().products.find((candidate) => candidate.id === item.productId);
-        const taxableBase = input.items.reduce((sum, candidate) => sum + Math.max(0, candidate.unitPrice * candidate.quantity - candidate.discount), 0);
-        const itemBase = Math.max(0, item.unitPrice * item.quantity - item.discount);
+        const calculatedLine = calculation.lines[index]!;
         return {
           productId: product?.serverId ?? item.productId,
           productName: product?.name ?? item.productId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          expectedUnitPrice: item.unitPrice,
           costPrice: item.costPrice,
-          lineDiscount: item.discount,
-          lineTotal: item.unitPrice * item.quantity - item.discount,
-          tax: taxableBase > 0 ? (input.taxTotal ?? 0) * (itemBase / taxableBase) : 0
+          lineDiscount: calculation.lines[index]!.lineDiscount + calculation.lines[index]!.orderDiscountAllocation,
+          lineTotal: calculatedLine.lineTotal
         };
       })
     };

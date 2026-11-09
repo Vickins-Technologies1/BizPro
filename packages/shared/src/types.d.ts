@@ -152,6 +152,10 @@ export interface SyncCheckpoint {
 export interface DailySummary {
     date: string;
     salesTotal: number;
+    transactionsCount?: number;
+    itemsSold?: number;
+    taxTotal?: number;
+    grossProfit?: number;
     expensesTotal: number;
     cogsTotal: number;
     estimatedProfit: number;

@@ -55,6 +55,9 @@ export const PAYMENT_STATUSES = [
   "unpaid",
   "reconciled",
   "manual_mpesa",
+  "failed",
+  "reversed",
+  "refunded",
 ] as const;
 
 export const SYNC_ACTIONS = [

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { addMonths, eachMonthOfInterval, endOfDay, format, startOfDay, startOfMonth, subMonths } from "date-fns";
-import { Customer, CustomerDocument, Expense, ExpenseDocument, Invoice, InvoiceDocument, Payment, PaymentDocument, Product, ProductDocument, Sale, SaleDocument, User, UserDocument } from "../schemas";
+import { Customer, CustomerDocument, Expense, ExpenseDocument, Invoice, InvoiceDocument, Product, ProductDocument, Sale, SaleDocument, User, UserDocument } from "../schemas";
 import { calculateCustomerOutstanding } from "../customers/customer-balance";
 import { calculateNetProfit } from "@vbo/shared";
 import type { EnterpriseAnalytics } from "@vbo/shared";
@@ -16,8 +16,7 @@ export class AnalyticsService {
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
     @InjectModel(Customer.name) private readonly customerModel: Model<CustomerDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-    @InjectModel(Invoice.name) private readonly invoiceModel: Model<InvoiceDocument>,
-    @InjectModel(Payment.name) private readonly paymentModel: Model<PaymentDocument>
+    @InjectModel(Invoice.name) private readonly invoiceModel: Model<InvoiceDocument>
   ) {}
 
   async enterprise(businessId: string, from?: string, to?: string, scope: BranchScope = {}) {
@@ -29,13 +28,13 @@ export class AnalyticsService {
     const saleMatch: Record<string, unknown> = { businessId, deletedAt: null, ...buildBranchMatch(branchId), createdAt: { $gte: start, $lte: end } };
     const expenseMatch: Record<string, unknown> = { businessId, deletedAt: null, ...buildBranchMatch(branchId), expenseDate: { $gte: start, $lte: end } };
 
-    const [monthlySales, monthlyCosts, monthlyExpenses, peakHours, topProducts, topCustomers, staffPerformance, products, customers, users, allCustomerSales, allCustomerInvoices, allCustomerPayments] = await Promise.all([
+    const [monthlySales, monthlyCosts, monthlyExpenses, peakHours, topProducts, topCustomers, staffPerformance, products, customers, users, allCustomerSales, allCustomerInvoices] = await Promise.all([
       this.saleModel.aggregate([
         { $match: saleMatch },
         {
           $group: {
             _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-            revenue: { $sum: "$grandTotal" },
+            revenue: { $sum: { $subtract: ["$grandTotal", { $ifNull: ["$taxTotal", 0] }] } },
             salesCount: { $sum: 1 }
           }
         },
@@ -68,7 +67,7 @@ export class AnalyticsService {
         {
           $group: {
             _id: { $hour: "$createdAt" },
-            revenue: { $sum: "$grandTotal" },
+            revenue: { $sum: { $subtract: ["$grandTotal", { $ifNull: ["$taxTotal", 0] }] } },
             salesCount: { $sum: 1 }
           }
         },
@@ -83,7 +82,7 @@ export class AnalyticsService {
             _id: "$items.productId",
             productName: { $first: "$items.productName" },
             quantity: { $sum: "$items.quantity" },
-            revenue: { $sum: "$items.lineTotal" },
+            revenue: { $sum: { $subtract: [{ $ifNull: ["$items.lineTotal", 0] }, { $ifNull: ["$items.lineTax", 0] }] } },
             cogs: { $sum: { $multiply: ["$items.costPrice", "$items.quantity"] } }
           }
         },
@@ -96,7 +95,7 @@ export class AnalyticsService {
         {
           $group: {
             _id: "$customerId",
-            revenue: { $sum: "$grandTotal" },
+            revenue: { $sum: { $subtract: ["$grandTotal", { $ifNull: ["$taxTotal", 0] }] } },
             visits: { $sum: 1 }
           }
         },
@@ -109,7 +108,7 @@ export class AnalyticsService {
         {
           $group: {
             _id: "$cashierId",
-            revenue: { $sum: "$grandTotal" },
+            revenue: { $sum: { $subtract: ["$grandTotal", { $ifNull: ["$taxTotal", 0] }] } },
             orders: { $sum: 1 }
           }
         },
@@ -118,10 +117,9 @@ export class AnalyticsService {
       ]),
       this.productModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
       this.customerModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
-      this.userModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean()
-      ,this.saleModel.find({ businessId, deletedAt: null, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean()
-      ,this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["void", "cancelled", "archived"] }, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean()
-      ,this.paymentModel.find({ businessId, deletedAt: null, customerId: { $ne: null }, saleId: null, invoiceId: null, ...buildBranchMatch(branchId) }).select({ customerId: 1, amount: 1 }).lean()
+      this.userModel.find({ businessId, deletedAt: null, ...buildBranchMatch(branchId) }).lean(),
+      this.saleModel.find({ businessId, deletedAt: null, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, balanceDue: 1, currency: 1 }).lean(),
+      this.invoiceModel.find({ businessId, deletedAt: null, status: { $nin: ["draft", "void", "cancelled", "archived"] }, customerId: { $ne: null }, ...buildBranchMatch(branchId) }).select({ customerId: 1, externalId: 1, saleId: 1, balanceDue: 1, currency: 1 }).lean()
     ]);
 
     const monthRevenue = new Map(monthlySales.map((row: any) => [String(row._id), { revenue: Number(row.revenue ?? 0), salesCount: Number(row.salesCount ?? 0) }]));
@@ -146,11 +144,11 @@ export class AnalyticsService {
     const profitTrends = revenueTrend;
     const monthlyGrowth = revenueTrend.map((point, index) => {
       const previous = revenueTrend[index - 1]?.revenue ?? 0;
-      const growthPercent = previous > 0 ? ((point.revenue - previous) / previous) * 100 : point.revenue > 0 ? 100 : 0;
+      const growthPercent = index > 0 && previous > 0 ? ((point.revenue - previous) / previous) * 100 : null;
       return {
         month: point.period,
         revenue: point.revenue,
-        growthPercent: roundDecimal(growthPercent)
+        growthPercent: growthPercent === null ? null : roundDecimal(growthPercent)
       };
     });
     const forecast = forecastRevenue(revenueTrend.map((point) => point.revenue)).map((revenue, index) => ({
@@ -178,8 +176,7 @@ export class AnalyticsService {
       const keys = [String(customer._id), customer.externalId].filter(Boolean);
       canonicalCustomerBalances.set(String(customer.externalId ?? customer._id), calculateCustomerOutstanding({
         sales: allCustomerSales.filter((sale) => keys.includes(String(sale.customerId))).map((sale) => ({ id: String(sale.externalId ?? sale._id), balanceDue: sale.balanceDue, currency: sale.currency })),
-        invoices: allCustomerInvoices.filter((invoice) => keys.includes(String(invoice.customerId))).map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), saleId: invoice.saleId ?? null, balanceDue: Number(invoice.balanceDue ?? 0), currency: invoice.currency ?? null })),
-        standalonePayments: allCustomerPayments.filter((payment) => keys.includes(String(payment.customerId))),
+        invoices: allCustomerInvoices.filter((invoice) => keys.includes(String(invoice.customerId))).map((invoice) => ({ id: String(invoice.externalId ?? invoice._id), saleId: invoice.saleId ?? null, balanceDue: Number(invoice.balanceDue ?? 0), currency: invoice.currency ?? null }))
       }));
     }
     const userMap = new Map(users.map((user) => [String(user._id), user]));
@@ -249,7 +246,7 @@ export class AnalyticsService {
       staffCount,
       averageOrderValue,
       profitTotal,
-      monthlyGrowthPercent: monthlyGrowth.length ? monthlyGrowth[monthlyGrowth.length - 1]?.growthPercent ?? 0 : 0,
+      monthlyGrowthPercent: monthlyGrowth.length ? monthlyGrowth[monthlyGrowth.length - 1]?.growthPercent ?? null : null,
       forecastRevenue: forecast[0]?.revenue ?? 0,
       inventoryTurnover: inventoryTurnover > 0 ? inventoryTurnover : soldQuantity / Math.max(1, totalStockOnHand)
     };

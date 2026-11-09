@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build": "expo export",
+    "release:android": "node scripts/android-release.cjs",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:smoke": "node test/offline-queue.smoke.cjs",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@babel/runtime": "^7.29.7",
     "@brooons/react-native-bluetooth-escpos-printer": "^1.2.0",
+    "@expo/metro-runtime": "~5.0.5",
     "@expo/vector-icons": "^14.0.4",
     "@hookform/resolvers": "^3.9.0",
     "@react-native-community/netinfo": "^11.3.1",
@@ -56,6 +58,7 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
+    "react-native-web": "~0.20.0",
     "zod": "^3.23.8",
     "zustand": "^4.5.4"
   },
@@ -64,7 +67,7 @@
     "@types/react": "^19.0.14",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-preset-expo": "~13.0.0",
-    "eas-cli": "^21.3.0",
+    "eas-cli": "^25.3.0",
     "typescript": "~5.8.3"
   }
 }

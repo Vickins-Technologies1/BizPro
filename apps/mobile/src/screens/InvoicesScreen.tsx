@@ -75,6 +75,7 @@ type InvoiceEditorState = {
   visible: boolean;
   mode: InvoiceEditorMode;
   invoiceId: string | null;
+  externalId: string;
   customerMode: CustomerMode;
   customerId: string;
   customerName: string;
@@ -93,6 +94,7 @@ type InvoiceEditorState = {
   notes: string;
   termsAndConditions: string;
   amountPaid: string;
+  initialPaymentMethod: string;
   lineItems: LineEditor[];
   sendOnSave: boolean;
 };
@@ -100,6 +102,7 @@ type InvoiceEditorState = {
 type PaymentEditorState = {
   visible: boolean;
   invoiceId: string | null;
+  externalId: string;
   amount: string;
   method: string;
   paymentDate: string;
@@ -143,6 +146,7 @@ function createInvoiceEditor(businessCurrency: string, invoice?: Invoice | null)
     visible: true,
     mode: invoice ? "edit" : "create",
     invoiceId: invoice?.id ?? null,
+    externalId: invoice?.externalId ?? createId(),
     customerMode: invoice?.customerId ? "existing" : "new",
     customerId: invoice?.customerId ?? "",
     customerName: invoice?.customerName ?? "",
@@ -161,6 +165,7 @@ function createInvoiceEditor(businessCurrency: string, invoice?: Invoice | null)
     notes: invoice?.notes ?? "",
     termsAndConditions: invoice?.termsAndConditions ?? "",
     amountPaid: String(invoice?.amountPaid ?? 0),
+    initialPaymentMethod: "cash",
     lineItems:
       invoice?.lineItems?.length
         ? invoice.lineItems.map((line) => ({
@@ -186,6 +191,7 @@ function createPaymentEditor(invoiceId: string | null, amount = "0"): PaymentEdi
   return {
     visible: true,
     invoiceId,
+    externalId: createId(),
     amount,
     method: "cash",
     paymentDate: format(new Date(), "yyyy-MM-dd"),
@@ -429,12 +435,13 @@ export function InvoicesScreen() {
         notes: editor.notes.trim() || null,
         termsAndConditions: editor.termsAndConditions.trim() || null,
         amountPaid: Number(editor.amountPaid || 0),
+        initialPaymentMethod: editor.initialPaymentMethod,
         lineItems
       };
 
       let invoice: Invoice;
       if (editor.mode === "create") {
-        invoice = await createInvoice(payload as any);
+        invoice = await createInvoice({ ...payload, externalId: editor.externalId } as any);
       } else {
         invoice = await updateInvoice(editor.invoiceId!, payload as any);
       }
@@ -769,6 +776,7 @@ export function InvoicesScreen() {
             <InputField label="Notes" value={editor.notes} onChangeText={(value) => setEditor((state) => (state ? { ...state, notes: value } : state))} multiline numberOfLines={3} />
             <InputField label="Terms & conditions" value={editor.termsAndConditions} onChangeText={(value) => setEditor((state) => (state ? { ...state, termsAndConditions: value } : state))} multiline numberOfLines={3} />
             <InputField label="Amount paid" value={editor.amountPaid} onChangeText={(value) => setEditor((state) => (state ? { ...state, amountPaid: value } : state))} keyboardType="decimal-pad" />
+            {editor.mode === "create" && Number(editor.amountPaid || 0) > 0 ? <Dropdown label="Initial payment method" value={editor.initialPaymentMethod} options={["cash", "bank", "card", "cheque", "other"].map((value) => ({ label: value.toUpperCase(), value }))} onChange={(value) => setEditor((state) => (state ? { ...state, initialPaymentMethod: value } : state))} /> : null}
 
             <View style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -901,6 +909,7 @@ export function InvoicesScreen() {
                   const result = await recordInvoicePayment(paymentEditor.invoiceId!, {
                     amount: Number(paymentEditor.amount || 0),
                     method: paymentEditor.method,
+                    externalId: paymentEditor.externalId,
                     paymentDate: paymentEditor.paymentDate,
                     reference: paymentEditor.reference.trim() || null,
                     note: paymentEditor.note.trim() || null

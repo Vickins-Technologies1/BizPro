@@ -59,7 +59,7 @@ const lightThemeVars = {
 } as const;
 
 const darkThemeVars = {
-  "--bg": "#090a0c",
+  "--bg": "#000000",
   "--surface": "#111315",
   "--surface-2": "#191c1f",
   "--line": "#292d31",

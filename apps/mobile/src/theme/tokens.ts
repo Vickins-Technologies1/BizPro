@@ -159,15 +159,15 @@ const lightTheme: ThemeTokens = {
 const darkTheme: ThemeTokens = {
   ...baseTheme,
   colors: {
-    background: "#08111F",
-    backgroundAlt: "#0D1929",
-    surface: "#0D1929",
-    surfaceAlt: "#132238",
-    surfaceCard: "#102035",
-    surfaceElevated: "#172943",
-    input: "#0C1A2D",
-    border: "#223A57",
-    divider: "#223A57",
+    background: "#000000",
+    backgroundAlt: "#0A0A0A",
+    surface: "#0A0A0A",
+    surfaceAlt: "#141414",
+    surfaceCard: "#0E0E0E",
+    surfaceElevated: "#1A1A1A",
+    input: "#0B0B0B",
+    border: "#2A2A2A",
+    divider: "#2A2A2A",
     primary: "#3B82F6",
     primaryStrong: "#3B82F6",
     primaryAction: "#2563EB",
@@ -189,7 +189,7 @@ const darkTheme: ThemeTokens = {
   },
   gradients: {
     primary: ["#3B82F6", "#2563EB"],
-    surface: ["#11161D", "#0B0F14"],
+    surface: ["#111315", "#08090A"],
     premium: ["rgba(59,130,246,0.07)", "rgba(59,130,246,0.01)"]
   },
   shadow: {

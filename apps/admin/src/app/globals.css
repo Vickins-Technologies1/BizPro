@@ -41,17 +41,17 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #0b1220;
-    --bg-alt: #0f172a;
-    --surface: #111827;
-    --surface-alt: #1a2436;
+    --bg: #000000;
+    --bg-alt: #0a0a0a;
+    --surface: #111111;
+    --surface-alt: #1a1a1a;
     --surface-soft: rgba(255, 255, 255, 0.02);
-    --border: #243041;
+    --border: #2d2d2d;
     --border-strong: rgba(255, 255, 255, 0.12);
     --text: #f8fafc;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
-    --input: rgba(10, 16, 28, 0.96);
+    --input: rgba(10, 10, 10, 0.96);
     --primary-soft: rgba(59, 130, 246, 0.12);
     --success-soft: rgba(16, 185, 129, 0.12);
     --warning-soft: rgba(245, 158, 11, 0.12);
@@ -61,10 +61,10 @@
     --input-border: rgba(255, 255, 255, 0.1);
     --muted-border: rgba(255, 255, 255, 0.12);
     --row-background: rgba(255, 255, 255, 0.02);
-    --dashboard-inset: rgba(17, 24, 39, 0.7);
+    --dashboard-inset: rgba(17, 17, 17, 0.7);
     --dashboard-row: rgba(255, 255, 255, 0.03);
     --dashboard-row-border: rgba(255, 255, 255, 0.08);
-    --card-background: linear-gradient(180deg, rgba(17, 24, 39, 0.94), rgba(15, 23, 42, 0.92));
+    --card-background: linear-gradient(180deg, rgba(17, 17, 17, 0.94), rgba(15, 15, 15, 0.92));
     --card-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
     --card-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.24);
     --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
@@ -94,10 +94,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background:
-      radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
-      radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 22%),
-      var(--bg);
+    background: var(--bg);
   }
 }
 

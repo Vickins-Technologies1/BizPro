@@ -1,3 +1,6 @@
 apps/desktop/release-parity/Dira[[:space:]]OS[[:space:]]Setup[[:space:]]0.1.0.exe filter=lfs diff=lfs merge=lfs -text
 apps/desktop/release-parity/win-unpacked/Dira[[:space:]]OS.exe filter=lfs diff=lfs merge=lfs -text
 apps/mobile/dira-release.apk filter=lfs diff=lfs merge=lfs -text
+apps/desktop/release-current-20261109/Dira[[:space:]]OS[[:space:]]Setup[[:space:]]0.1.0.exe filter=lfs diff=lfs merge=lfs -text
+apps/desktop/release-current-20261109/win-unpacked/Dira[[:space:]]OS.exe filter=lfs diff=lfs merge=lfs -text
+apps/mobile/preview-7cd771e6.apk filter=lfs diff=lfs merge=lfs -text

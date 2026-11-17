@@ -42,7 +42,13 @@
       ".next/standalone/**/*",
       "electron/**/*",
       "resources/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/@next/swc-linux-*/**",
+      "!node_modules/@next/swc-darwin-*/**",
+      "!node_modules/@next/swc-win32-arm64-msvc/**",
+      "!node_modules/@next/swc-win32-ia32-msvc/**",
+      "!node_modules/@next/swc-android-*/**",
+      "!node_modules/@next/swc-freebsd-*/**"
     ],
     "extraMetadata": {
       "main": "electron/main.cjs"

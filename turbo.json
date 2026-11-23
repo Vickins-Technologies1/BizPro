@@ -3,7 +3,18 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "android/**", "ios/**"]
+      "outputs": ["dist/**", ".next/**", "android/**", "ios/**"],
+      "env": [
+        "ADMIN_API_BASE_URL",
+        "ADMIN_API_SIGNING_SECRET",
+        "ADMIN_PUBLIC_URL",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "MONGODB_DB_NAME",
+        "MONGODB_URI",
+        "PLATFORM_ERROR_INGEST_KEY",
+        "SUPPORT_API_KEY"
+      ]
     },
     "dev": {
       "cache": false

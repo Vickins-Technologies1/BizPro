@@ -50,8 +50,14 @@ type RequestOptions = {
 };
 
 type AuthFailureHandler = (() => Promise<void> | void) | null;
+type MobileErrorContext = { deviceId?: string | null; appVersion?: string | null };
 
 let authFailureHandler: AuthFailureHandler = null;
+let mobileErrorContext: MobileErrorContext = {};
+
+export function setMobileErrorContext(context: MobileErrorContext) {
+  mobileErrorContext = context;
+}
 
 export function setAuthFailureHandler(handler: AuthFailureHandler) {
   authFailureHandler = handler;
@@ -444,6 +450,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+export async function reportMobileError(input: { title: string; message: string; stackTrace?: string; module?: string; severity?: "critical" | "high" | "medium" | "low" }) {
+  const token = await getSessionToken();
+  if (!token) return;
+  try {
+    await apiRequest("/telemetry/errors", {
+      method: "POST",
+      auth: false,
+      token,
+      body: {
+        title: input.title.slice(0, 240),
+        message: input.message.slice(0, 4000),
+        ...(input.stackTrace ? { stackTrace: input.stackTrace.slice(0, 12_000) } : {}),
+        ...(input.module ? { module: input.module.slice(0, 120) } : {}),
+        ...(mobileErrorContext.deviceId ? { deviceId: mobileErrorContext.deviceId } : {}),
+        ...(mobileErrorContext.appVersion ? { appVersion: mobileErrorContext.appVersion } : {}),
+        severity: input.severity ?? "high"
+      }
+    });
+  } catch {
+    // Diagnostics must never interrupt offline-first app workflows.
+  }
 }
 
 export async function authMe() {

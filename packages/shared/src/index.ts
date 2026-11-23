@@ -5,5 +5,6 @@ export * from "./theme";
 export * from "./industries";
 export * from "./catalog-creation";
 export * from "./operations";
+export * from "./platform-admin";
 export * from "./types";
 export * from "./financial";

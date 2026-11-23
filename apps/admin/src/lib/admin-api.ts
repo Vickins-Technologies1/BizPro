@@ -112,41 +112,44 @@ export async function listBusinesses() {
 }
 
 export async function listBusinessEmployees(businessId: string) {
-  return fetchJson<EmployeeRecord[]>(`/support/employees?businessId=${encodeURIComponent(businessId)}`);
+  return fetchJson<EmployeeRecord[]>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees`);
 }
 
 export async function getEmployeeCatalog() {
-  return fetchJson<PermissionCatalog>("/support/employees/catalog");
+  return {
+    permissions: [...ACCESS_PERMISSIONS],
+    roles: ROLE_PRESETS.map((preset) => ({ role: preset.role, label: formatRoleLabel(preset.role), description: preset.description, permissions: [...ROLE_ACCESS[preset.role]] }))
+  };
 }
 
 export async function listBusinessAuditLogs(businessId: string) {
-  return fetchJson<AuditLogRecord[]>(`/audit?businessId=${encodeURIComponent(businessId)}`);
+  return fetchJson<AuditLogRecord[]>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/activity`);
 }
 
 export async function createBusinessEmployee(businessId: string, input: EmployeeCreateInput) {
-  return fetchJson<EmployeeRecord>(`/support/employees?businessId=${encodeURIComponent(businessId)}`, {
+  return fetchJson<EmployeeRecord>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees`, {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
 export async function updateBusinessEmployee(businessId: string, employeeId: string, input: EmployeeUpdateInput) {
-  return fetchJson<EmployeeRecord>(`/support/employees/${encodeURIComponent(employeeId)}?businessId=${encodeURIComponent(businessId)}`, {
+  return fetchJson<EmployeeRecord>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees/${encodeURIComponent(employeeId)}`, {
     method: "PATCH",
     body: JSON.stringify(input)
   });
 }
 
 export async function suspendBusinessEmployee(businessId: string, employeeId: string, reason?: string | null) {
-  return fetchJson<EmployeeRecord>(`/support/employees/${encodeURIComponent(employeeId)}/suspend?businessId=${encodeURIComponent(businessId)}`, {
-    method: "POST",
+  return fetchJson<EmployeeRecord>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees/${encodeURIComponent(employeeId)}/suspend`, {
+    method: "PATCH",
     body: JSON.stringify({ reason: reason ?? "" })
   });
 }
 
 export async function restoreBusinessEmployee(businessId: string, employeeId: string) {
-  return fetchJson<EmployeeRecord>(`/support/employees/${encodeURIComponent(employeeId)}/restore?businessId=${encodeURIComponent(businessId)}`, {
-    method: "POST"
+  return fetchJson<EmployeeRecord>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees/${encodeURIComponent(employeeId)}/restore`, {
+    method: "PATCH"
   });
 }
 
@@ -156,16 +159,16 @@ export async function resetBusinessEmployeeCredentials(
   input: { password?: string | null; pin?: string | null }
 ) {
   return fetchJson<{ employee: EmployeeRecord; temporaryPassword: string | null }>(
-    `/support/employees/${encodeURIComponent(employeeId)}/reset-credentials?businessId=${encodeURIComponent(businessId)}`,
+    `/platform-admin/businesses/${encodeURIComponent(businessId)}/employees/${encodeURIComponent(employeeId)}/reset-credentials`,
     {
-      method: "POST",
+      method: "PATCH",
       body: JSON.stringify(input)
     }
   );
 }
 
 export async function deleteBusinessEmployee(businessId: string, employeeId: string) {
-  return fetchJson<EmployeeRecord>(`/support/employees/${encodeURIComponent(employeeId)}?businessId=${encodeURIComponent(businessId)}`, {
+  return fetchJson<EmployeeRecord>(`/platform-admin/businesses/${encodeURIComponent(businessId)}/employees/${encodeURIComponent(employeeId)}`, {
     method: "DELETE"
   });
 }

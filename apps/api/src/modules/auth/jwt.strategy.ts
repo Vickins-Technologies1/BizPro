@@ -28,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException("Session is no longer valid");
     }
     const business = await findBusinessByIdentifier(this.businessModel, payload.businessId);
-    if (!business) {
+    if (!business || business.billingStatus === "suspended") {
       throw new UnauthorizedException("Business is no longer available");
     }
 

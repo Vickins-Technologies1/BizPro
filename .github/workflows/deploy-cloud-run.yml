@@ -3,15 +3,15 @@ name: Deploy BizPro API to Cloud Run
 on:
   push:
     branches:
-      - production
+      - master
   workflow_dispatch:
 
 env:
   IMAGE_NAME: bizpro-api
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ vars.GCP_REGION }}
-  GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
-  CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+  GCP_PROJECT_ID: project-d12aa5f3-be97-4827-b63
+  GCP_REGION: me-central1
+  GAR_REPOSITORY: bizpro-api
+  CLOUD_RUN_SERVICE: bizpro-server
 
 jobs:
   deploy:
@@ -27,8 +27,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          workload_identity_provider: projects/237507579958/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: bizpro-cloud-run-deployer@project-d12aa5f3-be97-4827-b63.iam.gserviceaccount.com
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -55,5 +55,5 @@ jobs:
             --allow-unauthenticated \
             --quiet \
             --port 8080 \
-            --set-env-vars "NODE_ENV=production,MONGODB_DB_NAME=vickins_business_os,JWT_EXPIRES_IN=7d" \
-            --set-secrets "MONGODB_URI=MONGODB_URI:latest,JWT_SECRET=JWT_SECRET:latest,SUPPORT_API_KEY=SUPPORT_API_KEY:latest"
+            --update-env-vars "NODE_ENV=production,MONGODB_DB_NAME=vickins_business_os,JWT_EXPIRES_IN=7d" \
+            --update-secrets "MONGODB_URI=MONGODB_URI:latest,JWT_SECRET=JWT_SECRET:latest,SUPPORT_API_KEY=SUPPORT_API_KEY:latest,ADMIN_API_SIGNING_SECRET=ADMIN_API_SIGNING_SECRET:latest,PLATFORM_ERROR_INGEST_KEY=PLATFORM_ERROR_INGEST_KEY:latest"

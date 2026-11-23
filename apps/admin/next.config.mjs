@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  experimental: {
+    serverComponentsExternalPackages: ["@node-rs/argon2"]
+  },
   async rewrites() {
     return [
       {

@@ -15,6 +15,7 @@ import { RootNavigator } from "@/navigation/RootNavigator";
 import { useAppStore } from "@/store/useAppStore";
 import { getThemeTokens, type ThemeMode } from "@/theme/tokens";
 import { configureNotificationListeners, registerPushNotifications } from "@/services/notifications";
+import { setMobileErrorContext } from "@/services/apiClient";
 
 export function RootApp() {
   const bootstrap = useAppStore((state) => state.bootstrap);
@@ -62,6 +63,10 @@ export function RootApp() {
   useEffect(() => {
     bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    setMobileErrorContext({ deviceId });
+  }, [deviceId]);
 
   useEffect(() => {
     if (!business) return;

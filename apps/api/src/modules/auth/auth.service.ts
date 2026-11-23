@@ -273,7 +273,7 @@ export class AuthService {
         throw new UnauthorizedException("Invalid credentials");
       }
       const business = await this.findBusiness(user.businessId);
-      if (!business || business.deletedAt) {
+      if (!business || business.deletedAt || business.billingStatus === "suspended") {
         this.logger.warn(
           `Auth login rejected identifier="${this.maskPhone(this.normalizePhone(identifier))}" businessId="${businessId ?? "none"}" userId="${String(user._id)}" reason="business_not_found_or_deleted"`
         );

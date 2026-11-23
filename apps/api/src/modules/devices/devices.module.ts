@@ -7,6 +7,7 @@ import { DevicesService } from "./devices.service";
 @Module({
   imports: [MongooseModule.forFeature([...businessSchemas])],
   controllers: [DevicesController],
-  providers: [DevicesService]
+  providers: [DevicesService],
+  exports: [DevicesService]
 })
 export class DevicesModule {}

@@ -7,6 +7,7 @@ import { SubscriptionsService } from "./subscriptions.service";
 @Module({
   imports: [MongooseModule.forFeature([...subscriptionSchemas])],
   controllers: [SubscriptionsController],
-  providers: [SubscriptionsService]
+  providers: [SubscriptionsService],
+  exports: [SubscriptionsService]
 })
 export class SubscriptionsModule {}

@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { BadRequestException, Optional } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException, Optional } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { InjectConnection } from "@nestjs/mongoose";
+import { Connection, Model } from "mongoose";
+import { redactSensitiveText } from "../../common/secret-redaction";
 import {
   AuditLog,
   AuditLogDocument,
@@ -41,6 +43,7 @@ import { SalesService } from "../sales/sales.service";
 import { resolveCatalogCreationContext } from "@vbo/shared";
 import { Business, BusinessDocument } from "../schemas";
 import { findBusinessByIdentifier } from "../../common/business-lookup";
+import { runInTransaction } from "../../common/mongo-transaction";
 
 @Injectable()
 export class SyncService {
@@ -62,6 +65,7 @@ export class SyncService {
     @InjectModel(StockMovement.name) private readonly stockMovementModel: Model<StockMovementDocument>,
     @InjectModel(AuditLog.name) private readonly auditLogModel: Model<AuditLogDocument>,
     @InjectModel(BusinessOperationModel.name) private readonly businessOperationModel: Model<BusinessOperationDocument>,
+    @InjectConnection() private readonly connection: Connection,
     private readonly salesService: SalesService,
     @Optional() @InjectModel(Business.name) private readonly businessModel?: Model<BusinessDocument>
   ) {}
@@ -75,13 +79,20 @@ export class SyncService {
           acknowledgements.push({ eventId: event.eventId });
           continue;
         }
+        if (existing.status === "retrying") throw new ConflictException("This synchronization event is already being retried");
+        const claimed = await this.syncEventModel.findOneAndUpdate(
+          { _id: existing._id, status: { $in: ["pending", "failed", "sent"] } },
+          { $set: { status: "retrying", lastAttemptAt: new Date() }, $inc: { retryCount: 1 } },
+          { new: true }
+        ).lean();
+        if (!claimed) throw new ConflictException("This synchronization event changed state before it could be retried");
         try {
           await this.applyEvent(businessId, event);
-          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "applied", lastError: null, $inc: { retryCount: 1 } });
+          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "applied", lastError: null });
           acknowledgements.push({ eventId: event.eventId });
           continue;
         } catch (error) {
-          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "failed", lastError: error instanceof Error ? error.message : "Sync apply failed", $inc: { retryCount: 1 } });
+          await this.syncEventModel.findByIdAndUpdate(existing._id, { status: "failed", lastAttemptAt: new Date(), lastError: sanitizeSyncError(error) });
           throw error;
         }
       }
@@ -104,7 +115,8 @@ export class SyncService {
         payload: event.payload,
         status: "pending",
         retryCount: 0,
-        lastError: null
+        lastError: null,
+        lastAttemptAt: new Date()
       });
       try {
         await this.applyEvent(businessId, event);
@@ -113,7 +125,8 @@ export class SyncService {
       } catch (error) {
         await this.syncEventModel.findByIdAndUpdate(record._id, {
           status: "failed",
-          lastError: error instanceof Error ? error.message : "Sync apply failed",
+          lastError: sanitizeSyncError(error),
+          lastAttemptAt: new Date(),
           retryCount: 1
         });
         throw error;
@@ -167,6 +180,29 @@ export class SyncService {
       { upsert: true, new: true }
     );
     return { cursor: new Date().toISOString(), changes };
+  }
+
+  async retryFailedEvent(id: string) {
+    const event = await this.syncEventModel.findOne({ eventId: id }).lean();
+    if (!event) throw new NotFoundException("Sync event not found");
+    if (event.status === "applied") return { eventId: event.eventId, businessId: event.businessId, deviceId: event.deviceId, status: event.status, retryCount: event.retryCount };
+    if (event.status !== "failed") throw new ConflictException("Only failed synchronization events can be retried");
+
+    const claimed = await this.syncEventModel.findOneAndUpdate(
+      { _id: event._id, status: "failed" },
+      { $set: { status: "retrying", lastAttemptAt: new Date() }, $inc: { retryCount: 1 } },
+      { new: true }
+    ).lean();
+    if (!claimed) throw new ConflictException("This synchronization event is already being retried");
+
+    try {
+      await this.applyEvent(claimed.businessId, claimed);
+      const completed = await this.syncEventModel.findByIdAndUpdate(claimed._id, { status: "applied", lastError: null }, { new: true }).lean();
+      return { eventId: claimed.eventId, businessId: claimed.businessId, deviceId: claimed.deviceId, status: "applied", retryCount: completed?.retryCount ?? claimed.retryCount };
+    } catch (error) {
+      const failed = await this.syncEventModel.findByIdAndUpdate(claimed._id, { status: "failed", lastError: sanitizeSyncError(error), lastAttemptAt: new Date() }, { new: true }).lean();
+      return { eventId: claimed.eventId, businessId: claimed.businessId, deviceId: claimed.deviceId, status: "failed", retryCount: failed?.retryCount ?? claimed.retryCount, lastError: failed?.lastError ?? "Retry failed" };
+    }
   }
 
   async health(businessId: string) {
@@ -403,9 +439,10 @@ export class SyncService {
     }
     if (event.entityType === "stockMovement") {
       const movementId = String(event.entityId);
-      await this.stockMovementModel.findOneAndUpdate(
-        { businessId, externalId: movementId },
-        {
+      await runInTransaction(this.connection, async (session) => {
+        const existingMovement = await this.stockMovementModel.findOne({ businessId, externalId: movementId }).session(session).lean();
+        if (existingMovement) return;
+        await this.stockMovementModel.create([{
           externalId: movementId,
           businessId,
           productId: String(event.payload.productId ?? ""),
@@ -414,13 +451,14 @@ export class SyncService {
           quantityDelta: Number(event.payload.quantityDelta ?? 0),
           unitCost: Number(event.payload.unitCost ?? 0),
           note: (event.payload.note as string | null) ?? null
-        },
-        { upsert: true, new: true }
-      );
-      await this.productModel.findOneAndUpdate(
-        { businessId, externalId: String(event.payload.productId ?? "") },
-        { $inc: { stockOnHand: Number(event.payload.quantityDelta ?? 0) } }
-      );
+        }], { session });
+        const result = await this.productModel.updateOne(
+          { businessId, externalId: String(event.payload.productId ?? "") },
+          { $inc: { stockOnHand: Number(event.payload.quantityDelta ?? 0) } },
+          { session }
+        );
+        if (!result.matchedCount) throw new NotFoundException("The stock movement product no longer exists");
+      });
     }
   }
 
@@ -472,4 +510,9 @@ export class SyncService {
       deletedAt: (payload.deletedAt as string | null) ? new Date(String(payload.deletedAt)) : null
     };
   }
+}
+
+function sanitizeSyncError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Sync apply failed";
+  return redactSensitiveText(message, 1000);
 }

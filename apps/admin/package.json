@@ -8,11 +8,18 @@
     "start": "next start",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "admin:bootstrap": "node scripts/bootstrap-super-admin.mjs",
     "clean": "node -e \"process.exit(0)\""
   },
   "dependencies": {
+    "@better-auth/mongo-adapter": "^1.7.14",
+    "@better-auth/passkey": "^1.7.14",
+    "@node-rs/argon2": "^2.0.2",
     "@vbo/shared": "workspace:*",
+    "better-auth": "^1.7.14",
+    "mongodb": "^6.18.0",
     "next": "^14.2.5",
+    "nodemailer": "^6.9.16",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },

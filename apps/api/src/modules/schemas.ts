@@ -120,6 +120,15 @@ export class Business {
   @Prop({ type: Date })
   graceEndsAt?: Date | null;
 
+  @Prop({ type: Date, default: null, index: true })
+  platformSuspendedAt?: Date | null;
+
+  @Prop({ type: String, default: null })
+  platformSuspensionReason?: string | null;
+
+  @Prop({ type: String, enum: ["trial", "active", "past_due"], default: null })
+  platformPriorBillingStatus?: "trial" | "active" | "past_due" | null;
+
   @Prop({ type: Date, default: null })
   deletedAt?: Date | null;
 }
@@ -1453,13 +1462,16 @@ export class SyncEvent {
   payload!: Record<string, unknown>;
 
   @Prop({ required: true, default: "pending" })
-  status!: "pending" | "sent" | "failed" | "applied";
+  status!: "pending" | "sent" | "failed" | "retrying" | "applied";
 
   @Prop({ required: true, default: 0 })
   retryCount!: number;
 
   @Prop({ type: String })
   lastError?: string | null;
+
+  @Prop({ type: Date, default: null })
+  lastAttemptAt?: Date | null;
 }
 export type SyncEventDocument = HydratedDocument<SyncEvent>;
 export const SyncEventSchema = SchemaFactory.createForClass(SyncEvent);

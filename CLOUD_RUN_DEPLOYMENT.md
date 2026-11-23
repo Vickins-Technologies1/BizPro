@@ -55,7 +55,7 @@ docker push <REGION>-docker.pkg.dev/<PROJECT_ID>/<AR_REPOSITORY>/bizpro-api:<TAG
 4. Deploy to Cloud Run.
 
 ```bash
-gcloud run deploy bizpro-api \
+gcloud run deploy bizpro-server \
   --image <REGION>-docker.pkg.dev/<PROJECT_ID>/<AR_REPOSITORY>/bizpro-api:<TAG> \
   --region <REGION> \
   --platform managed \
@@ -65,91 +65,50 @@ gcloud run deploy bizpro-api \
   --max-instances 10 \
   --cpu 1 \
   --memory 512Mi \
-  --set-env-vars NODE_ENV=production,MONGODB_DB_NAME=vickins_business_os,JWT_EXPIRES_IN=7d \
-  --set-secrets MONGODB_URI=MONGODB_URI:latest,JWT_SECRET=JWT_SECRET:latest,SUPPORT_API_KEY=SUPPORT_API_KEY:latest
+  --update-env-vars NODE_ENV=production,MONGODB_DB_NAME=vickins_business_os,JWT_EXPIRES_IN=7d \
+  --update-secrets MONGODB_URI=MONGODB_URI:latest,JWT_SECRET=JWT_SECRET:latest,SUPPORT_API_KEY=SUPPORT_API_KEY:latest,ADMIN_API_SIGNING_SECRET=ADMIN_API_SIGNING_SECRET:latest,PLATFORM_ERROR_INGEST_KEY=PLATFORM_ERROR_INGEST_KEY:latest
 ```
 
 ## Google Cloud setup for GitHub Actions
 
-Run the following once, replacing the placeholders. These commands create the deployer service account, grant it the permissions used by the workflow, and configure keyless GitHub authentication.
+This project is configured for keyless GitHub Actions deployment:
 
-```bash
-export PROJECT_ID=<PROJECT_ID>
-export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
-export REGION=<REGION>
-export GITHUB_REPOSITORY=<GITHUB_OWNER>/<GITHUB_REPOSITORY>
-export DEPLOYER_SA=bizpro-cloud-run-deployer
-export WIF_POOL=github-pool
-export WIF_PROVIDER=github-provider
+- Project: `project-d12aa5f3-be97-4827-b63`
+- Workload Identity pool/provider: `github-pool` / `github-provider`
+- Provider condition: GitHub repository ID `1278269357` on `refs/heads/master`
+- Deployer service account: `bizpro-cloud-run-deployer@project-d12aa5f3-be97-4827-b63.iam.gserviceaccount.com`
+- Roles: Cloud Run Admin on the project, Artifact Registry Writer on the `bizpro-api` repository, and Service Account User on the Cloud Run runtime identity
 
-gcloud config set project "$PROJECT_ID"
-gcloud iam service-accounts create "$DEPLOYER_SA" \
-  --display-name="Dira OS Cloud Run deployer"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/run.admin"
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/artifactregistry.writer"
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountUser"
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-
-gcloud iam workload-identity-pools create "$WIF_POOL" \
-  --location=global \
-  --display-name="GitHub Actions pool"
-gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER" \
-  --location=global \
-  --workload-identity-pool="$WIF_POOL" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository == '${GITHUB_REPOSITORY}'"
-
-gcloud iam service-accounts add-iam-policy-binding \
-  "${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL}/attribute.repository/${GITHUB_REPOSITORY}"
-
-echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL}/providers/${WIF_PROVIDER}"
-echo "${DEPLOYER_SA}@${PROJECT_ID}.iam.gserviceaccount.com"
-```
-
-Add the two printed values to GitHub as the Actions secrets `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT_EMAIL`. Add `GCP_PROJECT_ID`, `GCP_REGION`, `GAR_REPOSITORY`, and `CLOUD_RUN_SERVICE` as repository variables.
-
-Create the runtime secrets before the first deployment. The command reads each value interactively so secrets are not placed in shell history:
-
-```bash
-for SECRET_NAME in MONGODB_URI JWT_SECRET SUPPORT_API_KEY; do
-  printf "Enter value for %s: " "$SECRET_NAME"
-  read -r SECRET_VALUE
-  printf '%s' "$SECRET_VALUE" | gcloud secrets create "$SECRET_NAME" --data-file=- 2>/dev/null || \
-    printf '%s' "$SECRET_VALUE" | gcloud secrets versions add "$SECRET_NAME" --data-file=-
-  unset SECRET_VALUE
-done
-```
+The workflow contains the non-secret project and identity identifiers. It does not need a service-account key or GitHub Actions secret for Google Cloud authentication. The Cloud Run runtime identity already has project-level `roles/secretmanager.secretAccessor` access.
 
 ## GitHub deployment
 
-The workflow at [`.github/workflows/deploy-cloud-run.yml`](./.github/workflows/deploy-cloud-run.yml) expects these GitHub configuration values:
-
-- Secret `GCP_WORKLOAD_IDENTITY_PROVIDER`
-- Secret `GCP_SERVICE_ACCOUNT_EMAIL`
-- Variable `GCP_PROJECT_ID`
-- Variable `GCP_REGION`
-- Variable `GAR_REPOSITORY`
-- Variable `CLOUD_RUN_SERVICE`
+For the existing Cloud Run service, the workflow targets project `project-d12aa5f3-be97-4827-b63`, region `me-central1`, Artifact Registry repository `bizpro-api`, and Cloud Run service `bizpro-server`. The repository and service have different names.
 
 The workflow:
 
-1. Triggers on pushes to the `production` branch.
-2. Authenticates with Google Cloud using Workload Identity Federation.
+1. Triggers on pushes to the repository's `master` branch or by manual workflow dispatch.
+2. Authenticates with Google Cloud using repository- and branch-restricted Workload Identity Federation.
 3. Builds the API image from [`apps/api/Dockerfile`](./apps/api/Dockerfile).
 4. Pushes the image to Artifact Registry.
-5. Deploys the image to Cloud Run.
+5. Deploys the image to Cloud Run while updating only the environment values and secrets named in the workflow. Existing unrelated service settings are preserved.
+
+## Vercel admin project configuration
+
+The production admin project is `biz-pro-admin` at `https://biz-pro-admin.vercel.app`. Set these production variables in Vercel:
+
+| Variable | Value |
+| --- | --- |
+| `ADMIN_API_BASE_URL` | `https://bizpro-server-u6vceulhlq-ww.a.run.app/api` |
+| `ADMIN_PUBLIC_URL` | `https://biz-pro-admin.vercel.app` |
+| `BETTER_AUTH_URL` | `https://biz-pro-admin.vercel.app` |
+| `MONGODB_DB_NAME` | `vickins_business_os` |
+| `MONGODB_URI` | Copy the `MONGODB_URI` value from Google Secret Manager |
+| `BETTER_AUTH_SECRET` | Generate a new random value of at least 32 bytes |
+| `ADMIN_API_SIGNING_SECRET` | Copy the matching Secret Manager value |
+| `PLATFORM_ERROR_INGEST_KEY` | Copy the matching Secret Manager value |
+
+Keep `ADMIN_API_SIGNING_SECRET` and `PLATFORM_ERROR_INGEST_KEY` identical in Vercel and Secret Manager. `SUPPORT_API_KEY` already exists in Vercel; confirm it matches the Secret Manager value if support endpoints are used.
 
 ## Environment variables
 
@@ -158,6 +117,8 @@ Required by the API:
 - `MONGODB_URI`
 - `JWT_SECRET`
 - `SUPPORT_API_KEY`
+- `ADMIN_API_SIGNING_SECRET` (at least 32 bytes; must match the Vercel admin signing secret)
+- `PLATFORM_ERROR_INGEST_KEY` (at least 32 bytes; must match the Vercel error-ingest key)
 
 Required or recommended defaults:
 
@@ -192,8 +153,9 @@ The API still uses MongoDB/Mongoose and expects a reachable `MONGODB_URI`.
 
 ## Cloud Run
 
-- Service name: `bizpro-api`
-- Region: choose the same region you configured in `GCP_REGION`
+- Service name: `bizpro-server`
+- Region: `me-central1`
+- Artifact Registry repository: `bizpro-api`
 - Port: `8080`
 - Authentication: the workflow deploys the service as public with `--allow-unauthenticated`
 - Minimum instances:
@@ -223,8 +185,8 @@ When you are ready to use `https://api.bizpro.co.ke` or another API domain:
 Deploy Cloud Run and validate it using its generated URL first:
 
 ```bash
-gcloud run services describe bizpro-api --region <REGION> --format='value(status.url)'
-curl -fsS "$(gcloud run services describe bizpro-api --region <REGION> --format='value(status.url)')/health"
+gcloud run services describe bizpro-server --region me-central1 --format='value(status.url)'
+curl -fsS "$(gcloud run services describe bizpro-server --region me-central1 --format='value(status.url)')/health"
 ```
 
-The admin proxy and mobile default API URL use the Cloud Run service URL. If you configure a custom domain later, update those two values and redeploy the clients.
+The existing service URL is `https://bizpro-server-u6vceulhlq-ww.a.run.app`; set the Vercel admin project's `ADMIN_API_BASE_URL` to this URL with `/api` appended. The admin project also needs `MONGODB_URI`, `BETTER_AUTH_URL`, `ADMIN_PUBLIC_URL`, `BETTER_AUTH_SECRET`, `ADMIN_API_SIGNING_SECRET`, and `PLATFORM_ERROR_INGEST_KEY`. The admin signing and error-ingest keys must match their Secret Manager values. If you configure a custom API domain later, update the admin API base URL and mobile default API URL, then redeploy the clients.

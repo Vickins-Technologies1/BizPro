@@ -44,4 +44,30 @@ export class BusinessesService {
     if (!updated) throw new NotFoundException("Business not found");
     return updated;
   }
+
+  async suspend(id: string, reason?: string | null) {
+    const business = await this.businessModel.findOne(buildBusinessLookup(id));
+    if (!business) throw new NotFoundException("Business not found");
+    if (business.billingStatus !== "suspended") {
+      business.platformPriorBillingStatus = business.billingStatus === "active" || business.billingStatus === "past_due" ? business.billingStatus : "trial";
+    }
+    business.billingStatus = "suspended";
+    business.platformSuspendedAt = new Date();
+    business.platformSuspensionReason = reason?.trim().slice(0, 500) || "Suspended by platform administrator";
+    await business.save();
+    return business.toObject();
+  }
+
+  async reactivate(id: string) {
+    const business = await this.businessModel.findOne(buildBusinessLookup(id));
+    if (!business) throw new NotFoundException("Business not found");
+    if (business.billingStatus === "suspended") {
+      business.billingStatus = business.platformPriorBillingStatus ?? "trial";
+    }
+    business.platformSuspendedAt = null;
+    business.platformSuspensionReason = null;
+    business.platformPriorBillingStatus = null;
+    await business.save();
+    return business.toObject();
+  }
 }

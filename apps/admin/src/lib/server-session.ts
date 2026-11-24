@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
-import { adminAuth } from "./auth";
+import { adminAuth, connectAdminMongo } from "./auth";
 
 export async function getPlatformAdminSession() {
+  await connectAdminMongo();
   return adminAuth.api.getSession({ headers: headers() });
 }

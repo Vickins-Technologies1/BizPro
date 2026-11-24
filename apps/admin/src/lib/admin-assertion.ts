@@ -1,8 +1,9 @@
 import { createHmac } from "node:crypto";
 import { getPlatformAdminPermissions, isPlatformAdminRole } from "@vbo/shared";
-import { adminAuth } from "./auth";
+import { adminAuth, connectAdminMongo } from "./auth";
 
 export async function createPlatformAdminAssertion(headers: Headers) {
+  await connectAdminMongo();
   const session = await adminAuth.api.getSession({ headers });
   if (!session || session.user.isActive === false || !isPlatformAdminRole(session.user.role)) return null;
 

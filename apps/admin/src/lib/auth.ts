@@ -36,6 +36,10 @@ export function getAdminMongoDb() {
   return getAdminMongoClient().db(process.env.MONGODB_DB_NAME || "vickins_business_os");
 }
 
+export async function connectAdminMongo() {
+  await getAdminMongoClient().connect();
+}
+
 const baseURL = process.env.BETTER_AUTH_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
 if (!baseURL) throw new Error("BETTER_AUTH_URL must be configured in production");
 if (process.env.NODE_ENV === "production" && !baseURL.startsWith("https://")) {
